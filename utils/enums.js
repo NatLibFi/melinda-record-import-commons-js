@@ -61,3 +61,7 @@ exports.errorTypes = {
     forbiden: 'request.authentication.forbiden',
     unknown: 'unknown'
 }
+
+exports.jobs = {
+    pollBlobs: 'poll.GET./blobs/'
+}
