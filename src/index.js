@@ -30,7 +30,7 @@
 
 'use strict';
 
-import TransformerUtils from './transformer';
-import ImporterUtils from './importer';
+import * as TransformerUtils from './transformer';
+import * as ImporterUtils from './importer';
 
 export {TransformerUtils, ImporterUtils};
