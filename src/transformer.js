@@ -105,7 +105,7 @@ export async function startTransformation(transformCallback, contentType) {
 				});
 			}
 		} else {
-			throw new Error(`Update blob state failed: ${response.status} ${response.statusText}`);
+			throw new Error(`Updating blob state failed: ${response.status} ${response.statusText}`);
 		}
 	} else {
 		throw new Error(`Fetching blob content failed: ${response.status} ${response.statusText}`);
