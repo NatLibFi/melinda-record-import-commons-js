@@ -71,7 +71,7 @@ export function startHealthCheckService() {
 	};
 }
 
-export async function startTransformation(transformCallback, contentType) {
+export async function startTransformation(transformCallback) {
 	const httpHeaders = generateHttpAuthorizationHeader(process.env.API_USERNAME, process.env.API_PASSWORD);
 	const queue = await amqp.connect(process.env.AMQP_URL);
 	const abortOnInvalid = process.env.ABORT_ON_INVALID_RECORDS || false;
@@ -86,7 +86,7 @@ export async function startTransformation(transformCallback, contentType) {
 
 		response = await fetch(`${process.env.API_URL}/blobs/${process.env.BLOB_ID}`, {
 			method: 'POST',
-			headers: Object.assign({'Content-Type': contentType}, httpHeaders),
+			headers: Object.assign({'Content-Type': 'application/json'}, httpHeaders),
 			body: JSON.stringify({
 				op: 'transformationDone',
 				numberOfRecords: records.length,
