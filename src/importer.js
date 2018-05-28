@@ -25,12 +25,3 @@
 * for the JavaScript code in this file.
 *
 */
-
-/* eslint-disable no-undef, max-nested-callbacks, no-unused-expressions */
-
-'use strict';
-
-/* Import {expect} from 'chai';
-import * as testContext from '../src/index';
-
-describe.skip('index'); */
