@@ -76,7 +76,7 @@ export async function startTransformation(transformCallback) {
 		if (response.ok) {
 			if (!abortOnInvalid || failedRecords.length === 0) {
 				const channel = await connection.createChannel();
-				
+
 				channel.assertQueue(process.env.QUEUE_NAME);
 
 				const result = await Promise.all(records
@@ -89,7 +89,7 @@ export async function startTransformation(transformCallback) {
 				await channel.close();
 				await connection.close();
 
-				logger.info(`${result.length} records sent to queue`);
+				logger.info(`${result.length} records sent to queue ${process.env.QUEUE_NAME}`);
 			}
 		} else {
 			throw new Error(`Updating blob state failed: ${response.status} ${response.statusText}`);
