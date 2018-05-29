@@ -26,10 +26,11 @@
 *
 */
 
-import http from 'http';
-import {parse as parseUrl} from 'url';
 import amqp from 'amqplib';
 import fetch from 'node-fetch';
+import {checkEnv as checkEnvShared, generateHttpAuthorizationHeader, createLogger} from './shared';
+
+export {registerSignalHandlers, startHealthCheckService, createLogger} from './shared';
 
 const MANDATORY_ENV_VARIABLES = [
 	'API_URL',
@@ -40,40 +41,14 @@ const MANDATORY_ENV_VARIABLES = [
 	'QUEUE_NAME'
 ];
 
-export function registerSignalHandlers() {
-	process.on('SIGINT', () => {
-		process.exit(1);
-	});
-}
-
-export function generateHttpAuthorizationHeader(username, password) {
-	return {Authorization: `Basic ${Buffer.from(`{username}:${password}`).toString('base64')}`};
-}
-
-export function checkEnv(mandatoryVariables = MANDATORY_ENV_VARIABLES) {
-	const missingVariables = mandatoryVariables.filter(v => !Object.keys(process.env).includes(v));
-
-	if (missingVariables.length > 0) {
-		throw new Error(`Mandatory environment variables are not defined: ${missingVariables.join(',')}`);
-	}
-}
-
-export function startHealthCheckService() {
-	const server = http.createServer((req, res) => {
-		const path = parseUrl(req.url);
-		res.statusCode = path === '/healthz' ? 200 : 404;
-		res.end();
-	}).listen(8080);
-	return async function () {
-		return new Promise(resolve => {
-			server.close(resolve);
-		});
-	};
+export function checkEnv() {
+	checkEnvShared(MANDATORY_ENV_VARIABLES);
 }
 
 export async function startTransformation(transformCallback) {
+	const logger = createLogger();
 	const httpHeaders = generateHttpAuthorizationHeader(process.env.API_USERNAME, process.env.API_PASSWORD);
-	const queue = await amqp.connect(process.env.AMQP_URL);
+	const connection = await amqp.connect(process.env.AMQP_URL);
 	const abortOnInvalid = process.env.ABORT_ON_INVALID_RECORDS || false;
 
 	let response = await fetch(`${process.env.API_URL}/blobs/${process.env.BLOB_ID}/content`, {
@@ -81,6 +56,8 @@ export async function startTransformation(transformCallback) {
 	});
 
 	if (response.ok) {
+		logger.info(`Starting transformation for blob ${process.env.BLOB_ID}`);
+
 		const records = await transformCallback(response);
 		const failedRecords = records.filter(r => r.validation.failed);
 
@@ -94,15 +71,23 @@ export async function startTransformation(transformCallback) {
 			})
 		});
 
+		logger.info('Transformation done');
+
 		if (response.ok) {
 			if (!abortOnInvalid || failedRecords.length === 0) {
-				const channel = await queue.createChannel();
+				const channel = await connection.createChannel();
 
-				records.filter(r => !r.validation.failed).forEach(async record => {
-					const message = Buffer.from(JSON.stringify(record));
-					channel.assertQueue(process.env.QUEUE_NAME);
-					await channel.sendToQueue(process.env.QUEUE_NAME, message);
-				});
+				const result = await Promise.all(records
+					.filter(r => !r.validation.failed)
+					.map(async record => {
+						const message = Buffer.from(JSON.stringify(record));
+						channel.assertQueue(process.env.QUEUE_NAME);
+						await channel.sendToQueue(process.env.QUEUE_NAME, message);
+					}));
+
+				await channel.close();
+				await connection.close();
+				logger.info(`${result.length} records sent to queue`);
 			}
 		} else {
 			throw new Error(`Updating blob state failed: ${response.status} ${response.statusText}`);

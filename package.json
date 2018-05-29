@@ -34,8 +34,12 @@
 		"travisci": "npm run check-and-build",
 		"publish-to-npm": "npm install && npm run lint && npm test && npm run coverage && npm publish --access=public"
 	},
-	"devDependencies": {
+	"dependencies": {
 		"amqplib": "^0.5.2",
+		"node-fetch": "^2.1.2",
+		"winston": "^2.4.2"
+	},
+	"devDependencies": {
 		"babel-cli": "^6.26.0",
 		"babel-plugin-istanbul": "^4.1.5",
 		"babel-preset-env": "^1.6.1",
@@ -47,7 +51,6 @@
 		"git-scripts": "^0.2.1",
 		"istanbul": "^0.4.5",
 		"mocha": "^4.0.1",
-		"node-fetch": "^2.1.2",
 		"nodemon": "^1.12.4",
 		"npm-check-updates": "^2.13.0",
 		"nyc": "^11.3.0",
