@@ -83,7 +83,7 @@ export async function startTransformation(transformCallback) {
 					.filter(r => !r.validation.failed)
 					.map(async record => {
 						const message = Buffer.from(JSON.stringify(record));
-						await channel.sendToQueue(process.env.QUEUE_NAME, message);
+						await channel.sendToQueue(process.env.QUEUE_NAME, message, { persistent: true });
 					}));
 
 				await channel.close();
