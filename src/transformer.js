@@ -76,17 +76,19 @@ export async function startTransformation(transformCallback) {
 		if (response.ok) {
 			if (!abortOnInvalid || failedRecords.length === 0) {
 				const channel = await connection.createChannel();
+				
+				channel.assertQueue(process.env.QUEUE_NAME);
 
 				const result = await Promise.all(records
 					.filter(r => !r.validation.failed)
 					.map(async record => {
 						const message = Buffer.from(JSON.stringify(record));
-						channel.assertQueue(process.env.QUEUE_NAME);
 						await channel.sendToQueue(process.env.QUEUE_NAME, message);
 					}));
 
 				await channel.close();
 				await connection.close();
+
 				logger.info(`${result.length} records sent to queue`);
 			}
 		} else {
