@@ -55,7 +55,7 @@ export async function startImport(importCallback) {
 	const connection = await amqp.connect(process.env.AMQP_URL);
 	const channel = await connection.createChannel();
 
-	channel.assertQueue(process.env.QUEUE_NAME, { durable: true });
+	channel.assertQueue(process.env.QUEUE_NAME, {durable: true});
 
 	logger.info(`Ready to consume messages from the queue ${process.env.QUEUE_NAME}`);
 	await consume();

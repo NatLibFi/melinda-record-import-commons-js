@@ -77,7 +77,7 @@ export async function startTransformation(transformCallback) {
 			if (!abortOnInvalid || failedRecords.length === 0) {
 				const channel = await connection.createChannel();
 
-				channel.assertQueue(process.env.QUEUE_NAME, { durable: true });
+				channel.assertQueue(process.env.QUEUE_NAME, {durable: true});
 
 				const result = await Promise.all(records
 					.filter(r => !r.validation.failed)
