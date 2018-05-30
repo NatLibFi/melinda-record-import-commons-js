@@ -38,9 +38,8 @@ const MANDATORY_ENV_VARIABLES = [
 	'API_URL',
 	'API_USERNAME',
 	'API_PASSWORD',
-	'BLOB_ID',
-	'AMQP_URL',
-	'QUEUE_NAME'
+	'PROFILE_ID',
+	'AMQP_URL'
 ];
 
 export function checkEnv() {
@@ -55,18 +54,18 @@ export async function startImport(importCallback) {
 	const connection = await amqp.connect(process.env.AMQP_URL);
 	const channel = await connection.createChannel();
 
-	channel.assertQueue(process.env.QUEUE_NAME, {durable: true});
+	channel.assertQueue(process.env.PROFILE_ID, {durable: true});
 
-	logger.info(`Ready to consume messages from the queue ${process.env.QUEUE_NAME}`);
+	logger.info(`Ready to consume messages from queue ${process.env.PROFILE_ID}`);
 	await consume();
 
 	async function consume(tries = 0) {
-		const message = await channel.get(process.env.QUEUE_NAME);
+		const message = await channel.get(process.env.PROFILE_ID);
 
 		if (message) {
-			logger.debug('Message received');
+			logger.debug('Record received');
 
-			let response = await fetch(`${process.env.API_URL}/blobs/${process.env.BLOB_ID}`, {
+			let response = await fetch(`${process.env.API_URL}/blobs/${message.fields.routingKey}`, {
 				headers: Object.assign({'Content-Type': 'application/json'}, httpHeaders)
 			});
 
@@ -74,35 +73,35 @@ export async function startImport(importCallback) {
 				const metadata = await response.json();
 
 				if (metadata.state === 'ABORTED') {
-					logger.info('Blob state is set to ABORTED. Stopping import');
-					await channel.nack(message);
-				} else {
-					let importResult;
-
-					try {
-						importResult = await importCallback(message);
-					} catch (err) {
-						await channel.ack(message, false, true);
-						logger.error(err);
-						throw err;
-					}
-
-					await channel.ack(message);
-
-					response = await fetch(`${process.env.API_URL}/blobs/${process.env.BLOB_ID}`, {
-						method: 'POST',
-						headers: Object.assign({'Content-Type': 'application/json'}, httpHeaders),
-						body: JSON.stringify({
-							op: 'recordProcessed',
-							content: importResult
-						})
-					});
-
-					if (response.ok) {
-						return consume();
-					}
-					throw new Error(`Updating blob state failed: ${response.status} ${response.statusText}`);
+					logger.info('Blob state is set to ABORTED. Ditching message');
+					await channel.nack(message, false, false);
+					return consume();
 				}
+				let importResult;
+
+				try {
+					importResult = await importCallback(message);
+				} catch (err) {
+					await channel.ack(message, false, true);
+					logger.error(err);
+					throw err;
+				}
+
+				await channel.ack(message);
+
+				response = await fetch(`${process.env.API_URL}/blobs/${process.env.BLOB_ID}`, {
+					method: 'POST',
+					headers: Object.assign({'Content-Type': 'application/json'}, httpHeaders),
+					body: JSON.stringify({
+						op: 'recordProcessed',
+						content: importResult
+					})
+				});
+
+				if (response.ok) {
+					return consume();
+				}
+				throw new Error(`Updating blob state failed: ${response.status} ${response.statusText}`);
 			} else {
 				throw new Error(`Fetching blob metadata failed: ${response.status} ${response.statusText}`);
 			}

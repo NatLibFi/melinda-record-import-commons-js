@@ -38,7 +38,7 @@ const MANDATORY_ENV_VARIABLES = [
 	'API_PASSWORD',
 	'BLOB_ID',
 	'AMQP_URL',
-	'QUEUE_NAME'
+	'PROFILE_ID'
 ];
 
 export function checkEnv() {
@@ -51,50 +51,65 @@ export async function startTransformation(transformCallback) {
 	const connection = await amqp.connect(process.env.AMQP_URL);
 	const abortOnInvalid = process.env.ABORT_ON_INVALID_RECORDS || false;
 
-	let response = await fetch(`${process.env.API_URL}/blobs/${process.env.BLOB_ID}/content`, {
-		headers: httpHeaders
-	});
-
-	if (response.ok) {
-		logger.info(`Starting transformation for blob ${process.env.BLOB_ID}`);
-
-		const records = await transformCallback(response);
-		const failedRecords = records.filter(r => r.validation.failed);
-
-		response = await fetch(`${process.env.API_URL}/blobs/${process.env.BLOB_ID}`, {
-			method: 'POST',
-			headers: Object.assign({'Content-Type': 'application/json'}, httpHeaders),
-			body: JSON.stringify({
-				op: 'transformationDone',
-				numberOfRecords: records.length,
-				failedRecords: failedRecords.map(r => r.validation.messages)
-			})
+	try {
+		let response = await fetch(`${process.env.API_URL}/blobs/${process.env.BLOB_ID}/content`, {
+			headers: httpHeaders
 		});
 
-		logger.info('Transformation done');
-
 		if (response.ok) {
-			if (!abortOnInvalid || failedRecords.length === 0) {
-				const channel = await connection.createChannel();
+			logger.info(`Starting transformation for blob ${process.env.BLOB_ID}`);
 
-				channel.assertQueue(process.env.QUEUE_NAME, {durable: true});
+			const records = await transformCallback(response);
+			const failedRecords = records.filter(r => r.validation.failed);
 
-				const result = await Promise.all(records
-					.filter(r => !r.validation.failed)
-					.map(async record => {
-						const message = Buffer.from(JSON.stringify(record));
-						await channel.sendToQueue(process.env.QUEUE_NAME, message, {persistent: true});
-					}));
+			response = await fetch(`${process.env.API_URL}/blobs/${process.env.BLOB_ID}`, {
+				method: 'POST',
+				headers: Object.assign({'Content-Type': 'application/json'}, httpHeaders),
+				body: JSON.stringify({
+					op: 'transformationDone',
+					numberOfRecords: records.length,
+					failedRecords: failedRecords.map(r => r.validation.messages)
+				})
+			});
 
-				await channel.close();
-				await connection.close();
+			logger.info('Transformation done');
 
-				logger.info(`${result.length} records sent to queue ${process.env.QUEUE_NAME}`);
+			if (response.ok) {
+				if (!abortOnInvalid || failedRecords.length === 0) {
+					const channel = await connection.createChannel();
+
+					await channel.assertQueue(process.env.PROFILE_ID, {durable: true});
+					await channel.assertExchange(process.env.BLOB_ID, 'direct', {autoDelete: true});
+					await channel.bindQueue(process.env.PROFILE_ID, process.env.BLOB_ID, process.env.BLOB_ID);
+
+					const count = await sendRecords(channel, records.filter(r => !r.validation.failed));
+
+					await channel.unbindQueue(process.env.PROFILE_ID, process.env.BLOB_ID, process.env.BLOB_ID);
+					await channel.close();
+					await connection.close();
+
+					logger.info(`${count} records sent to queue ${process.env.PROFILE_ID}`);
+				}
+			} else {
+				throw new Error(`Updating blob state failed: ${response.status} ${response.statusText}`);
 			}
 		} else {
-			throw new Error(`Updating blob state failed: ${response.status} ${response.statusText}`);
+			throw new Error(`Fetching blob content failed: ${response.status} ${response.statusText}`);
 		}
-	} else {
-		throw new Error(`Fetching blob content failed: ${response.status} ${response.statusText}`);
+	} catch (err) {
+		await connection.close();
+		throw err;
+	}
+
+	async function sendRecords(channel, records, count = 0) {
+		const record = records.shift();
+
+		if (record) {
+			const message = Buffer.from(JSON.stringify(record));
+			logger.debug('Sending a record to the queue');
+			await channel.publish(process.env.BLOB_ID, process.env.BLOB_ID, message, {persistent: true});
+			return sendRecords(channel, records, count + 1);
+		}
+		return count;
 	}
 }
