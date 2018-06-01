@@ -32,5 +32,6 @@
 
 import * as TransformerUtils from './transformer';
 import * as ImporterUtils from './importer';
+import * as configurationGeneral from './configurationGeneral';
 
-export {TransformerUtils, ImporterUtils};
+export {TransformerUtils, ImporterUtils, configurationGeneral};
