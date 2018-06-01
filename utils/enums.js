@@ -59,9 +59,13 @@ exports.errorTypes = {
     invalidSyntax: 'request.mismatch.id',
     unauthorized: 'request.authentication.unauthorized',
     forbiden: 'request.authentication.forbiden',
+    missing: 'request.profile.missing',
     unknown: 'unknown'
 }
 
 exports.jobs = {
-    pollBlobs: 'poll.GET./blobs/'
+    pollBlobs: 'poll.GET./blobs/',
+    pollBlobsPending: 'poll.GET./blobs/.pending',
+    pollBlobsTransformed: 'poll.GET./blobs/.transformed',
+    pollBlobsAborted: 'poll.GET./blobs/.aborted',
 }

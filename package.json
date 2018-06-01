@@ -1,4 +1,4 @@
-{
+    {
 	"name": "@natlibfi/melinda-record-import-commons",
 	"description": "Shared modules for microservices of Melinda record batch import system",
 	"author": {

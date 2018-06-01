@@ -31,10 +31,13 @@
 'use strict';
 var enums = require('../melinda-record-import-commons/utils/enums');
 
-exports.hostname = process.env.hostname || 'localhost';
-exports.environment = enums.environment.development;
+exports.hostname = "127.0.0.1" || 'localhost';
 exports.portAPI = 3000;
 exports.portController = 3001;
+
+exports.urlAPI = 'http://127.0.0.1:3000';
+
+exports.environment = enums.environment.development;
 
 exports.mongodb = {
     uri: process.env.MONGODB_URI || process.env.MONGOLAB_URI || process.env.MONGOHQ_URL || 'mongodb://generalAdmin:ToDoChangeAdmin@127.0.0.1:27017/melinda-record-import-api'
@@ -49,4 +52,6 @@ exports.agendaMongo = {
 
 exports.mongoDebug = false;
 
-exports.logs = true;
+exports.logs = false;
+
+exports.seedDB = true;

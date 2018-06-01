@@ -33,6 +33,7 @@ module.exports = {
     Created: 201,
     Accepted: 202,
     NoContent: 204,
+    Updated: 204,
     Malformed: 400,
     BadRequest: 400,
     Unauthorized: 401,
