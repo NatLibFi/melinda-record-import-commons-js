@@ -1,6 +1,6 @@
 /**
 *
-* @licstart  The following is the entire license notice for the JavaScript code in this file. 
+* @licstart  The following is the entire license notice for the JavaScript code in this file.
 *
 * Shared modules for microservices of Melinda record batch import system
 *
@@ -30,7 +30,7 @@
 
 'use strict';
 
-import {expect} from 'chai';
+/* Import {expect} from 'chai';
 import * as testContext from '../src/index';
 
-describe.skip('index');
+describe.skip('index'); */

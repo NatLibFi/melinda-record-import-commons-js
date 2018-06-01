@@ -1,6 +1,6 @@
 /**
 *
-* @licstart  The following is the entire license notice for the JavaScript code in this file. 
+* @licstart  The following is the entire license notice for the JavaScript code in this file.
 *
 * Shared modules for microservices of Melinda record batch import system
 *
@@ -26,6 +26,11 @@
 *
 */
 
-/* eslint-disable no-unused-vars */
+/* eslint-disable import/default */
 
 'use strict';
+
+import * as TransformerUtils from './transformer';
+import * as ImporterUtils from './importer';
+
+export {TransformerUtils, ImporterUtils};
