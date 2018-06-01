@@ -1,6 +1,6 @@
 /**
 *
-* @licstart  The following is the entire license notice for the JavaScript code in this file. 
+* @licstart  The following is the entire license notice for the JavaScript code in this file.
 *
 * API microservice of Melinda record batch import system
 *
@@ -29,22 +29,22 @@
 /* eslint-disable no-unused-vars */
 
 module.exports = {
-    OK: 200,
-    Created: 201,
-    Accepted: 202,
-    NoContent: 204,
-    Updated: 204,
-    Malformed: 400,
-    BadRequest: 400,
-    Unauthorized: 401,
-    Forbidden: 403,
-    NotFound: 404,
-    MethodNotAllowed: 405,
-    Conflict: 409,
-    Teapot: 418,
-    ValidationError: 422,
-    InternalServerError: 500,
-    NotImplemented: 501,
-    BadGateway: 502,
-    ServiceUnavailable: 503
+	OK: 200,
+	Created: 201,
+	Accepted: 202,
+	NoContent: 204,
+	Updated: 204,
+	Malformed: 400,
+	BadRequest: 400,
+	Unauthorized: 401,
+	Forbidden: 403,
+	NotFound: 404,
+	MethodNotAllowed: 405,
+	Conflict: 409,
+	Teapot: 418,
+	ValidationError: 422,
+	InternalServerError: 500,
+	NotImplemented: 501,
+	BadGateway: 502,
+	ServiceUnavailable: 503
 };

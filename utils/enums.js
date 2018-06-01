@@ -1,6 +1,6 @@
 /**
 *
-* @licstart  The following is the entire license notice for the JavaScript code in this file. 
+* @licstart  The following is the entire license notice for the JavaScript code in this file.
 *
 * API microservice of Melinda record batch import system
 *
@@ -30,42 +30,42 @@
 
 'use strict';
 exports.environment = {
-    production: 'production',
-    development: 'development',
-    testing: 'testing'
+	production: 'production',
+	development: 'development',
+	testing: 'testing'
 };
 
 exports.blobStates = {
-    pending: 'PENDING_TRANSFORMATION',
-    inProgress: 'TRANSFORMATION_IN_PROGRESS',
-    failed: 'TRANSFORMATION_FAILED',
-    transformed: 'TRANSFORMED',
-    processed: 'PROCESSED',
-    aborted: 'ABORTED'
+	pending: 'PENDING_TRANSFORMATION',
+	inProgress: 'TRANSFORMATION_IN_PROGRESS',
+	failed: 'TRANSFORMATION_FAILED',
+	transformed: 'TRANSFORMED',
+	processed: 'PROCESSED',
+	aborted: 'ABORTED'
 };
 
 exports.recodImportStatuses = {
-    created: 'CREATED', 
-    updated: 'UPDATED', 
-    invalid: 'INVALID', 
-    duplicate: 'DUPLICATE', 
-    multiple: 'MULTIPLE_MATCHES', 
-    error: 'ERROR'
-}
+	created: 'CREATED',
+	updated: 'UPDATED',
+	invalid: 'INVALID',
+	duplicate: 'DUPLICATE',
+	multiple: 'MULTIPLE_MATCHES',
+	error: 'ERROR'
+};
 
 exports.errorTypes = {
-    parseFailed: 'entity.parse.failed',
-    notObject: 'entity.not.object',
-    invalidSyntax: 'request.mismatch.id',
-    unauthorized: 'request.authentication.unauthorized',
-    forbiden: 'request.authentication.forbiden',
-    missing: 'request.profile.missing',
-    unknown: 'unknown'
-}
+	parseFailed: 'entity.parse.failed',
+	notObject: 'entity.not.object',
+	invalidSyntax: 'request.mismatch.id',
+	unauthorized: 'request.authentication.unauthorized',
+	forbiden: 'request.authentication.forbiden',
+	missing: 'request.profile.missing',
+	unknown: 'unknown'
+};
 
 exports.jobs = {
-    pollBlobs: 'poll.GET./blobs/',
-    pollBlobsPending: 'poll.GET./blobs/.pending',
-    pollBlobsTransformed: 'poll.GET./blobs/.transformed',
-    pollBlobsAborted: 'poll.GET./blobs/.aborted',
-}
+	pollBlobs: 'poll.GET./blobs/',
+	pollBlobsPending: 'poll.GET./blobs/.pending',
+	pollBlobsTransformed: 'poll.GET./blobs/.transformed',
+	pollBlobsAborted: 'poll.GET./blobs/.aborted'
+};
