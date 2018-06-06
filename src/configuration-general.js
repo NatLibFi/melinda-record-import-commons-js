@@ -27,10 +27,13 @@
 */
 import {checkEnv as checkEnvShared} from './shared';
 
-'use strict';
 const enums = require('../utils/enums');
 
-export function checkEnv(MANDATORY_ENV_VARIABLES) {
+const MANDATORY_ENV_VARIABLES = [
+	'API_URL'
+];
+
+export default function checkEnv() {
 	checkEnvShared(MANDATORY_ENV_VARIABLES);
 }
 
