@@ -27,17 +27,15 @@
 */
 import {checkEnv as checkEnvShared} from './shared';
 
-const enums = require('../utils/enums');
+const enums = require('./utils/enums');
+const httpCodes = require('./utils/http-codes');
 
-const MANDATORY_ENV_VARIABLES = [
-	'API_URL'
-];
-
-export default function checkEnv() {
+export default function checkEnv(MANDATORY_ENV_VARIABLES) {
 	checkEnvShared(MANDATORY_ENV_VARIABLES);
 }
 
 exports.enums = enums;
+exports.httpCodes = httpCodes;
 
 exports.hostname = '127.0.0.1' || 'localhost';
 exports.portAPI = 3000;
