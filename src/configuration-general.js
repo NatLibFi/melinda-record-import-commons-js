@@ -37,27 +37,28 @@ export default function checkEnv(MANDATORY_ENV_VARIABLES) {
 exports.enums = enums;
 exports.httpCodes = httpCodes;
 
-exports.hostname = '127.0.0.1' || 'localhost';
-exports.portAPI = 3000;
-exports.portController = 3001;
+const hostname = process.env.HOSTNAME_API || '127.0.0.1';
+exports.hostname = hostname;
+const portAPI = process.env.PORT_API || 3000;
+exports.portAPI = portAPI;
+const portController = process.env.PORT_CNTRL || 3001;
+exports.portController = portController;
 
-exports.urlAPI = 'http://127.0.0.1:3000';
-
-exports.environment = enums.environment.development;
+exports.urlAPI = process.env.URL_API || 'http://' + hostname + ':' + portAPI;
 
 exports.mongodb = {
-	uri: process.env.MONGODB_URI || process.env.MONGOLAB_URI || process.env.MONGOHQ_URL || 'mongodb://generalAdmin:ToDoChangeAdmin@127.0.0.1:27017/melinda-record-import-api'
+	uri: process.env.MONGODB_URI || 'mongodb://generalAdmin:ToDoChangeAdmin@127.0.0.1:27017/melinda-record-import-api'
 };
 
 exports.agendaMongo = {
 	db: {
-		address: 'mongodb://generalAdmin:ToDoChangeAdmin@127.0.0.1:27017/melinda-record-import-api',
+		address: process.env.MONGODB_URI || 'mongodb://generalAdmin:ToDoChangeAdmin@127.0.0.1:27017/melinda-record-import-api',
 		collection: 'jobs'
 	}
 };
 
-exports.mongoDebug = false;
+exports.mongoDebug = process.env.MONGODB_DEBUG || false;
 
-exports.logs = false;
+exports.logs = process.env.LOGS || false;
 
-exports.seedDB = true;
+exports.seedDB = process.env.DB_SEED || true;
