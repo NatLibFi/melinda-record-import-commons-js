@@ -59,7 +59,9 @@ exports.errorTypes = {
 	invalidSyntax: 'request.mismatch.id',
 	unauthorized: 'request.authentication.unauthorized',
 	forbiden: 'request.authentication.forbiden',
-	missing: 'request.profile.missing',
+	missingProfile: 'request.profile.missing',
+	missingContentType: 'request.content.missing',
+	validation: 'request.content.validation',
 	unknown: 'unknown'
 };
 
