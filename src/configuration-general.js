@@ -59,6 +59,6 @@ exports.agendaMongo = {
 
 exports.mongoDebug = process.env.MONGODB_DEBUG || false;
 
-exports.logs = process.env.LOGS || false;
+exports.logs = process.env.DEBUG || false;
 
 exports.seedDB = process.env.DB_SEED || true;
