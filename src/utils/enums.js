@@ -60,7 +60,8 @@ exports.errorTypes = {
 	unauthorized: 'request.authentication.unauthorized',
 	forbiden: 'request.authentication.forbiden',
 	missingProfile: 'request.profile.missing',
-	missingContentType: 'request.content.missing',
+	missingContent: 'request.content.missing',
+	missingContentType: 'request.contenttype.missing',
 	validation: 'request.content.validation',
 	unknown: 'unknown'
 };
