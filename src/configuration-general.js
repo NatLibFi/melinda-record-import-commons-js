@@ -44,6 +44,8 @@ exports.portAPI = portAPI;
 const portController = process.env.PORT_CNTRL || 3001;
 exports.portController = portController;
 
+exports.requireAuthentication = process.env.REQ_AUTH !== 'false';
+
 exports.urlAPI = process.env.URL_API || 'http://' + hostname + ':' + portAPI;
 
 exports.mongodb = {
@@ -57,8 +59,8 @@ exports.agendaMongo = {
 	}
 };
 
-exports.mongoDebug = process.env.MONGODB_DEBUG || false;
+exports.mongoDebug = process.env.MONGODB_DEBUG === 'true';
 
-exports.logs = process.env.DEBUG || false;
+exports.logs = process.env.DEBUG === 'true';
 
-exports.seedDB = process.env.DB_SEED || true;
+exports.seedDB = process.env.DB_SEED !== 'false';
