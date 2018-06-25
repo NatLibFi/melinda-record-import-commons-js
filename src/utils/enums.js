@@ -54,15 +54,16 @@ exports.recodImportStatuses = {
 };
 
 exports.errorTypes = {
-	parseFailed: 'entity.parse.failed',
 	notObject: 'entity.not.object',
-	invalidSyntax: 'request.mismatch.id',
 	unauthorized: 'request.authentication.unauthorized',
 	forbiden: 'request.authentication.forbiden',
+	badRequest: 'request.bad',
 	missingProfile: 'request.profile.missing',
 	missingContent: 'request.content.missing',
 	missingContentType: 'request.contenttype.missing',
+	bodyTooLarge: 'request.body.large',
 	validation: 'request.content.validation',
+	idConflict: 'request.mismatch.id',
 	unknown: 'unknown'
 };
 

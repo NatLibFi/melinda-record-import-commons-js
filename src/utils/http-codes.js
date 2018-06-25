@@ -41,6 +41,7 @@ module.exports = {
 	NotFound: 404,
 	MethodNotAllowed: 405,
 	Conflict: 409,
+	PayloadTooLarge: 413,
 	Unsupported: 415,
 	Teapot: 418,
 	ValidationError: 422,
