@@ -44,7 +44,7 @@ exports.portAPI = portAPI;
 const portController = process.env.PORT_CNTRL || 3001;
 exports.portController = portController;
 
-exports.requireAuthentication = process.env.REQ_AUTH !== 'false'; //Default: true
+exports.requireAuthentication = process.env.REQ_AUTH !== 'false'; // Default: true
 
 exports.contentMaxLength = process.env.CONT_MAX_LENGTH || 100;
 
@@ -61,8 +61,8 @@ exports.agendaMongo = {
 	}
 };
 
-exports.mongoDebug = process.env.MONGODB_DEBUG === 'true'; //Default: false
+exports.mongoDebug = process.env.MONGODB_DEBUG === 'true'; // Default: false
 
-exports.logs = process.env.DEBUG === 'true'; //Default: false
+exports.logs = process.env.DEBUG === 'true'; // Default: false
 
-exports.seedDB = process.env.DB_SEED === 'true'; //Default: false
+exports.seedDB = process.env.DB_SEED === 'true'; // Default: false
