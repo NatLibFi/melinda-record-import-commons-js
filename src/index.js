@@ -30,8 +30,9 @@
 
 'use strict';
 
+import * as CommonUtils from './shared';
 import * as TransformerUtils from './transformer';
 import * as ImporterUtils from './importer';
 import * as configurationGeneral from './configuration-general';
 
-export {TransformerUtils, ImporterUtils, configurationGeneral};
+export {TransformerUtils, ImporterUtils, configurationGeneral, CommonUtils};
