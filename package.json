@@ -25,11 +25,10 @@
 		"lint": "eslint --fix src",
 		"test": "npm run lint",
 		"clean": "rimraf build dist",
-		"coverage": "nyc check-coverage --per-file",
 		"build:transpile": "babel src --source-maps --out-dir=dist --minified",
 		"build": "npm run clean && npm run build:transpile && npm run check-deps",
 		"watch": "cross-env DEBUG=1 NODE_ENV=test chokidar src -c 'npm test && babel-node src/index.js'",
-		"publish-to-npm": "npm install && npm test && npm run coverage && npm publish --access=public"
+		"publish-to-npm": "npm install && npm test && npm publish --access=public"
 	},
 	"dependencies": {
 		"amqplib": "^0.5.2",
