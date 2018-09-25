@@ -115,14 +115,14 @@ export async function startTransformation(transformCallback) {
 }
 
 export async function runValidation(validateFunc, records, fix = false) {
-  const opts = fix ? {fix: true, validateFixes: true} : {fix: false};
-  const results = await Promise.all(
-    records.map(r => validateFunc(r, opts))
-  );
+	const opts = fix ? {fix: true, validateFixes: true} : {fix: false};
+	const results = await Promise.all(
+		records.map(r => validateFunc(r, opts))
+	);
 
-  return results.map(result => ({
-    record: result.record,
-    failed: !result.valid,
-    messages: result.report
-  }));
+	return results.map(result => ({
+		record: result.record,
+		failed: !result.valid,
+		messages: result.report
+	}));
 }

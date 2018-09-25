@@ -26,15 +26,26 @@
 *
 */
 
+/* eslint-disable no-unused-vars, require-await */
 import http from 'http';
 import {parse as parseUrl} from 'url';
+import moment from 'moment';
 import winston from 'winston';
 
 export function createLogger() {
-	return new winston.Logger({
+	const timestamp = winston.format(info => {
+		info.timestamp = moment().format();
+		return info;
+	});
+
+	return winston.createLogger({
 		level: process.env.NODE_ENV === 'debug' ? 'debug' : 'info',
+		format: winston.format.combine(
+			timestamp(),
+			winston.format.printf(i => `${i.timestamp} - ${i.level}: ${i.message}`)
+		),
 		transports: [
-			new (winston.transports.Console)()
+			new winston.transports.Console()
 		]
 	});
 }
