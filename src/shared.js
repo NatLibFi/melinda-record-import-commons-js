@@ -80,3 +80,16 @@ export function startHealthCheckService(port = 8080) {
 		});
 	};
 }
+
+export function readEnvironmentVariable(name, defaultValue, opts) {
+	if (process.env[name] === undefined) {
+		if (defaultValue === undefined) {
+			throw new Error(`Mandatory environment variable missing: ${name}`);
+		}
+
+		const loggedDefaultValue = opts.hideDefaultValue ? '[hidden]' : defaultValue;
+		console.log('info', `No environment variable set for ${name}, using default value: ${loggedDefaultValue}`);
+	}
+
+	return process.env[name] || defaultValue;
+}
