@@ -25,7 +25,7 @@
 		"lint": "eslint --fix src",
 		"test": "npm run lint",
 		"clean": "rimraf build dist",
-		"build:transpile": "babel src --source-maps --out-dir=dist --minified",
+		"build:transpile": "babel src --source-maps --out-dir=dist",
 		"build": "npm run clean && npm run build:transpile && npm run check-deps",
 		"watch": "cross-env DEBUG=1 NODE_ENV=test chokidar src -c 'npm test && babel-node src/index.js'"
 	},
