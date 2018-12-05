@@ -39,7 +39,8 @@ export function createLogger() {
 	});
 
 	return winston.createLogger({
-		level: process.env.NODE_ENV === 'debug' ? 'debug' : 'info',
+		silent: process.env.NODE_ENV === 'test',
+		level: process.env.DEBUG ? 'debug' : 'info',
 		format: winston.format.combine(
 			timestamp(),
 			winston.format.printf(i => `${i.timestamp} - ${i.level}: ${i.message}`)
