@@ -28,9 +28,8 @@
 
 import amqp from 'amqplib';
 import fetch from 'node-fetch';
-import {checkEnv as checkEnvShared, generateHttpAuthorizationHeader, createLogger} from './shared';
-
-export {registerSignalHandlers, startHealthCheckService, createLogger} from './shared';
+import {checkEnv as checkEnvShared, generateHttpAuthorizationHeader, createLogger} from './common';
+import {RECORD_IMPORT_STATE} from './constants';
 
 const MAX_MESSAGE_TRIES = 3;
 const MESSAGE_WAIT_TIME = 3000;
@@ -48,9 +47,15 @@ export function checkEnv() {
 
 export async function startImport(importCallback) {
 	const logger = createLogger();
-	const httpHeaders = generateHttpAuthorizationHeader(process.env.API_USERNAME, process.env.API_PASSWORD);
+
 	const maxMessageTries = 'QUEUE_MAX_MESSAGE_TRIES' in process.env ? process.env.QUEUE_MAX_MESSAGE_TRIES : MAX_MESSAGE_TRIES;
 	const messageWaitTime = 'QUEUE_MESSAGE_WAIT_TIME' in process.env ? process.env.QUEUE_MESSAGE_WAIT_TIME : MESSAGE_WAIT_TIME;
+
+	const httpHeaders = {
+		'Content-Type': 'application/json',
+		Authorization: generateHttpAuthorizationHeader(process.env.API_USERNAME, process.env.API_PASSWORD)
+	};
+
 	const connection = await amqp.connect(process.env.AMQP_URL);
 	const channel = await connection.createChannel();
 
@@ -66,13 +71,13 @@ export async function startImport(importCallback) {
 			logger.debug('Record received');
 
 			let response = await fetch(`${process.env.API_URL}/blobs/${message.fields.routingKey}`, {
-				headers: Object.assign({'Content-Type': 'application/json'}, httpHeaders)
+				headers: httpHeaders
 			});
 
 			if (response.ok) {
 				const metadata = await response.json();
 
-				if (metadata.state === 'ABORTED') {
+				if (metadata.state === RECORD_IMPORT_STATE.aborted) {
 					logger.info('Blob state is set to ABORTED. Ditching message');
 					await channel.nack(message, false, false);
 					return consume();
@@ -91,7 +96,7 @@ export async function startImport(importCallback) {
 
 				response = await fetch(`${process.env.API_URL}/blobs/${process.env.BLOB_ID}`, {
 					method: 'POST',
-					headers: Object.assign({'Content-Type': 'application/json'}, httpHeaders),
+					headers: httpHeaders,
 					body: JSON.stringify({
 						op: 'recordProcessed',
 						content: importResult

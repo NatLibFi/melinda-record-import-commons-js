@@ -26,12 +26,36 @@
 *
 */
 
-import * as TransformerUtils from './transformer';
-import * as ImporterUtils from './importer';
-import * as HarvesterUtils from './harvester';
+import fs from 'fs';
+import path from 'path';
+import yargs from 'yargs';
+import {sync as rmdir} from 'rimraf';
 
-export * from './common';
-export * from './constants';
-export * from './api-client';
+export async function cli(name, callback) {
+	const args = yargs
+		.scriptName(name)
+		.command('$0 <outputDirectory>', '', yargs => {
+			yargs
+				.positional('outputDirectory', {type: 'string', describe: 'Directory to write files to'})
+				.option('y', {alias: 'overwriteDirectory', default: false, type: 'boolean', describe: 'Recreate the output directory if it exists'});
+		})
+		.parse();
 
-export {TransformerUtils, ImporterUtils, HarvesterUtils};
+	if (fs.existsSync(args.outputDirectory)) {
+		if (args.overwriteDirectory) {
+			rmdir(args.outputDirectory);
+		} else {
+			console.error(`Directory ${args.outputDirectory} already exists!`);
+			process.exit(-1);
+		}
+	}
+
+	fs.mkdirSync(args.outputDirectory);
+
+	let count = 0;
+
+	await callback(data => {
+		fs.writeFileSync(path.join(args.outputDirectory, String(count)), data);
+		count++;
+	});
+}

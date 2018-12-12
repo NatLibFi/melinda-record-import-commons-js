@@ -26,79 +26,58 @@
 *
 */
 
+/* Not sure why this is needed only in this module... */
+/* eslint-disable import/default */
+
 import amqp from 'amqplib';
-import fetch from 'node-fetch';
-import {checkEnv as checkEnvShared, generateHttpAuthorizationHeader, createLogger} from './shared';
-
-export {registerSignalHandlers, startHealthCheckService, createLogger} from './shared';
-
-const MANDATORY_ENV_VARIABLES = [
-	'API_URL',
-	'API_USERNAME',
-	'API_PASSWORD',
-	'BLOB_ID',
-	'AMQP_URL',
-	'PROFILE_ID'
-];
+import {checkEnv as checkEnvShared, createLogger} from './common';
+import {BLOB_STATE} from './constants';
+import createApiClient from './api-client';
 
 export function checkEnv() {
-	checkEnvShared(MANDATORY_ENV_VARIABLES);
+	checkEnvShared([
+		'API_URL',
+		'API_USERNAME',
+		'API_PASSWORD',
+		'BLOB_ID',
+		'AMQP_URL',
+		'PROFILE_ID'
+	]);
 }
 
-export async function startTransformation(transformCallback) {
+export async function startTransformation({callback, blobId, profile, apiURL, apiUsername, apiPassword, amqpURL, abortOnInvalid = false}) {
 	const logger = createLogger();
-	const httpHeaders = generateHttpAuthorizationHeader(process.env.API_USERNAME, process.env.API_PASSWORD);
-	const connection = await amqp.connect(process.env.AMQP_URL);
-	const abortOnInvalid = process.env.ABORT_ON_INVALID_RECORDS || false;
+	const connection = await amqp.connect(amqpURL);
+	const client = createApiClient({apiURL, apiUsername, apiPassword});
+	const readStream = await client.readBlobContent(blobId);
 
-	try {
-		let response = await fetch(`${process.env.API_URL}/blobs/${process.env.BLOB_ID}/content`, {
-			headers: httpHeaders
-		});
+	logger.info(`Starting transformation for blob ${blobId}`);
+	const records = await callback(readStream);
 
-		if (response.ok) {
-			logger.info(`Starting transformation for blob ${process.env.BLOB_ID}`);
+	const failedRecords = records.filter(r => r.validation.failed);
 
-			const records = await transformCallback(response);
-			const failedRecords = records.filter(r => r.validation.failed);
+	await client.updateBlobMetadata({
+		state: BLOB_STATE.transformed,
+		numberOfRecords: records.length,
+		failedRecords
+	});
 
-			response = await fetch(`${process.env.API_URL}/blobs/${process.env.BLOB_ID}`, {
-				method: 'POST',
-				headers: Object.assign({'Content-Type': 'application/json'}, httpHeaders),
-				body: JSON.stringify({
-					op: 'transformationDone',
-					numberOfRecords: records.length,
-					failedRecords: failedRecords.map(r => r.validation.messages)
-				})
-			});
+	logger.info('Transformation done');
 
-			logger.info('Transformation done');
+	if (!abortOnInvalid || failedRecords.length === 0) {
+		const channel = await connection.createChannel();
 
-			if (response.ok) {
-				if (!abortOnInvalid || failedRecords.length === 0) {
-					const channel = await connection.createChannel();
+		await channel.assertQueue(profile, {durable: true});
+		await channel.assertExchange(blobId, 'direct', {autoDelete: true});
+		await channel.bindQueue(profile, blobId, blobId);
 
-					await channel.assertQueue(process.env.PROFILE_ID, {durable: true});
-					await channel.assertExchange(process.env.BLOB_ID, 'direct', {autoDelete: true});
-					await channel.bindQueue(process.env.PROFILE_ID, process.env.BLOB_ID, process.env.BLOB_ID);
+		const count = await sendRecords(channel, records.filter(r => !r.validation.failed));
 
-					const count = await sendRecords(channel, records.filter(r => !r.validation.failed));
-
-					await channel.unbindQueue(process.env.PROFILE_ID, process.env.BLOB_ID, process.env.BLOB_ID);
-					await channel.close();
-					await connection.close();
-
-					logger.info(`${count} records sent to queue ${process.env.PROFILE_ID}`);
-				}
-			} else {
-				throw new Error(`Updating blob state failed: ${response.status} ${response.statusText}`);
-			}
-		} else {
-			throw new Error(`Fetching blob content failed: ${response.status} ${response.statusText}`);
-		}
-	} catch (err) {
+		await channel.unbindQueue(profile, blobId, blobId);
+		await channel.close();
 		await connection.close();
-		throw err;
+
+		logger.info(`${count} records sent to queue ${profile}`);
 	}
 
 	async function sendRecords(channel, records, count = 0) {
@@ -107,7 +86,7 @@ export async function startTransformation(transformCallback) {
 		if (record) {
 			const message = Buffer.from(JSON.stringify(record));
 			logger.debug('Sending a record to the queue');
-			await channel.publish(process.env.BLOB_ID, process.env.BLOB_ID, message, {persistent: true});
+			await channel.publish(blobId, blobId, message, {persistent: true});
 			return sendRecords(channel, records, count + 1);
 		}
 		return count;

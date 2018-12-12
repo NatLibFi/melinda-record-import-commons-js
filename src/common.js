@@ -26,9 +26,8 @@
 *
 */
 
-/* eslint-disable no-unused-vars, require-await */
 import http from 'http';
-import {parse as parseUrl} from 'url';
+import {URL} from 'url';
 import moment from 'moment';
 import winston from 'winston';
 
@@ -58,7 +57,7 @@ export function registerSignalHandlers() {
 }
 
 export function generateHttpAuthorizationHeader(username, password) {
-	return {Authorization: `Basic ${Buffer.from(`{username}:${password}`).toString('base64')}`};
+	return `Basic ${Buffer.from(`{username}:${password}`).toString('base64')}`;
 }
 
 export function checkEnv(mandatoryVariables) {
@@ -71,8 +70,9 @@ export function checkEnv(mandatoryVariables) {
 
 export function startHealthCheckService(port = 8080) {
 	const server = http.createServer((req, res) => {
-		const path = parseUrl(req.url);
-		res.statusCode = path === '/healthz' ? 200 : 404;
+		const requestURL = new URL(req.url);
+
+		res.statusCode = requestURL.pathname === '/healthz' ? 200 : 404;
 		res.end();
 	}).listen(port);
 	return async function () {
@@ -82,7 +82,7 @@ export function startHealthCheckService(port = 8080) {
 	};
 }
 
-export function readEnvironmentVariable(name, defaultValue, opts={}) {
+export function readEnvironmentVariable(name, defaultValue, opts = {}) {
 	if (process.env[name] === undefined) {
 		if (defaultValue === undefined) {
 			throw new Error(`Mandatory environment variable missing: ${name}`);
