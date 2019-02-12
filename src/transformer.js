@@ -4,7 +4,7 @@
 *
 * Shared modules for microservices of Melinda record batch import system
 *
-* Copyright (C) 2018 University Of Helsinki (The National Library Of Finland)
+* Copyright (C) 2018-2019 University Of Helsinki (The National Library Of Finland)
 *
 * This file is part of melinda-record-import-commons
 *
@@ -92,6 +92,7 @@ export async function startTransformation({callback, blobId, profile, apiURL, ap
 			await channel.publish(blobId, blobId, message, {persistent: true});
 			return sendRecords(channel, records, count + 1);
 		}
+
 		return count;
 	}
 }

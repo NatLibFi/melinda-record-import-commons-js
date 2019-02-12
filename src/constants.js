@@ -26,6 +26,12 @@
 *
 */
 
+export const ENVIRONMENT = {
+	production: 'production',
+	development: 'development',
+	testing: 'testing'
+};
+
 export const BLOB_STATE = {
 	pending: 'PENDING_TRANSFORMATION',
 	inProgress: 'TRANSFORMATION_IN_PROGRESS',
@@ -65,5 +71,26 @@ export const HTTP_CODES = {
 	NotImplemented: 501,
 	BadGateway: 502,
 	ServiceUnavailable: 503
+};
+
+export const ERROR_TYPES = {
+	notObject: 'entity.not.object',
+	unauthorized: 'request.authentication.unauthorized',
+	forbiden: 'request.authentication.forbiden',
+	badRequest: 'request.bad',
+	missingProfile: 'request.profile.missing',
+	missingContent: 'request.content.missing',
+	missingContentType: 'request.contenttype.missing',
+	bodyTooLarge: 'request.body.large',
+	validation: 'request.content.validation',
+	idConflict: 'request.mismatch.id',
+	unknown: 'unknown'
+};
+
+export const JOBS = {
+	pollBlobs: 'poll.GET./blobs/',
+	pollBlobsPending: 'poll.GET./blobs/.pending',
+	pollBlobsTransformed: 'poll.GET./blobs/.transformed',
+	pollBlobsAborted: 'poll.GET./blobs/.aborted'
 };
 

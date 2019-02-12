@@ -4,7 +4,7 @@
 *
 * Shared modules for microservices of Melinda record batch import system
 *
-* Copyright (C) 2018 University Of Helsinki (The National Library Of Finland)
+* Copyright (C) 2018-2019 University Of Helsinki (The National Library Of Finland)
 *
 * This file is part of melinda-record-import-commons
 *
@@ -82,6 +82,7 @@ export async function startImport(importCallback) {
 					await channel.nack(message, false, false);
 					return consume();
 				}
+
 				let importResult;
 
 				try {
@@ -106,6 +107,7 @@ export async function startImport(importCallback) {
 				if (response.ok) {
 					return consume();
 				}
+
 				throw new Error(`Updating blob state failed: ${response.status} ${response.statusText}`);
 			} else {
 				throw new Error(`Fetching blob metadata failed: ${response.status} ${response.statusText}`);
