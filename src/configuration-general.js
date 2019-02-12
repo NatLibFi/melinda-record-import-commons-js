@@ -4,7 +4,7 @@
 *
 * Shared modules for microservices of Melinda record batch import system
 *
-* Copyright (C) 2018 University Of Helsinki (The National Library Of Finland)
+* Copyright (C) 2018-2019 University Of Helsinki (The National Library Of Finland)
 *
 * This file is part of melinda-record-import-commons
 *
@@ -27,15 +27,9 @@
 */
 import {checkEnv as checkEnvShared} from './shared';
 
-const enums = require('./utils/enums');
-const httpCodes = require('./utils/http-codes');
-
 export default function checkEnv(MANDATORY_ENV_VARIABLES) {
 	checkEnvShared(MANDATORY_ENV_VARIABLES);
 }
-
-exports.enums = enums;
-exports.httpCodes = httpCodes;
 
 const hostname = process.env.HOSTNAME_API || '127.0.0.1';
 exports.hostname = hostname;
