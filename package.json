@@ -21,7 +21,7 @@
 	},
 	"scripts": {
 		"prepublishOnly": "npm run build:transpile",
-		"check-deps": "npm-check;exit 0",
+		"check-deps": "npm-check || exit 0",
 		"lint": "eslint --fix src",
 		"test": "npm run lint",
 		"build:transpile": "babel src --source-maps --delete-dir-on-start --out-dir=dist",
