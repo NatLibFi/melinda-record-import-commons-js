@@ -91,6 +91,7 @@ export const JOBS = {
 	pollBlobs: 'poll.GET./blobs/',
 	pollBlobsPending: 'poll.GET./blobs/.pending',
 	pollBlobsTransformed: 'poll.GET./blobs/.transformed',
-	pollBlobsAborted: 'poll.GET./blobs/.aborted'
+	pollBlobsAborted: 'poll.GET./blobs/.aborted',
+	checkContainerHealth: 'check.docker.container.health'
 };
 
