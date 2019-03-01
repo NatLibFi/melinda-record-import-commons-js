@@ -19,6 +19,9 @@
 	"engines": {
 		"node": ">=8"
 	},
+	"bin": {
+		"healthz": "./src/health-check.js"
+	},
 	"scripts": {
 		"prepublishOnly": "npm run build:transpile",
 		"check-deps": "npm-check || exit 0",
