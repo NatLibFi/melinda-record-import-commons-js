@@ -57,7 +57,7 @@ export function registerSignalHandlers() {
 }
 
 export function generateHttpAuthorizationHeader(username, password) {
-	return `Basic ${Buffer.from(`{username}:${password}`).toString('base64')}`;
+	return `Basic ${Buffer.from(`${username}:${password}`).toString('base64')}`;
 }
 
 export function checkEnv(mandatoryVariables) {

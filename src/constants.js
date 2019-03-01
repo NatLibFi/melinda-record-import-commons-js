@@ -41,6 +41,14 @@ export const BLOB_STATE = {
 	aborted: 'ABORTED'
 };
 
+export const BLOB_UPDATE_OPERATIONS = {
+	abort: 'abort',
+	transformationStarted: 'transformationStarted',
+	transformationDone: 'transformationDone',
+	transformationFailed: 'transformationFailed',
+	recordProcessed: 'recordProcessed'
+};
+
 export const RECORD_IMPORT_STATE = {
 	created: 'CREATED',
 	updated: 'UPDATED',

@@ -32,7 +32,7 @@ import {generateHttpAuthorizationHeader} from './common';
 
 export class ApiClientError extends Error {
 	constructor(status, ...params) {
-		super(params);
+		super(status, ...params);
 		this.status = status;
 	}
 }
@@ -108,14 +108,16 @@ export function createApiClient({url, username, password}) {
 		throw new ApiClientError(response.status);
 	}
 
-	async function updateBlobMetadata({id, op, numberOfRecords, failedRecords}) {
+	async function updateBlobMetadata({id, op, numberOfRecords, failedRecords, error}) {
+		const body = JSON.stringify(error ? {op, error} : {op, numberOfRecords, failedRecords});
+		console.log(body);
 		const response = await fetch(`${url}/blobs/${id}`, {
+			body,
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
 				Authorization: authHeader
-			},
-			body: JSON.stringify({op, numberOfRecords, failedRecords})
+			}
 		});
 
 		if (response.status !== HttpStatus.NO_CONTENT) {
