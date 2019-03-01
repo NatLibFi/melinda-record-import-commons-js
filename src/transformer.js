@@ -34,7 +34,7 @@ import yargs from 'yargs';
 import ora from 'ora';
 import amqp from 'amqplib';
 import {checkEnv as checkEnvShared, createLogger} from './common';
-import {BLOB_STATE} from './constants';
+import {BLOB_UPDATE_OPERATIONS} from './constants';
 import {createApiClient} from './api-client';
 
 export function checkEnv() {
@@ -51,36 +51,56 @@ export function checkEnv() {
 export async function startTransformation({callback, blobId, profile, apiURL, apiUsername, apiPassword, amqpURL, abortOnInvalid = false}) {
 	const logger = createLogger();
 	const connection = await amqp.connect(amqpURL);
-	const client = createApiClient({apiURL, apiUsername, apiPassword});
-	const readStream = await client.readBlobContent(blobId);
+	const client = createApiClient({url: apiURL, username: apiUsername, password: apiPassword});
+	const readStream = await client.getBlobContent(blobId);
 
 	logger.info(`Starting transformation for blob ${blobId}`);
-	const records = await callback(readStream);
 
-	const failedRecords = records.filter(r => r.validation.failed);
+	try {
+		const records = await callback(readStream);
 
-	await client.updateBlobMetadata({
-		state: BLOB_STATE.transformed,
-		numberOfRecords: records.length,
-		failedRecords
-	});
+		const failedRecords = records.filter(r => r.failed);
 
-	logger.info('Transformation done');
+		await client.updateBlobMetadata({
+			id: blobId,
+			op: BLOB_UPDATE_OPERATIONS.transformationDone,
+			numberOfRecords: records.length,
+			failedRecords
+		});
 
-	if (!abortOnInvalid || failedRecords.length === 0) {
-		const channel = await connection.createChannel();
+		logger.info('Transformation done');
 
-		await channel.assertQueue(profile, {durable: true});
-		await channel.assertExchange(blobId, 'direct', {autoDelete: true});
-		await channel.bindQueue(profile, blobId, blobId);
+		if (abortOnInvalid && failedRecords.length > 0) {
+			logger.info('Not sending records to query because ABORT_ON_INVALID_RECORDS is true');
 
-		const count = await sendRecords(channel, records.filter(r => !r.validation.failed));
+			await client.updateBlobMetadata({
+				id: blobId,
+				op: BLOB_UPDATE_OPERATIONS.transformationFailed,
+				numberOfRecords: records.length,
+				failedRecords
+			});
+		} else {
+			const channel = await connection.createChannel();
 
-		await channel.unbindQueue(profile, blobId, blobId);
-		await channel.close();
-		await connection.close();
+			await channel.assertQueue(profile, {durable: true});
+			await channel.assertExchange(blobId, 'direct', {autoDelete: true});
+			await channel.bindQueue(profile, blobId, blobId);
 
-		logger.info(`${count} records sent to queue ${profile}`);
+			const count = await sendRecords(channel, records.filter(r => !r.validation.failed));
+
+			await channel.unbindQueue(profile, blobId, blobId);
+			await channel.close();
+			await connection.close();
+
+			logger.info(`${count} records sent to queue ${profile}`);
+		}
+	} catch (err) {
+		logger.error(`Failed transforming blob: ${err.stack}`);
+		await client.updateBlobMetadata({
+			id: blobId,
+			op: BLOB_UPDATE_OPERATIONS.transformationFailed,
+			error: err.stack
+		});
 	}
 
 	async function sendRecords(channel, records, count = 0) {
