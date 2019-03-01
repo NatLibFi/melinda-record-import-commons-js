@@ -35,7 +35,7 @@ import ora from 'ora';
 import amqp from 'amqplib';
 import {checkEnv as checkEnvShared, createLogger} from './common';
 import {BLOB_STATE} from './constants';
-import createApiClient from './api-client';
+import {createApiClient} from './api-client';
 
 export function checkEnv() {
 	checkEnvShared([
