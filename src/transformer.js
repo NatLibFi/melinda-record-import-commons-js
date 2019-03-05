@@ -34,7 +34,6 @@ import yargs from 'yargs';
 import ora from 'ora';
 import amqp from 'amqplib';
 import {checkEnv as checkEnvShared, createLogger} from './common';
-import {BLOB_UPDATE_OPERATIONS} from './constants';
 import {createApiClient} from './api-client';
 
 export function checkEnv() {
@@ -51,8 +50,8 @@ export function checkEnv() {
 export async function startTransformation({callback, blobId, profile, apiURL, apiUsername, apiPassword, amqpURL, abortOnInvalid = false}) {
 	const logger = createLogger();
 	const connection = await amqp.connect(amqpURL);
-	const client = createApiClient({url: apiURL, username: apiUsername, password: apiPassword});
-	const readStream = await client.getBlobContent(blobId);
+	const ApiClient = createApiClient({url: apiURL, username: apiUsername, password: apiPassword});
+	const readStream = await ApiClient.getBlobContent(blobId);
 
 	logger.info(`Starting transformation for blob ${blobId}`);
 
@@ -61,9 +60,8 @@ export async function startTransformation({callback, blobId, profile, apiURL, ap
 
 		const failedRecords = records.filter(r => r.failed);
 
-		await client.updateBlobMetadata({
+		await ApiClient.setTransformationDone({
 			id: blobId,
-			op: BLOB_UPDATE_OPERATIONS.transformationDone,
 			numberOfRecords: records.length,
 			failedRecords
 		});
@@ -73,12 +71,7 @@ export async function startTransformation({callback, blobId, profile, apiURL, ap
 		if (abortOnInvalid && failedRecords.length > 0) {
 			logger.info('Not sending records to query because ABORT_ON_INVALID_RECORDS is true');
 
-			await client.updateBlobMetadata({
-				id: blobId,
-				op: BLOB_UPDATE_OPERATIONS.transformationFailed,
-				numberOfRecords: records.length,
-				failedRecords
-			});
+			await ApiClient.setTransformationFailed({id: blobId, error: failedRecords});
 		} else {
 			const channel = await connection.createChannel();
 
@@ -96,11 +89,7 @@ export async function startTransformation({callback, blobId, profile, apiURL, ap
 		}
 	} catch (err) {
 		logger.error(`Failed transforming blob: ${err.stack}`);
-		await client.updateBlobMetadata({
-			id: blobId,
-			op: BLOB_UPDATE_OPERATIONS.transformationFailed,
-			error: err.stack
-		});
+		await ApiClient.setTransformationFailed({id: blobId, error: err.stack});
 	}
 
 	async function sendRecords(channel, records, count = 0) {

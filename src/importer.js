@@ -27,12 +27,14 @@
 */
 
 import amqp from 'amqplib';
-import fetch from 'node-fetch';
-import {checkEnv as checkEnvShared, generateHttpAuthorizationHeader, createLogger} from './common';
+import {promisify} from 'util';
+import {checkEnv as checkEnvShared, createLogger} from './common';
+import {createApiClient} from './api-client';
 import {RECORD_IMPORT_STATE} from './constants';
 
-const MAX_MESSAGE_TRIES = 3;
-const MESSAGE_WAIT_TIME = 3000;
+const MAX_MESSAGE_TRIES = process.env.MAX_MESSAGE_TRIES || 3;
+const MESSAGE_WAIT_TIME = process.env.MESSAGE_WAIT_TIME || 3000;
+
 const MANDATORY_ENV_VARIABLES = [
 	'API_URL',
 	'API_USERNAME',
@@ -45,81 +47,52 @@ export function checkEnv() {
 	checkEnvShared(MANDATORY_ENV_VARIABLES);
 }
 
-export async function startImport(importCallback) {
+export async function startImport({callback, blobId, profile, apiURL, apiUsername, apiPassword, amqpURL}) {
 	const logger = createLogger();
-
-	const maxMessageTries = 'QUEUE_MAX_MESSAGE_TRIES' in process.env ? process.env.QUEUE_MAX_MESSAGE_TRIES : MAX_MESSAGE_TRIES;
-	const messageWaitTime = 'QUEUE_MESSAGE_WAIT_TIME' in process.env ? process.env.QUEUE_MESSAGE_WAIT_TIME : MESSAGE_WAIT_TIME;
-
-	const httpHeaders = {
-		'Content-Type': 'application/json',
-		Authorization: generateHttpAuthorizationHeader(process.env.API_USERNAME, process.env.API_PASSWORD)
-	};
-
-	const connection = await amqp.connect(process.env.AMQP_URL);
+	const setTimeoutPromise = promisify(setTimeout);
+	const ApiClient = createApiClient({url: apiURL, username: apiUsername, password: apiPassword});
+	const connection = await amqp.connect(amqpURL);
 	const channel = await connection.createChannel();
 
-	channel.assertQueue(process.env.PROFILE_ID, {durable: true});
+	channel.assertQueue(profile, {durable: true});
 
-	logger.info(`Ready to consume messages from queue ${process.env.PROFILE_ID}`);
+	logger.info(`Ready to consume messages from queue ${profile}`);
 	await consume();
 
 	async function consume(tries = 0) {
-		const message = await channel.get(process.env.PROFILE_ID);
+		const message = await channel.get(profile);
 
-		if (message) {
+		if (message && message.fields.routingKey === blobId) {
 			logger.debug('Record received');
 
-			let response = await fetch(`${process.env.API_URL}/blobs/${message.fields.routingKey}`, {
-				headers: httpHeaders
-			});
+			const metadata = await ApiClient.getBlobMetadata(blobId);
 
-			if (response.ok) {
-				const metadata = await response.json();
-
-				if (metadata.state === RECORD_IMPORT_STATE.aborted) {
-					logger.info('Blob state is set to ABORTED. Ditching message');
-					await channel.nack(message, false, false);
-					return consume();
-				}
-
-				let importResult;
-
-				try {
-					importResult = await importCallback(message);
-				} catch (err) {
-					await channel.ack(message, false, true);
-					logger.error(err);
-					throw err;
-				}
-
-				await channel.ack(message);
-
-				response = await fetch(`${process.env.API_URL}/blobs/${process.env.BLOB_ID}`, {
-					method: 'POST',
-					headers: httpHeaders,
-					body: JSON.stringify({
-						op: 'recordProcessed',
-						content: importResult
-					})
-				});
-
-				if (response.ok) {
-					return consume();
-				}
-
-				throw new Error(`Updating blob state failed: ${response.status} ${response.statusText}`);
-			} else {
-				throw new Error(`Fetching blob metadata failed: ${response.status} ${response.statusText}`);
+			if (metadata.state === RECORD_IMPORT_STATE.aborted) {
+				logger.info('Blob state is set to ABORTED. Ditching message');
+				await channel.nack(message, false, false);
+				return consume();
 			}
-		} else if (tries < maxMessageTries) {
-			return new Promise(resolve => {
-				setTimeout(() => {
-					resolve(consume(tries + 1));
-				}, messageWaitTime);
-			});
-		} else {
-			logger.info('No more messages in queue');
+
+			let importResult;
+
+			try {
+				importResult = await callback(message);
+			} catch (err) {
+				await channel.nack(message, false, true);
+				throw err;
+			}
+
+			await channel.ack(message);
+			await ApiClient.setRecordProcessed({blobId, ...importResult});
+
+			return consume();
 		}
+
+		if (tries < MAX_MESSAGE_TRIES) {
+			await setTimeoutPromise(MESSAGE_WAIT_TIME);
+			return consume(tries + 1);
+		}
+
+		logger.info('No more messages in queue');
 	}
 }
