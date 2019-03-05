@@ -29,6 +29,7 @@
 import fetch from 'node-fetch';
 import HttpStatus from 'http-status';
 import {generateHttpAuthorizationHeader} from './common';
+import {BLOB_UPDATE_OPERATIONS} from './constants';
 
 export class ApiClientError extends Error {
 	constructor(status, ...params) {
@@ -40,7 +41,7 @@ export class ApiClientError extends Error {
 export function createApiClient({url, username, password}) {
 	const authHeader = generateHttpAuthorizationHeader(username, password);
 
-	return {createBlob, updateBlobMetadata, getBlobMetadata, getBlobContent, getProfile};
+	return {createBlob, getBlobMetadata, getBlobContent, getProfile, setTransformationDone, setTransformationFailed, setRecordProcessed};
 
 	async function createBlob({blob, type, profile}) {
 		const response = await fetch(`${url}/blobs`, {
@@ -108,12 +109,43 @@ export function createApiClient({url, username, password}) {
 		throw new ApiClientError(response.status);
 	}
 
-	async function updateBlobMetadata({id, op, numberOfRecords, failedRecords, error}) {
-		const body = JSON.stringify(error ? {op, error} : {op, numberOfRecords, failedRecords});
-		console.log(body);
+	async function setTransformationDone({id, numberOfRecords, failedRecords}) {
+		updateBlobMetadata({
+			id,
+			payload: {
+				op: BLOB_UPDATE_OPERATIONS.transformationDone,
+				numberOfRecords, failedRecords
+			}
+		});
+	}
+
+	async function setTransformationFailed({id, error}) {
+		updateBlobMetadata({
+			id,
+			payload: {
+				error,
+				op: BLOB_UPDATE_OPERATIONS.transformationFailed
+			}
+		});
+	}
+
+	async function setRecordProcessed({blobId, status, recordId, metadata}) {		
+		updateBlobMetadata({
+			id: blobId,
+			payload: {
+				op: BLOB_UPDATE_OPERATIONS.recordProcessed,
+				content: {
+					id: recordId,
+					status, metadata
+				}
+			}
+		});
+	}
+
+	async function updateBlobMetadata({id, payload}) {
 		const response = await fetch(`${url}/blobs/${id}`, {
-			body,
 			method: 'POST',
+			body: JSON.stringify(payload),
 			headers: {
 				'Content-Type': 'application/json',
 				Authorization: authHeader
