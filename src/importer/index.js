@@ -4,7 +4,7 @@
 *
 * Shared modules for microservices of Melinda record batch import system
 *
-* Copyright (C) 2018 University Of Helsinki (The National Library Of Finland)
+* Copyright (C) 2018-2019 University Of Helsinki (The National Library Of Finland)
 *
 * This file is part of melinda-record-import-commons
 *
@@ -26,36 +26,6 @@
 *
 */
 
-import fs from 'fs';
-import path from 'path';
-import yargs from 'yargs';
-import {sync as rmdir} from 'rimraf';
+import startImporter from './importer';
 
-export async function cli(name, callback) {
-	const args = yargs
-		.scriptName(name)
-		.command('$0 <outputDirectory>', '', yargs => {
-			yargs
-				.positional('outputDirectory', {type: 'string', describe: 'Directory to write files to'})
-				.option('y', {alias: 'overwriteDirectory', default: false, type: 'boolean', describe: 'Recreate the output directory if it exists'});
-		})
-		.parse();
-
-	if (fs.existsSync(args.outputDirectory)) {
-		if (args.overwriteDirectory) {
-			rmdir(args.outputDirectory);
-		} else {
-			console.error(`Directory ${args.outputDirectory} already exists!`);
-			process.exit(-1);
-		}
-	}
-
-	fs.mkdirSync(args.outputDirectory);
-
-	let count = 0;
-
-	await callback(data => {
-		fs.writeFileSync(path.join(args.outputDirectory, String(count)), data);
-		count++;
-	});
-}
+export {startImporter};

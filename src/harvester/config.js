@@ -26,23 +26,11 @@
 *
 */
 
-import http from 'http';
+import {Utils} from '@natlibfi/melinda-commons';
 
-export function registerSignalHandlers({stopHealthCheckService = () => {}} = {}) {
-	process.on('SIGINT', () => {
-		stopHealthCheckService();
-		process.exit(1);
-	});
-}
+const {readEnvironmentVariable} = Utils;
 
-export function startHealthCheckService(port) {
-	const server = http.createServer((req, res) => {
-		res.statusCode = req.url === '/healthz' ? 200 : 404;
-		res.end();
-	}).listen(port);
-	return async function () {
-		return new Promise(resolve => {
-			server.close(resolve);
-		});
-	};
-}
+export const API_URL = readEnvironmentVariable('API_URL');
+export const API_USERNAME = readEnvironmentVariable('API_USERNAME');
+export const API_PASSWORD = readEnvironmentVariable('API_PASSWORD');
+export const PROFILE_ID = readEnvironmentVariable('PROFILE_ID');

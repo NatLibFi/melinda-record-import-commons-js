@@ -29,7 +29,7 @@
 export const ENVIRONMENT = {
 	production: 'production',
 	development: 'development',
-	testing: 'testing'
+	testing: 'test'
 };
 
 export const BLOB_STATE = {
@@ -94,12 +94,3 @@ export const ERROR_TYPES = {
 	idConflict: 'request.mismatch.id',
 	unknown: 'unknown'
 };
-
-export const JOBS = {
-	pollBlobs: 'poll.GET./blobs/',
-	pollBlobsPending: 'poll.GET./blobs/.pending',
-	pollBlobsTransformed: 'poll.GET./blobs/.transformed',
-	pollBlobsAborted: 'poll.GET./blobs/.aborted',
-	checkContainerHealth: 'check.docker.container.health'
-};
-

@@ -4,7 +4,7 @@
 *
 * Shared modules for microservices of Melinda record batch import system
 *
-* Copyright (C) 2018-2019 University Of Helsinki (The National Library Of Finland)
+* Copyright (C) 2018 University Of Helsinki (The National Library Of Finland)
 *
 * This file is part of melinda-record-import-commons
 *
@@ -26,23 +26,36 @@
 *
 */
 
-import http from 'http';
+/* eslint-disable import/default */
 
-export function registerSignalHandlers({stopHealthCheckService = () => {}} = {}) {
-	process.on('SIGINT', () => {
-		stopHealthCheckService();
-		process.exit(1);
-	});
-}
+import {registerSignalHandlers} from '../common';
+import {createApiClient} from '../api-client';
+import {Utils} from '@natlibfi/melinda-commons';
 
-export function startHealthCheckService(port) {
-	const server = http.createServer((req, res) => {
-		res.statusCode = req.url === '/healthz' ? 200 : 404;
-		res.end();
-	}).listen(port);
-	return async function () {
-		return new Promise(resolve => {
-			server.close(resolve);
+const {createLogger} = Utils;
+
+export default async function (harvestCallback) {
+	const {API_URL, API_USERNAME, API_PASSWORD, PROFILE_ID} = await import('./config');
+	const Logger = createLogger();
+	const ApiClient = createApiClient({url: API_URL, username: API_USERNAME, password: API_PASSWORD});
+
+	registerSignalHandlers();
+
+	try {
+		await harvestCallback({recordsCallback: createBlob});
+		process.exit();
+	} catch (err) {
+		Logger.log('error', err.stack);
+		process.exit(-1);
+	}
+
+	async function createBlob(records) {
+		const id = await ApiClient.createBlob({
+			blob: JSON.stringify(records),
+			type: 'application/json',
+			profile: PROFILE_ID
 		});
-	};
+
+		Logger.info(`Created new blob ${id}`);
+	}
 }
