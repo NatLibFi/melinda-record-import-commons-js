@@ -26,12 +26,12 @@
 *
 */
 
-import * as TransformerUtils from './transformer';
-import * as ImporterUtils from './importer';
-import * as HarvesterUtils from './harvester';
+import * as Transformer from './transformer';
+import * as Importer from './importer';
+import * as Harvester from './harvester';
 
 export * from './common';
 export * from './constants';
 export * from './api-client';
 
-export {TransformerUtils, ImporterUtils, HarvesterUtils};
+export {Transformer, Importer, Harvester};

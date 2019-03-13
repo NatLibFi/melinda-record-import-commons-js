@@ -28,8 +28,11 @@
 
 import fetch from 'node-fetch';
 import HttpStatus from 'http-status';
-import {generateHttpAuthorizationHeader} from './common';
+import {URL} from 'url';
+import {Utils} from '@natlibfi/melinda-commons';
 import {BLOB_UPDATE_OPERATIONS} from './constants';
+
+const {generateAuthorizationHeader} = Utils;
 
 export class ApiClientError extends Error {
 	constructor(status, ...params) {
@@ -38,17 +41,21 @@ export class ApiClientError extends Error {
 	}
 }
 
-export function createApiClient({url, username, password}) {
-	const authHeader = generateHttpAuthorizationHeader(username, password);
+export function createApiClient({url, username, password, userAgent = 'Record import API client / Javascript'}) {
+	const authHeader = generateAuthorizationHeader(username, password);
 
-	return {createBlob, getBlobMetadata, getBlobContent, getProfile, setTransformationDone, setTransformationFailed, setRecordProcessed};
+	return {
+		getBlobs, createBlob, getBlobMetadata, getBlobContent, getProfile, deleteBlob, deleteBlobContent,
+		setTransformationDone, setTransformationFailed, setRecordProcessed, setTransformationStarted
+	};
 
 	async function createBlob({blob, type, profile}) {
 		const response = await fetch(`${url}/blobs`, {
+			method: 'POST',
 			body: blob,
 			headers: {
+				'User-Agent': userAgent,
 				Authorization: authHeader,
-				method: 'POST',
 				'Content-Type': type,
 				'Import-Profile': profile
 			}
@@ -61,13 +68,14 @@ export function createApiClient({url, username, password}) {
 		return parseBlobId();
 
 		function parseBlobId() {
-			return /\/([0-9]+)$/.exec(response.headers.Location)[1];
+			return /\/(.[^/]*)$/.exec(response.headers.get('location'))[1];
 		}
 	}
 
-	async function getBlobMetadata(id) {
+	async function getBlobMetadata({id}) {
 		const response = await fetch(`${url}/blobs/${id}`, {
 			headers: {
+				'User-Agent': userAgent,
 				Authorization: authHeader,
 				Accept: 'application/json'
 			}
@@ -80,9 +88,10 @@ export function createApiClient({url, username, password}) {
 		throw new ApiClientError(response.status);
 	}
 
-	async function getBlobContent(id) {
+	async function getBlobContent({id}) {
 		const response = await fetch(`${url}/blobs/${id}/content`, {
 			headers: {
+				'User-Agent': userAgent,
 				Authorization: authHeader
 			}
 		});
@@ -94,9 +103,10 @@ export function createApiClient({url, username, password}) {
 		throw new ApiClientError(response.status);
 	}
 
-	async function getProfile(id) {
+	async function getProfile({id}) {
 		const response = await fetch(`${url}/profiles/${id}`, {
 			headers: {
+				'User-Agent': userAgent,
 				Authorization: authHeader,
 				Accept: 'application/json'
 			}
@@ -109,8 +119,40 @@ export function createApiClient({url, username, password}) {
 		throw new ApiClientError(response.status);
 	}
 
+	async function deleteBlob({id}) {
+		const response = await fetch(`${url}/blobs/${id}`, {
+			method: 'DELETE',
+			headers: {
+				'User-Agent': userAgent,
+				Authorization: authHeader
+			}
+		});
+
+		if (response.status === HttpStatus.NO_CONTENT) {
+			return response.body;
+		}
+
+		throw new ApiClientError(response.status);
+	}
+
+	async function deleteBlobContent({id}) {
+		const response = await fetch(`${url}/blobs/${id}/content`, {
+			method: 'DELETE',
+			headers: {
+				'User-Agent': userAgent,
+				Authorization: authHeader
+			}
+		});
+
+		if (response.status === HttpStatus.NO_CONTENT) {
+			return response.body;
+		}
+
+		throw new ApiClientError(response.status);
+	}
+
 	async function setTransformationDone({id, numberOfRecords, failedRecords}) {
-		updateBlobMetadata({
+		await updateBlobMetadata({
 			id,
 			payload: {
 				op: BLOB_UPDATE_OPERATIONS.transformationDone,
@@ -120,7 +162,7 @@ export function createApiClient({url, username, password}) {
 	}
 
 	async function setTransformationFailed({id, error}) {
-		updateBlobMetadata({
+		await updateBlobMetadata({
 			id,
 			payload: {
 				error,
@@ -129,8 +171,8 @@ export function createApiClient({url, username, password}) {
 		});
 	}
 
-	async function setRecordProcessed({blobId, status, recordId, metadata}) {		
-		updateBlobMetadata({
+	async function setRecordProcessed({blobId, status, recordId, metadata}) {
+		await updateBlobMetadata({
 			id: blobId,
 			payload: {
 				op: BLOB_UPDATE_OPERATIONS.recordProcessed,
@@ -142,11 +184,51 @@ export function createApiClient({url, username, password}) {
 		});
 	}
 
+	async function setTransformationStarted({id}) {
+		await updateBlobMetadata({
+			id,
+			payload: {
+				op: BLOB_UPDATE_OPERATIONS.transformationStarted
+			}
+		});
+	}
+
+	async function getBlobs(query) {
+		const blobsUrl = new URL(`${url}/blobs`);
+
+		Object.keys(query).forEach(k => {
+			if (Array.isArray(query[k])) {
+				query[k].forEach(value => {
+					blobsUrl.searchParams.append(`${k}[]`, value);
+				});
+			} else {
+				blobsUrl.searchParams.set(k, query[k]);
+			}
+		});
+
+		const response = await fetch(blobsUrl, {
+			headers: {
+				'User-Agent': userAgent,
+				Authorization: authHeader,
+				Accept: 'application/json'
+			}
+		});
+
+		if (response.status === HttpStatus.OK) {
+			const urls = await response.json();
+			// Get blob id from URL
+			return urls.map(u => /\/(.[^/]*)$/.exec(u)[1]);
+		}
+
+		throw new ApiClientError(response.status);
+	}
+
 	async function updateBlobMetadata({id, payload}) {
 		const response = await fetch(`${url}/blobs/${id}`, {
 			method: 'POST',
 			body: JSON.stringify(payload),
 			headers: {
+				'User-Agent': userAgent,
 				'Content-Type': 'application/json',
 				Authorization: authHeader
 			}

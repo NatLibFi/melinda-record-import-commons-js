@@ -26,23 +26,7 @@
 *
 */
 
-import http from 'http';
+import startTransformer from './transformer';
+import runCLI from './cli';
 
-export function registerSignalHandlers({stopHealthCheckService = () => {}} = {}) {
-	process.on('SIGINT', () => {
-		stopHealthCheckService();
-		process.exit(1);
-	});
-}
-
-export function startHealthCheckService(port) {
-	const server = http.createServer((req, res) => {
-		res.statusCode = req.url === '/healthz' ? 200 : 404;
-		res.end();
-	}).listen(port);
-	return async function () {
-		return new Promise(resolve => {
-			server.close(resolve);
-		});
-	};
-}
+export {startTransformer, runCLI};

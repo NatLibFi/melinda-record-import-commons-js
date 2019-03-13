@@ -26,23 +26,17 @@
 *
 */
 
-import http from 'http';
+export default function (callback) {
+	return async (records, fix = false) => {
+		const opts = fix ? {fix: true, validateFixes: true} : {fix: false};
+		const results = await Promise.all(
+			records.map(r => callback(r, opts))
+		);
 
-export function registerSignalHandlers({stopHealthCheckService = () => {}} = {}) {
-	process.on('SIGINT', () => {
-		stopHealthCheckService();
-		process.exit(1);
-	});
-}
-
-export function startHealthCheckService(port) {
-	const server = http.createServer((req, res) => {
-		res.statusCode = req.url === '/healthz' ? 200 : 404;
-		res.end();
-	}).listen(port);
-	return async function () {
-		return new Promise(resolve => {
-			server.close(resolve);
-		});
+		return results.map(result => ({
+			record: result.record,
+			failed: !result.valid,
+			messages: result.report
+		}));
 	};
 }
