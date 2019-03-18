@@ -35,9 +35,9 @@ import {Utils} from '@natlibfi/melinda-commons';
 const {createLogger} = Utils;
 
 export default async function (harvestCallback) {
-	const {API_URL, API_USERNAME, API_PASSWORD, PROFILE_ID} = await import('./config');
+	const {API_URL, API_USERNAME, API_PASSWORD, API_CLIENT_USER_AGENT, PROFILE_ID} = await import('./config');
 	const Logger = createLogger();
-	const ApiClient = createApiClient({url: API_URL, username: API_USERNAME, password: API_PASSWORD});
+	const ApiClient = createApiClient({url: API_URL, username: API_USERNAME, password: API_PASSWORD, userAgent: API_CLIENT_USER_AGENT});
 
 	registerSignalHandlers();
 
@@ -45,8 +45,8 @@ export default async function (harvestCallback) {
 		await harvestCallback({recordsCallback: createBlob});
 		process.exit();
 	} catch (err) {
-		Logger.log('error', err.stack);
-		process.exit(-1);
+		Logger.error(err instanceof Error ? err.stack : err);
+		process.exit(1);
 	}
 
 	async function createBlob(records) {

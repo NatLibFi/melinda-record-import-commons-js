@@ -36,7 +36,7 @@ import {RECORD_IMPORT_STATE} from '../constants';
 const {createLogger} = Utils;
 
 export default async function (importCallback) {
-	const {AMQP_URL, API_URL, API_USERNAME, API_PASSWORD, BLOB_ID, PROFILE_ID, HEALTH_CHECK_PORT, MAX_MESSAGE_TRIES, MESSAGE_WAIT_TIME} = await import('./config');
+	const {AMQP_URL, API_URL, API_USERNAME, API_PASSWORD, API_CLIENT_USER_AGENT, BLOB_ID, PROFILE_ID, HEALTH_CHECK_PORT, MAX_MESSAGE_TRIES, MESSAGE_WAIT_TIME} = await import('./config');
 	const Logger = createLogger();
 	const stopHealthCheckService = startHealthCheckService(HEALTH_CHECK_PORT);
 
@@ -51,13 +51,13 @@ export default async function (importCallback) {
 		process.exit();
 	} catch (err) {
 		stopHealthCheckService();
-		Logger.error(err.stack);
+		Logger.error(err instanceof Error ? err.stack : err);
 		process.exit(1);
 	}
 
 	async function startImport() {
 		const setTimeoutPromise = promisify(setTimeout);
-		const ApiClient = createApiClient({url: API_URL, username: API_USERNAME, password: API_PASSWORD});
+		const ApiClient = createApiClient({url: API_URL, username: API_USERNAME, password: API_PASSWORD, userAgent: API_CLIENT_USER_AGENT});
 		const connection = await amqplib.connect(AMQP_URL);
 		const channel = await connection.createChannel();
 

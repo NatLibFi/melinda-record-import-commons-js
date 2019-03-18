@@ -42,3 +42,4 @@ export const PROFILE_ID = readEnvironmentVariable('PROFILE_ID');
 export const ABORT_ON_INVALID_RECORDS = readEnvironmentVariable('ABORT_ON_INVALID_RECORDS', {defaultValue: false, format: parseBoolean});
 export const HEALTH_CHECK_PORT = readEnvironmentVariable('HEALTH_CHECK_PORT', {defaultValue: 8080, format: v => Number(v)});
 
+export const API_CLIENT_USER_AGENT = readEnvironmentVariable('API_CLIENT_USER_AGENT', {defaultValue: '_RECORD-IMPORT-TRANSFORMER'});

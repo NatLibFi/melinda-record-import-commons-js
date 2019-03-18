@@ -34,3 +34,5 @@ export const API_URL = readEnvironmentVariable('API_URL');
 export const API_USERNAME = readEnvironmentVariable('API_USERNAME');
 export const API_PASSWORD = readEnvironmentVariable('API_PASSWORD');
 export const PROFILE_ID = readEnvironmentVariable('PROFILE_ID');
+
+export const API_CLIENT_USER_AGENT = readEnvironmentVariable('API_CLIENT_USER_AGENT', {defaultValue: '_RECORD-IMPORT-HARVESTER'});

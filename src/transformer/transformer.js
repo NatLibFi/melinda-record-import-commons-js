@@ -38,7 +38,7 @@ import {createApiClient} from '../api-client';
 const {createLogger} = Utils;
 
 export default async function (transformCallback, validateCallback) {
-	const {AMQP_URL, API_URL, API_USERNAME, API_PASSWORD, BLOB_ID, PROFILE_ID, ABORT_ON_INVALID_RECORDS, HEALTH_CHECK_PORT} = await import('./config');
+	const {AMQP_URL, API_URL, API_USERNAME, API_PASSWORD, API_CLIENT_USER_AGENT, BLOB_ID, PROFILE_ID, ABORT_ON_INVALID_RECORDS, HEALTH_CHECK_PORT} = await import('./config');
 	const Logger = createLogger();
 	const stopHealthCheckService = startHealthCheckService();
 
@@ -50,14 +50,14 @@ export default async function (transformCallback, validateCallback) {
 		process.exit();
 	} catch (err) {
 		stopHealthCheckService();
-		Logger.error(err.stack);
+		Logger.error(err instanceof Error ? err.stack : err);
 		process.exit(1);
 	}
 
 	async function startTransformation() {
 		const validate = createValidator(validateCallback);
 		const connection = await amqplib.connect(AMQP_URL);
-		const ApiClient = createApiClient({url: API_URL, username: API_USERNAME, password: API_PASSWORD});
+		const ApiClient = createApiClient({url: API_URL, username: API_USERNAME, password: API_PASSWORD, userAgent: API_CLIENT_USER_AGENT});
 		const readStream = await ApiClient.getBlobContent({id: BLOB_ID});
 
 		Logger.info(`Starting transformation for blob ${BLOB_ID}`);
