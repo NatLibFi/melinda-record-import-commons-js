@@ -14,13 +14,13 @@
 		"url": "git@github.com:natlibfi/melinda-record-import-commons.git"
 	},
 	"license": "AGPL-3.0+",
-	"version": "3.0.1",
+	"version": "3.0.2",
 	"main": "./dist/index.js",
 	"engines": {
 		"node": ">=8"
 	},
 	"bin": {
-		"healthz": "./src/health-check.js"
+		"healthz": "./dist/health-check.js"
 	},
 	"scripts": {
 		"prepublishOnly": "npm run build:transpile",
