@@ -63,7 +63,7 @@ export default async function (importCallback) {
 
 		channel.assertQueue(PROFILE_ID, {durable: true});
 
-		Logger.info(`Ready to consume messages from queue ${PROFILE_ID}`);
+		Logger.info(`Ready to consume records of blob ${BLOB_ID} from queue ${PROFILE_ID}`);
 		await consume();
 
 		async function consume(tries = 0) {
