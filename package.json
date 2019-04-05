@@ -14,7 +14,7 @@
 		"url": "git@github.com:natlibfi/melinda-record-import-commons.git"
 	},
 	"license": "AGPL-3.0+",
-	"version": "3.0.5",
+	"version": "3.1.0",
 	"main": "./dist/index.js",
 	"engines": {
 		"node": ">=8"
@@ -29,7 +29,8 @@
 		"test": "npm run lint",
 		"build:transpile": "babel src --source-maps --delete-dir-on-start --out-dir=dist",
 		"build": "npm run build:transpile && npm run check-deps",
-		"watch": "cross-env DEBUG=1 NODE_ENV=test chokidar src -c 'npm test'"
+		"watch:test": "cross-env DEBUG=1 NODE_ENV=test nodemon -w src --exec 'npm test'",
+		"watch:dev": "nodemon -w src --exec 'npm run lint && npm run build:transpile'"
 	},
 	"dependencies": {
 		"@babel/core": "^7.2.0",
@@ -47,11 +48,11 @@
 		"@babel/preset-env": "^7.2.0",
 		"babel-eslint": "^10.0.1",
 		"babel-plugin-dynamic-import-node": "^2.2.0",
-		"chokidar-cli": "^1.2.0",
 		"cross-env": "^5.1.1",
 		"eslint": "^5.9.0",
 		"eslint-config-xo": ">=0.25.1 <1.0.0",
 		"eslint-plugin-import": "^2.14.0",
+		"nodemon": "^1.18.10",
 		"npm-check": "^5.9.0"
 	},
 	"eslintConfig": {

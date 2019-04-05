@@ -26,6 +26,5 @@
 *
 */
 
-import startImporter from './importer';
-
-export {startImporter};
+export {default as startImporter} from './importer';
+export {default as runCLI} from './cli';

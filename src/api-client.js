@@ -215,9 +215,8 @@ export function createApiClient({url, username, password, userAgent = 'Record im
 		});
 
 		if (response.status === HttpStatus.OK) {
-			const urls = await response.json();
-			// Get blob id from URL
-			return urls.map(u => /\/(.[^/]*)$/.exec(u)[1]);
+			const blobs = await response.json();
+			return blobs.map(b => b.id);
 		}
 
 		throw new ApiClientError(response.status);
