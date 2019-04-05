@@ -55,7 +55,8 @@ export const RECORD_IMPORT_STATE = {
 	invalid: 'INVALID',
 	duplicate: 'DUPLICATE',
 	multipleMatches: 'MULTIPLE_MATCHES',
-	error: 'ERROR'
+	error: 'ERROR',
+	skipped: 'SKIPPED'
 };
 
 export const HTTP_CODES = {
