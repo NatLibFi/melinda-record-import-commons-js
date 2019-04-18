@@ -31,21 +31,17 @@ import HttpStatus from 'http-status';
 import {URL} from 'url';
 import {Utils} from '@natlibfi/melinda-commons';
 import {BLOB_UPDATE_OPERATIONS} from './constants';
+import {ApiError} from './error';
 
 const {generateAuthorizationHeader} = Utils;
-
-export class ApiClientError extends Error {
-	constructor(status, ...params) {
-		super(status, ...params);
-		this.status = status;
-	}
-}
 
 export function createApiClient({url, username, password, userAgent = 'Record import API client / Javascript'}) {
 	const authHeader = generateAuthorizationHeader(username, password);
 
 	return {
-		getBlobs, createBlob, getBlobMetadata, getBlobContent, getProfile, deleteBlob, deleteBlobContent,
+		getBlobs, createBlob, getBlobMetadata, deleteBlob,
+		getBlobContent, deleteBlobContent,
+		getProfile, modifyProfile, queryProfiles, deleteProfile,
 		setTransformationDone, setTransformationFailed, setRecordProcessed, setTransformationStarted
 	};
 
@@ -61,11 +57,11 @@ export function createApiClient({url, username, password, userAgent = 'Record im
 			}
 		});
 
-		if (response.status !== HttpStatus.CREATED) {
-			throw new ApiClientError(response.status);
+		if (response.status === HttpStatus.CREATED) {
+			return parseBlobId();
 		}
 
-		return parseBlobId();
+		throw new ApiError(response.status);
 
 		function parseBlobId() {
 			return /\/(.[^/]*)$/.exec(response.headers.get('location'))[1];
@@ -85,7 +81,7 @@ export function createApiClient({url, username, password, userAgent = 'Record im
 			return response.json();
 		}
 
-		throw new ApiClientError(response.status);
+		throw new ApiError(response.status);
 	}
 
 	async function getBlobContent({id}) {
@@ -97,10 +93,13 @@ export function createApiClient({url, username, password, userAgent = 'Record im
 		});
 
 		if (response.status === HttpStatus.OK) {
-			return response.body;
+			return {
+				contentType: response.headers.get('Content-Type'),
+				readStream: response.body
+			};
 		}
 
-		throw new ApiClientError(response.status);
+		throw new ApiError(response.status);
 	}
 
 	async function getProfile({id}) {
@@ -116,7 +115,53 @@ export function createApiClient({url, username, password, userAgent = 'Record im
 			return response.json();
 		}
 
-		throw new ApiClientError(response.status);
+		throw new ApiError(response.status);
+	}
+
+	async function deleteProfile({id}) {
+		const response = await fetch(`${url}/profiles/${id}`, {
+			method: 'DELETE',
+			headers: {
+				'User-Agent': userAgent,
+				Authorization: authHeader
+			}
+		});
+
+		if (response.status !== HttpStatus.NO_CONTENT) {
+			throw new ApiError(response.status);
+		}
+	}
+
+	async function queryProfiles() {
+		const response = await fetch(`${url}/profiles`, {
+			headers: {
+				'User-Agent': userAgent,
+				Authorization: authHeader,
+				Accept: 'application/json'
+			}
+		});
+
+		if (response.status === HttpStatus.OK) {
+			return response.json();
+		}
+
+		throw new ApiError(response.status);
+	}
+
+	async function modifyProfile({id, payload}) {
+		const response = await fetch(`${url}/profiles/${id}`, {
+			method: 'PUT',
+			body: JSON.stringify(payload),
+			headers: {
+				'User-Agent': userAgent,
+				'Content-Type': 'application/json',
+				Authorization: authHeader
+			}
+		});
+
+		if (![HttpStatus.CREATED, HttpStatus.NO_CONTENT].includes(response.status)) {
+			throw new ApiError(response.status);
+		}
 	}
 
 	async function deleteBlob({id}) {
@@ -132,7 +177,7 @@ export function createApiClient({url, username, password, userAgent = 'Record im
 			return response.body;
 		}
 
-		throw new ApiClientError(response.status);
+		throw new ApiError(response.status);
 	}
 
 	async function deleteBlobContent({id}) {
@@ -148,7 +193,7 @@ export function createApiClient({url, username, password, userAgent = 'Record im
 			return response.body;
 		}
 
-		throw new ApiClientError(response.status);
+		throw new ApiError(response.status);
 	}
 
 	async function setTransformationDone({id, numberOfRecords, failedRecords}) {
@@ -193,7 +238,7 @@ export function createApiClient({url, username, password, userAgent = 'Record im
 		});
 	}
 
-	async function getBlobs(query) {
+	async function getBlobs(query = {}) {
 		const blobsUrl = new URL(`${url}/blobs`);
 
 		Object.keys(query).forEach(k => {
@@ -215,11 +260,10 @@ export function createApiClient({url, username, password, userAgent = 'Record im
 		});
 
 		if (response.status === HttpStatus.OK) {
-			const blobs = await response.json();
-			return blobs.map(b => b.id);
+			return response.json();
 		}
 
-		throw new ApiClientError(response.status);
+		throw new ApiError(response.status);
 	}
 
 	async function updateBlobMetadata({id, payload}) {
@@ -234,7 +278,7 @@ export function createApiClient({url, username, password, userAgent = 'Record im
 		});
 
 		if (response.status !== HttpStatus.NO_CONTENT) {
-			throw new ApiClientError(response.status);
+			throw new ApiError(response.status);
 		}
 	}
 }
