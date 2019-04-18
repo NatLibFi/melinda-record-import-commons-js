@@ -26,28 +26,9 @@
 *
 */
 
-export const BLOB_STATE = {
-	PENDING_TRANSFORMATION: 'PENDING_TRANSFORMATION',
-	TRANSFORMATION_IN_PROGRESS: 'TRANSFORMATION_IN_PROGRESS',
-	TRANSFORMATION_FAILED: 'TRANSFORMATION_FAILED',
-	TRANSFORMED: 'TRANSFORMED',
-	PROCESSED: 'PROCESSED',
-	ABORTED: 'ABORTED'
-};
-
-export const BLOB_UPDATE_OPERATIONS = {
-	abort: 'abort',
-	transformationStarted: 'transformationStarted',
-	transformationDone: 'transformationDone',
-	transformationFailed: 'transformationFailed',
-	recordProcessed: 'recordProcessed'
-};
-
-export const RECORD_IMPORT_STATE = {
-	CREATED: 'CREATED',
-	UPDATED: 'UPDATED',
-	INVALID: 'INVALID',
-	DUPLICATE: 'DUPLICATE',	
-	ERROR: 'ERROR',
-	SKIPPED: 'SKIPPED'
-};
+export class ApiError extends Error {
+	constructor(status, ...params) {
+		super(status, ...params);
+		this.status = status;
+	}
+}

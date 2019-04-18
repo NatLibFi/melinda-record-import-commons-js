@@ -74,7 +74,7 @@ export default async function (importCallback) {
 
 				const metadata = await ApiClient.getBlobMetadata({id: BLOB_ID});
 
-				if (metadata.state === RECORD_IMPORT_STATE.aborted) {
+				if (metadata.state === RECORD_IMPORT_STATE.ABORTED) {
 					Logger.info('Blob state is set to ABORTED. Ditching message');
 					await channel.nack(message, false, false);
 					return consume();
