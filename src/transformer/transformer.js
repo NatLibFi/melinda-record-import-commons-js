@@ -58,7 +58,7 @@ export default async function (transformCallback, validateCallback) {
 		const validate = createValidator(validateCallback);
 		const connection = await amqplib.connect(AMQP_URL);
 		const ApiClient = createApiClient({url: API_URL, username: API_USERNAME, password: API_PASSWORD, userAgent: API_CLIENT_USER_AGENT});
-		const readStream = await ApiClient.getBlobContent({id: BLOB_ID});
+		const {readStream} = await ApiClient.getBlobContent({id: BLOB_ID});
 
 		Logger.info(`Starting transformation for blob ${BLOB_ID}`);
 
