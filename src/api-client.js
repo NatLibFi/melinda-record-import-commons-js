@@ -216,15 +216,12 @@ export function createApiClient({url, username, password, userAgent = 'Record im
 		});
 	}
 
-	async function setRecordProcessed({blobId, status, recordId, metadata}) {
+	async function setRecordProcessed({blobId, status, metadata}) {
 		await updateBlobMetadata({
 			id: blobId,
 			payload: {
-				op: BLOB_UPDATE_OPERATIONS.recordProcessed,
-				content: {
-					id: recordId,
-					status, metadata
-				}
+				status, metadata,
+				op: BLOB_UPDATE_OPERATIONS.recordProcessed
 			}
 		});
 	}
