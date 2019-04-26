@@ -27,7 +27,6 @@
 */
 
 import amqplib from 'amqplib';
-import {promisify} from 'util';
 import {Utils} from '@natlibfi/melinda-commons';
 import {createApiClient} from '../api-client';
 import {startHealthCheckService} from '../common';
@@ -36,7 +35,7 @@ import {RECORD_IMPORT_STATE} from '../constants';
 const {createLogger} = Utils;
 
 export default async function (importCallback) {
-	const {AMQP_URL, API_URL, API_USERNAME, API_PASSWORD, API_CLIENT_USER_AGENT, BLOB_ID, PROFILE_ID, HEALTH_CHECK_PORT, MAX_MESSAGE_TRIES, MESSAGE_WAIT_TIME} = await import('./config');
+	const {AMQP_URL, API_URL, API_USERNAME, API_PASSWORD, API_CLIENT_USER_AGENT, BLOB_ID, PROFILE_ID, HEALTH_CHECK_PORT} = await import('./config');
 	const Logger = createLogger();
 	const stopHealthCheckService = startHealthCheckService(HEALTH_CHECK_PORT);
 
@@ -56,7 +55,6 @@ export default async function (importCallback) {
 	}
 
 	async function startImport() {
-		const setTimeoutPromise = promisify(setTimeout);
 		const ApiClient = createApiClient({url: API_URL, username: API_USERNAME, password: API_PASSWORD, userAgent: API_CLIENT_USER_AGENT});
 		const connection = await amqplib.connect(AMQP_URL);
 		const channel = await connection.createChannel();
@@ -66,39 +64,38 @@ export default async function (importCallback) {
 		Logger.info(`Ready to consume records of blob ${BLOB_ID} from queue ${PROFILE_ID}`);
 		await consume();
 
-		async function consume(tries = 0) {
+		async function consume() {
 			const message = await channel.get(PROFILE_ID);
 
-			if (message && message.fields.routingKey === BLOB_ID) {
-				Logger.debug('Record received');
+			if (message) {
+				if (message.fields.routingKey === BLOB_ID) {
+					Logger.debug('Record received');
 
-				const metadata = await ApiClient.getBlobMetadata({id: BLOB_ID});
+					const metadata = await ApiClient.getBlobMetadata({id: BLOB_ID});
 
-				if (metadata.state === RECORD_IMPORT_STATE.ABORTED) {
-					Logger.info('Blob state is set to ABORTED. Ditching message');
-					await channel.nack(message, false, false);
-					return consume();
+					if (metadata.state === RECORD_IMPORT_STATE.ABORTED) {
+						Logger.info('Blob state is set to ABORTED. Ditching message');
+						await channel.nack(message, false, false);
+						return consume();
+					}
+
+					let importResult;
+
+					try {
+						importResult = await importCallback(message);
+					} catch (err) {
+						await channel.nack(message, false, true);
+						throw err;
+					}
+
+					await channel.ack(message);
+					await ApiClient.setRecordProcessed({blobId: BLOB_ID, ...importResult});
+					Logger.log('debug', 'Set record as processed');
+				} else {
+					Logger.debug('Message received but is from another blob');
 				}
-
-				let importResult;
-
-				try {
-					importResult = await importCallback(message);
-				} catch (err) {
-					await channel.nack(message, false, true);
-					throw err;
-				}
-
-				await channel.ack(message);
-				await ApiClient.setRecordProcessed({blobId: BLOB_ID, ...importResult});
-				Logger.log('debug', 'Set record as processed');
 
 				return consume();
-			}
-
-			if (tries < MAX_MESSAGE_TRIES) {
-				await setTimeoutPromise(MESSAGE_WAIT_TIME);
-				return consume(tries + 1);
 			}
 
 			Logger.info('No more messages in queue');
