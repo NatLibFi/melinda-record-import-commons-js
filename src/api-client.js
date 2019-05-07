@@ -36,7 +36,7 @@ import {ApiError} from './error';
 const {generateAuthorizationHeader} = Utils;
 
 export function createApiClient({url, username, password, userAgent = 'Record import API client / Javascript'}) {
-	const authHeader = generateAuthorizationHeader(username, password);
+	let authHeader;
 
 	return {
 		getBlobs, createBlob, getBlobMetadata, deleteBlob,
@@ -46,12 +46,11 @@ export function createApiClient({url, username, password, userAgent = 'Record im
 	};
 
 	async function createBlob({blob, type, profile}) {
-		const response = await fetch(`${url}/blobs`, {
+		const response = await doRequest(`${url}/blobs`, {
 			method: 'POST',
 			body: blob,
 			headers: {
 				'User-Agent': userAgent,
-				Authorization: authHeader,
 				'Content-Type': type,
 				'Import-Profile': profile
 			}
@@ -69,10 +68,9 @@ export function createApiClient({url, username, password, userAgent = 'Record im
 	}
 
 	async function getBlobMetadata({id}) {
-		const response = await fetch(`${url}/blobs/${id}`, {
+		const response = await doRequest(`${url}/blobs/${id}`, {
 			headers: {
 				'User-Agent': userAgent,
-				Authorization: authHeader,
 				Accept: 'application/json'
 			}
 		});
@@ -85,10 +83,9 @@ export function createApiClient({url, username, password, userAgent = 'Record im
 	}
 
 	async function getBlobContent({id}) {
-		const response = await fetch(`${url}/blobs/${id}/content`, {
+		const response = await doRequest(`${url}/blobs/${id}/content`, {
 			headers: {
-				'User-Agent': userAgent,
-				Authorization: authHeader
+				'User-Agent': userAgent
 			}
 		});
 
@@ -103,10 +100,9 @@ export function createApiClient({url, username, password, userAgent = 'Record im
 	}
 
 	async function getProfile({id}) {
-		const response = await fetch(`${url}/profiles/${id}`, {
+		const response = await doRequest(`${url}/profiles/${id}`, {
 			headers: {
 				'User-Agent': userAgent,
-				Authorization: authHeader,
 				Accept: 'application/json'
 			}
 		});
@@ -119,11 +115,10 @@ export function createApiClient({url, username, password, userAgent = 'Record im
 	}
 
 	async function deleteProfile({id}) {
-		const response = await fetch(`${url}/profiles/${id}`, {
+		const response = await doRequest(`${url}/profiles/${id}`, {
 			method: 'DELETE',
 			headers: {
-				'User-Agent': userAgent,
-				Authorization: authHeader
+				'User-Agent': userAgent
 			}
 		});
 
@@ -133,10 +128,9 @@ export function createApiClient({url, username, password, userAgent = 'Record im
 	}
 
 	async function queryProfiles() {
-		const response = await fetch(`${url}/profiles`, {
+		const response = await doRequest(`${url}/profiles`, {
 			headers: {
 				'User-Agent': userAgent,
-				Authorization: authHeader,
 				Accept: 'application/json'
 			}
 		});
@@ -149,13 +143,12 @@ export function createApiClient({url, username, password, userAgent = 'Record im
 	}
 
 	async function modifyProfile({id, payload}) {
-		const response = await fetch(`${url}/profiles/${id}`, {
+		const response = await doRequest(`${url}/profiles/${id}`, {
 			method: 'PUT',
 			body: JSON.stringify(payload),
 			headers: {
 				'User-Agent': userAgent,
-				'Content-Type': 'application/json',
-				Authorization: authHeader
+				'Content-Type': 'application/json'
 			}
 		});
 
@@ -165,11 +158,10 @@ export function createApiClient({url, username, password, userAgent = 'Record im
 	}
 
 	async function deleteBlob({id}) {
-		const response = await fetch(`${url}/blobs/${id}`, {
+		const response = await doRequest(`${url}/blobs/${id}`, {
 			method: 'DELETE',
 			headers: {
-				'User-Agent': userAgent,
-				Authorization: authHeader
+				'User-Agent': userAgent
 			}
 		});
 
@@ -181,11 +173,10 @@ export function createApiClient({url, username, password, userAgent = 'Record im
 	}
 
 	async function deleteBlobContent({id}) {
-		const response = await fetch(`${url}/blobs/${id}/content`, {
+		const response = await doRequest(`${url}/blobs/${id}/content`, {
 			method: 'DELETE',
 			headers: {
-				'User-Agent': userAgent,
-				Authorization: authHeader
+				'User-Agent': userAgent
 			}
 		});
 
@@ -248,10 +239,9 @@ export function createApiClient({url, username, password, userAgent = 'Record im
 			}
 		});
 
-		const response = await fetch(blobsUrl, {
+		const response = await doRequest(blobsUrl, {
 			headers: {
 				'User-Agent': userAgent,
-				Authorization: authHeader,
 				Accept: 'application/json'
 			}
 		});
@@ -264,17 +254,60 @@ export function createApiClient({url, username, password, userAgent = 'Record im
 	}
 
 	async function updateBlobMetadata({id, payload}) {
-		const response = await fetch(`${url}/blobs/${id}`, {
+		const response = await doRequest(`${url}/blobs/${id}`, {
 			method: 'POST',
 			body: JSON.stringify(payload),
 			headers: {
 				'User-Agent': userAgent,
-				'Content-Type': 'application/json',
-				Authorization: authHeader
+				'Content-Type': 'application/json'
 			}
 		});
 
 		if (response.status !== HttpStatus.NO_CONTENT) {
+			throw new ApiError(response.status);
+		}
+	}
+
+	// Requests a new token once
+	async function doRequest(reqUrl, reqOptions) {
+		const options = {headers: {}, ...reqOptions};
+
+		if (authHeader) {
+			options.headers.Authorization = authHeader;
+
+			const response = await fetch(reqUrl, options);
+
+			if (response.status === HttpStatus.UNAUTHORIZED) {
+				const token = await getAuthToken();
+				authHeader = `Authorization: Bearer ${token}`;
+				options.headers.Authorization = authHeader;
+
+				return fetch(reqUrl, options);
+			}
+
+			return response;
+		}
+
+		const token = await getAuthToken();
+		authHeader = `Bearer ${token}`;
+		options.headers.Authorization = authHeader;
+
+		return fetch(reqUrl, options);
+
+		async function getAuthToken() {
+			const encodedCreds = generateAuthorizationHeader(username, password);
+			const response = await fetch(`${url}/auth`, {
+				method: 'POST',
+				headers: {
+					'User-Agent': userAgent,
+					Authorization: encodedCreds
+				}
+			});
+
+			if (response.status === HttpStatus.NO_CONTENT) {
+				return response.headers.get('Token');
+			}
+
 			throw new ApiError(response.status);
 		}
 	}
