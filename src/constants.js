@@ -40,7 +40,8 @@ export const BLOB_UPDATE_OPERATIONS = {
 	transformationStarted: 'transformationStarted',
 	transformationDone: 'transformationDone',
 	transformationFailed: 'transformationFailed',
-	recordProcessed: 'recordProcessed'
+	recordProcessed: 'recordProcessed',
+	updateState: 'updateState'
 };
 
 export const RECORD_IMPORT_STATE = {

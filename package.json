@@ -23,7 +23,7 @@
 		"healthz": "./dist/health-check.js"
 	},
 	"scripts": {
-		"prepublishOnly": "npm run build",
+		"prepare": "npm run build",
 		"check-deps": "npm-check || exit 0",
 		"lint": "eslint --fix src",
 		"test": "npm run lint",

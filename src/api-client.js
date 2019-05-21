@@ -42,7 +42,7 @@ export function createApiClient({url, username, password, userAgent = 'Record im
 		getBlobs, createBlob, getBlobMetadata, deleteBlob,
 		getBlobContent, deleteBlobContent,
 		getProfile, modifyProfile, queryProfiles, deleteProfile,
-		setTransformationDone, setTransformationFailed, setRecordProcessed, setTransformationStarted, setAborted
+		setTransformationDone, setTransformationFailed, setRecordProcessed, setAborted, updateState
 	};
 
 	async function createBlob({blob, type, profile}) {
@@ -226,11 +226,12 @@ export function createApiClient({url, username, password, userAgent = 'Record im
 		});
 	}
 
-	async function setTransformationStarted({id}) {
+	async function updateState({id, state}) {
 		await updateBlobMetadata({
 			id,
 			payload: {
-				op: BLOB_UPDATE_OPERATIONS.transformationStarted
+				op: BLOB_UPDATE_OPERATIONS.updateState,
+				state
 			}
 		});
 	}
