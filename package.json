@@ -19,9 +19,6 @@
 	"engines": {
 		"node": ">=8"
 	},
-	"bin": {
-		"healthz": "./dist/health-check.js"
-	},
 	"scripts": {
 		"prepare": "npm run build",
 		"check-deps": "npm-check || exit 0",
