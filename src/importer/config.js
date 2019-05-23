@@ -39,8 +39,6 @@ export const AMQP_URL = readEnvironmentVariable('AMQP_URL');
 export const BLOB_ID = readEnvironmentVariable('BLOB_ID');
 export const PROFILE_ID = readEnvironmentVariable('PROFILE_ID');
 
-export const MAX_MESSAGE_TRIES = readEnvironmentVariable('MAX_MESSAGE_TRIES', {defaultValue: 3, format: v => Number(v)});
-export const MESSAGE_WAIT_TIME = readEnvironmentVariable('MESSAGE_WAIT_TIME', {defaultValue: 3000, format: v => Number(v)});
 export const HEALTH_CHECK_PORT = readEnvironmentVariable('HEALTH_CHECK_PORT', {defaultValue: 8080, format: v => Number(v)});
 
 export const API_CLIENT_USER_AGENT = readEnvironmentVariable('API_CLIENT_USER_AGENT', {defaultValue: '_RECORD-IMPORT-IMPORTER'});

@@ -35,8 +35,8 @@ import {RECORD_IMPORT_STATE} from '../constants';
 const {createLogger} = Utils;
 
 export default async function (importCallback) {
-	const {AMQP_URL, API_URL, API_USERNAME, API_PASSWORD, API_CLIENT_USER_AGENT, BLOB_ID, PROFILE_ID, HEALTH_CHECK_PORT} = await import('./config');
-	const Logger = createLogger();
+	const {AMQP_URL, API_URL, API_USERNAME, API_PASSWORD, API_CLIENT_USER_AGENT, BLOB_ID, HEALTH_CHECK_PORT} = await import('./config');
+	const logger = createLogger();
 	const stopHealthCheckService = startHealthCheckService(HEALTH_CHECK_PORT);
 
 	process.on('SIGINT', () => {
@@ -50,55 +50,60 @@ export default async function (importCallback) {
 		process.exit();
 	} catch (err) {
 		stopHealthCheckService();
-		Logger.error(err instanceof Error ? err.stack : err);
+		logger.log('error', err instanceof Error ? err.stack : err);
 		process.exit(1);
 	}
 
 	async function startImport() {
+		let connection;
+		let channel;
+
+		connection = await amqplib.connect(AMQP_URL);
+		channel = await connection.createChannel();
+
 		const ApiClient = createApiClient({url: API_URL, username: API_USERNAME, password: API_PASSWORD, userAgent: API_CLIENT_USER_AGENT});
-		const connection = await amqplib.connect(AMQP_URL);
-		const channel = await connection.createChannel();
 
-		channel.assertQueue(PROFILE_ID, {durable: true});
+		logger.log('info', `Starting consuming records of blob ${BLOB_ID}`);
 
-		Logger.info(`Ready to consume records of blob ${BLOB_ID} from queue ${PROFILE_ID}`);
-		await consume();
-
-		async function consume() {
-			const message = await channel.get(PROFILE_ID);
-
-			if (message) {
-				if (message.fields.routingKey === BLOB_ID) {
-					Logger.debug('Record received');
-
-					const metadata = await ApiClient.getBlobMetadata({id: BLOB_ID});
-
-					if (metadata.state === RECORD_IMPORT_STATE.ABORTED) {
-						Logger.info('Blob state is set to ABORTED. Ditching message');
-						await channel.nack(message, false, false);
-						return consume();
-					}
-
-					let importResult;
-
-					try {
-						importResult = await importCallback(message);
-					} catch (err) {
-						await channel.nack(message, false, true);
-						throw err;
-					}
-
-					await channel.ack(message);
-					await ApiClient.setRecordProcessed({blobId: BLOB_ID, ...importResult});
-					Logger.log('debug', 'Set record as processed');
-				} else {
-					Logger.debug('Message received but is from another blob');
-				}
-
-				return consume();
+		try {
+			await consume();
+			logger.log('info', 'Processed all messages.');
+		} finally {
+			if (channel) {
+				await channel.close();
 			}
 
-			Logger.info('No more messages in queue');
+			if (connection) {
+				await connection.close();
+			}
+		}
+
+		async function consume() {
+			const message = await channel.get(BLOB_ID);
+
+			if (message) {
+				logger.log('debug', 'Record received');
+
+				const metadata = await ApiClient.getBlobMetadata({id: BLOB_ID});
+
+				if (metadata.state === RECORD_IMPORT_STATE.ABORTED) {
+					logger.log('info', 'Blob state is set to ABORTED. Ditching message');
+					await channel.nack(message, false, false);
+					return consume();
+				}
+
+				try {
+					const importResult = await importCallback(message);
+					await ApiClient.setRecordProcessed({blobId: BLOB_ID, ...importResult});
+					await channel.ack(message);
+				} catch (err) {
+					await channel.nack(message);
+					throw err;
+				}
+
+				logger.log('debug', 'Set record as processed');
+				return consume();
+			}
 		}
 	}
 }
