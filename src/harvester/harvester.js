@@ -36,7 +36,7 @@ const {createLogger} = Utils;
 
 export default async function (harvestCallback) {
 	const {API_URL, API_USERNAME, API_PASSWORD, API_CLIENT_USER_AGENT, PROFILE_ID} = await import('./config');
-	const Logger = createLogger();
+	const logger = createLogger();
 	const ApiClient = createApiClient({url: API_URL, username: API_USERNAME, password: API_PASSWORD, userAgent: API_CLIENT_USER_AGENT});
 
 	registerSignalHandlers();
@@ -45,7 +45,7 @@ export default async function (harvestCallback) {
 		await harvestCallback({recordsCallback: createBlob});
 		process.exit();
 	} catch (err) {
-		Logger.error(err instanceof Error ? err.stack : err);
+		logger.log('error', err instanceof Error ? err.stack : err);
 		process.exit(1);
 	}
 
@@ -56,6 +56,6 @@ export default async function (harvestCallback) {
 			profile: PROFILE_ID
 		});
 
-		Logger.info(`Created new blob ${id}`);
+		logger.log('info', `Created new blob ${id}`);
 	}
 }
