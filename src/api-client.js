@@ -26,6 +26,7 @@
 *
 */
 
+import {EventEmitter} from 'events';
 import fetch from 'node-fetch';
 import HttpStatus from 'http-status';
 import {URL} from 'url';
@@ -236,31 +237,60 @@ export function createApiClient({url, username, password, userAgent = 'Record im
 		});
 	}
 
-	async function getBlobs(query = {}) {
-		const blobsUrl = new URL(`${url}/blobs`);
+	function getBlobs(query = {}) {
+		const blobsUrl = createURL();
+		const emitter = new EventEmitter();
 
-		Object.keys(query).forEach(k => {
-			if (Array.isArray(query[k])) {
-				query[k].forEach(value => {
-					blobsUrl.searchParams.append(`${k}[]`, value);
-				});
-			} else {
-				blobsUrl.searchParams.set(k, query[k]);
-			}
-		});
+		pump();
 
-		const response = await doRequest(blobsUrl, {
-			headers: {
-				'User-Agent': userAgent,
-				Accept: 'application/json'
-			}
-		});
+		return emitter;
 
-		if (response.status === HttpStatus.OK) {
-			return response.json();
+		function createURL() {
+			const blobsUrl = new URL(`${url}/blobs`);
+
+			Object.keys(query).forEach(k => {
+				if (Array.isArray(query[k])) {
+					query[k].forEach(value => {
+						blobsUrl.searchParams.append(`${k}[]`, value);
+					});
+				} else {
+					blobsUrl.searchParams.set(k, query[k]);
+				}
+			});
+
+			return blobsUrl;
 		}
 
-		throw new ApiError(response.status);
+		async function pump(offset) {
+			const response = await doRequest(blobsUrl, getOptions());
+
+			if (response.status === HttpStatus.OK) {
+				emitter.emit('blobs', await response.json());
+
+				if (response.headers.has('NextOffset')) {
+					pump(response.headers.get('NextOffset'));
+				} else {
+					emitter.emit('end');
+				}
+			} else {
+				emitter.emit('error', new ApiError(response.status));
+			}
+
+			function getOptions() {
+				const options = {
+					headers: {
+						'User-Agent': userAgent,
+						Accept: 'application/json'
+					}
+				};
+
+				if (offset) {
+					options.headers.QueryOffset = offset;
+				}
+
+				return options;
+			}
+		}
 	}
 
 	async function updateBlobMetadata({id, payload}) {
@@ -289,7 +319,7 @@ export function createApiClient({url, username, password, userAgent = 'Record im
 
 			if (response.status === HttpStatus.UNAUTHORIZED) {
 				const token = await getAuthToken();
-				authHeader = `Authorization: Bearer ${token}`;
+				authHeader = `Authorization: Bearer ${token}`; // eslint-disable-line require-atomic-updates
 				options.headers.Authorization = authHeader;
 
 				return fetch(reqUrl, options);
@@ -299,7 +329,7 @@ export function createApiClient({url, username, password, userAgent = 'Record im
 		}
 
 		const token = await getAuthToken();
-		authHeader = `Bearer ${token}`;
+		authHeader = `Bearer ${token}`; // eslint-disable-line require-atomic-updates
 		options.headers.Authorization = authHeader;
 
 		return fetch(reqUrl, options);
