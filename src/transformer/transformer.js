@@ -71,8 +71,14 @@ export default async function (transformCallback, validateCallback) {
 
 			const records = await transform();
 			const failedRecords = records.filter(r => r.failed).map(result => {
-				return {...result, record: result.record.toObject()};
-			});
+				const returnSchema = {
+				  record: {
+					leader, fields
+				  },
+				  failed, messages
+				}
+				return _objectSpread({}, result, returnSchema);
+			  });
 
 			logger.log('debug', `${failedRecords.length} records failed`);
 
