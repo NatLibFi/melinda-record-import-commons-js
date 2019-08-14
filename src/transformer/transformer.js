@@ -31,19 +31,19 @@
 
 import amqplib from 'amqplib';
 import uuid from 'uuid/v4';
-import {Utils} from '@natlibfi/melinda-commons';
+import { Utils } from '@natlibfi/melinda-commons';
 import createValidator from './validate';
-import {registerSignalHandlers, startHealthCheckService} from '../common';
-import {createApiClient} from '../api-client';
+import { registerSignalHandlers, startHealthCheckService } from '../common';
+import { createApiClient } from '../api-client';
 
-const {createLogger} = Utils;
+const { createLogger } = Utils;
 
 export default async function (transformCallback, validateCallback) {
-	const {AMQP_URL, API_URL, API_USERNAME, API_PASSWORD, API_CLIENT_USER_AGENT, BLOB_ID, PROFILE_ID, ABORT_ON_INVALID_RECORDS, HEALTH_CHECK_PORT} = await import('./config');
+	const { AMQP_URL, API_URL, API_USERNAME, API_PASSWORD, API_CLIENT_USER_AGENT, BLOB_ID, PROFILE_ID, ABORT_ON_INVALID_RECORDS, HEALTH_CHECK_PORT } = await import('./config');
 	const logger = createLogger();
 	const stopHealthCheckService = startHealthCheckService();
 
-	registerSignalHandlers({stopHealthCheckService});
+	registerSignalHandlers({ stopHealthCheckService });
 
 	try {
 		await startTransformation(HEALTH_CHECK_PORT);
@@ -60,8 +60,8 @@ export default async function (transformCallback, validateCallback) {
 		let channel;
 
 		const validate = createValidator(validateCallback);
-		const ApiClient = createApiClient({url: API_URL, username: API_USERNAME, password: API_PASSWORD, userAgent: API_CLIENT_USER_AGENT});
-		const {readStream} = await ApiClient.getBlobContent({id: BLOB_ID});
+		const ApiClient = createApiClient({ url: API_URL, username: API_USERNAME, password: API_PASSWORD, userAgent: API_CLIENT_USER_AGENT });
+		const { readStream } = await ApiClient.getBlobContent({ id: BLOB_ID });
 
 		logger.log('info', `Starting transformation for blob ${BLOB_ID}`);
 
@@ -71,14 +71,8 @@ export default async function (transformCallback, validateCallback) {
 
 			const records = await transform();
 			const failedRecords = records.filter(r => r.failed).map(result => {
-				const returnSchema = {
-				  record: {
-					leader, fields
-				  },
-				  failed, messages
-				}
-				return _objectSpread({}, result, returnSchema);
-			  });
+				return {...result,};
+			});
 
 			logger.log('debug', `${failedRecords.length} records failed`);
 
@@ -92,9 +86,9 @@ export default async function (transformCallback, validateCallback) {
 
 			if (ABORT_ON_INVALID_RECORDS && failedRecords.length > 0) {
 				logger.log('info', `Not sending records to queue because ${failedRecords.length} records failed and ABORT_ON_INVALID_RECORDS is true`);
-				await ApiClient.setTransformationFailed({id: BLOB_ID, error: failedRecords});
+				await ApiClient.setTransformationFailed({ id: BLOB_ID, error: failedRecords });
 			} else {
-				await channel.assertQueue(BLOB_ID, {durable: true});
+				await channel.assertQueue(BLOB_ID, { durable: true });
 				// Await channel.assertExchange(BLOB_ID, 'direct', {autoDelete: true});
 				// await channel.bindQueue(PROFILE_ID, BLOB_ID, BLOB_ID);
 
@@ -105,7 +99,7 @@ export default async function (transformCallback, validateCallback) {
 			}
 		} catch (err) {
 			logger.log('error', `Failed transforming blob: ${err.stack}`);
-			await ApiClient.setTransformationFailed({id: BLOB_ID, error: err.stack});
+			await ApiClient.setTransformationFailed({ id: BLOB_ID, error: err.stack });
 		} finally {
 			if (channel) {
 				await channel.close();
@@ -131,7 +125,7 @@ export default async function (transformCallback, validateCallback) {
 			if (record) {
 				const message = Buffer.from(JSON.stringify(record));
 				logger.log('debug', 'Sending a record to the queue');
-				await channel.sendToQueue(BLOB_ID, message, {persistent: true, messageId: uuid()});
+				await channel.sendToQueue(BLOB_ID, message, { persistent: true, messageId: uuid() });
 				return sendRecords(channel, records, count + 1);
 			}
 
