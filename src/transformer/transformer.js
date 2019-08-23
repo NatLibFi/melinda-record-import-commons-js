@@ -32,7 +32,6 @@
 import amqplib from 'amqplib';
 import uuid from 'uuid/v4';
 import {Utils} from '@natlibfi/melinda-commons';
-import createValidator from './validate';
 import {registerSignalHandlers, startHealthCheckService} from '../common';
 import {createApiClient} from '../api-client';
 
@@ -59,7 +58,6 @@ export default async function (transformCallback, validateCallback) {
 		let connection;
 		let channel;
 
-		const validate = createValidator(validateCallback);
 		const ApiClient = createApiClient({url: API_URL, username: API_USERNAME, password: API_PASSWORD, userAgent: API_CLIENT_USER_AGENT});
 		const {readStream} = await ApiClient.getBlobContent({id: BLOB_ID});
 
@@ -69,7 +67,7 @@ export default async function (transformCallback, validateCallback) {
 			connection = await amqplib.connect(AMQP_URL);
 			channel = await connection.createChannel();
 
-			const records = await transform();
+			const records = await validateCallback(await transformCallback(readStream));
 			const failedRecords = records.filter(r => r.failed).map(result => {
 				return {...result, record: result.record.toObject()};
 			});
@@ -108,15 +106,6 @@ export default async function (transformCallback, validateCallback) {
 			if (connection) {
 				await connection.close();
 			}
-		}
-
-		async function transform() {
-			logger.log('debug', 'Transforming records');
-
-			const records = await transformCallback(readStream);
-
-			logger.log('debug', 'Validating records');
-			return validate(records, true);
 		}
 
 		async function sendRecords(channel, records, count = 0) {
