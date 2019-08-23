@@ -67,7 +67,8 @@ export default async function (transformCallback, validateCallback) {
 			connection = await amqplib.connect(AMQP_URL);
 			channel = await connection.createChannel();
 
-			const records = await validateCallback(await transformCallback(readStream));
+			const unValidatedRecords = await transformCallback(readStream);
+			const records = await validateCallback(unValidatedRecords);
 			const failedRecords = records.filter(r => r.failed).map(result => {
 				return {...result, record: result.record.toObject()};
 			});
