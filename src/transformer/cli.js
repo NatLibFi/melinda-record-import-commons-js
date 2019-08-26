@@ -33,10 +33,8 @@ import fs from 'fs';
 import path from 'path';
 import yargs from 'yargs';
 import ora from 'ora';
-import createValidator from './validate';
 
-export default async function ({name, transformCallback, validateCallback}) {
-	const validate = createValidator(validateCallback);
+export default async function ({name, transformCallback}) {
 	const args = yargs
 		.scriptName(name)
 		.command('$0 <file>', '', yargs => {
@@ -55,22 +53,21 @@ export default async function ({name, transformCallback, validateCallback}) {
 	}
 
 	const spinner = ora('Transforming records').start();
-	const records = await transformCallback(fs.createReadStream(args.file));
+	const records = await transformCallback(fs.createReadStream(args.file), args.validate, args.fix);
 
 	if (args.validate || args.fix) {
 		spinner.succeed();
 		spinner.start('Validating records');
 
-		const results = await validate(records, args.fix);
-		const invalidCount = results.filter(r => r.failed).length;
-		const validCount = results.length - invalidCount;
+		const invalidCount = records.filter(r => r.failed).length;
+		const validCount = records.length - invalidCount;
 		spinner.succeed(`Validating records (Valid: ${validCount}, invalid: ${invalidCount})`);
 
 		if (args.recordsOnly) {
-			console.error(`Excluding ${results.filter(r => r.failed).length} failed records`);
-			handleRecordsOutput(results.filter(r => !r.failed).map(r => r.record));
+			console.error(`Excluding ${records.filter(r => r.failed).length} failed records`);
+			handleRecordsOutput(records.filter(r => !r.failed).map(r => r.record));
 		} else {
-			console.log(JSON.stringify(results.map(r => {
+			console.log(JSON.stringify(records.map(r => {
 				return {record: r.record.toObject(), ...r};
 			}), undefined, 2));
 		}
