@@ -33,7 +33,7 @@ import fs from 'fs';
 import yargs from 'yargs';
 import ora from 'ora';
 
-export default async function ({transformerSettings}) {
+export default async function (transformerSettings) {
 	console.log('debug', 'commons suorittaa');
 	const args = yargs
 		.scriptName(transformerSettings.name)
