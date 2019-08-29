@@ -33,7 +33,8 @@ import fs from 'fs';
 import yargs from 'yargs';
 import ora from 'ora';
 
-export default async function ({transformerSettings, transformCallback}) {
+export default async function ({transformerSettings}) {
+	console.log('debug', 'commons suorittaa');
 	const args = yargs
 		.scriptName(transformerSettings.name)
 		.command('$0 <file>', '', yargs => {
@@ -53,5 +54,5 @@ export default async function ({transformerSettings, transformCallback}) {
 	}
 
 	const spinner = ora('Transforming records').start();
-	await transformCallback(fs.createReadStream(args.file), args, spinner, fs);
+	await transformerSettings.callback(fs.createReadStream(args.file), args, spinner, fs);
 }
