@@ -54,5 +54,5 @@ export default async function (name, transformeryargs, transformer) {
 	}
 
 	const spinner = ora('Transforming records').start();
-	await transformer.callback(fs.createReadStream(args.file), args, spinner, fs);
+	await transformer(fs.createReadStream(args.file), args, spinner, fs);
 }
