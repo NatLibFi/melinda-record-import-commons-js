@@ -30,10 +30,8 @@
 /* eslint-disable import/default */
 
 import fs from 'fs';
-import path from 'path';
 import yargs from 'yargs';
 import ora from 'ora';
-import moment from 'moment';
 
 export default async function ({transformerSettings, transformCallback}) {
 	const args = yargs
@@ -55,42 +53,5 @@ export default async function ({transformerSettings, transformCallback}) {
 	}
 
 	const spinner = ora('Transforming records').start();
-	const records = await transformCallback(fs.createReadStream(args.file), args.validate, args.fix);
-
-	if (args.validate || args.fix) {
-		spinner.succeed();
-		spinner.start('Validating records');
-
-		const invalidCount = records.filter(r => r.failed).length;
-		const validCount = records.length - invalidCount;
-		spinner.succeed(`Validating records (Valid: ${validCount}, invalid: ${invalidCount})`);
-
-		if (args.recordsOnly) {
-			console.error(`Excluding ${records.filter(r => r.failed).length} failed records`);
-			handleRecordsOutput(records.filter(r => !r.failed).map(r => r.record));
-		} else {
-			console.log(JSON.stringify(records.map(r => {
-				return {record: r.record.toObject(), timestamp: moment(), ...r};
-			}), undefined, 2));
-		}
-	} else {
-		spinner.succeed();
-		handleRecordsOutput(records);
-	}
-
-	function handleRecordsOutput(records) {
-		if (args.outputDirectory) {
-			if (!fs.existsSync(args.outputDirectory)) {
-				fs.mkdirSync(args.outputDirectory);
-			}
-
-			records
-				.forEach((record, index) => {
-					const file = path.join(args.outputDirectory, `${index}.json`);
-					fs.writeFileSync(file, JSON.stringify(record.toObject(), undefined, 2));
-				});
-		} else {
-			console.log(JSON.stringify(records.map(r => r.toObject()), undefined, 2));
-		}
-	}
+	await transformCallback(fs.createReadStream(args.file), args, spinner);
 }
