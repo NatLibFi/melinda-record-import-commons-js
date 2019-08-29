@@ -33,6 +33,7 @@ import fs from 'fs';
 import path from 'path';
 import yargs from 'yargs';
 import ora from 'ora';
+import moment from 'moment';
 
 export default async function ({name, transformCallback}) {
 	const args = yargs
@@ -68,7 +69,7 @@ export default async function ({name, transformCallback}) {
 			handleRecordsOutput(records.filter(r => !r.failed).map(r => r.record));
 		} else {
 			console.log(JSON.stringify(records.map(r => {
-				return {record: r.record.toObject(), ...r};
+				return {record: r.record.toObject(), timestamp: moment(), ...r};
 			}), undefined, 2));
 		}
 	} else {

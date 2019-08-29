@@ -34,6 +34,7 @@ import uuid from 'uuid/v4';
 import {Utils} from '@natlibfi/melinda-commons';
 import {registerSignalHandlers, startHealthCheckService} from '../common';
 import {createApiClient} from '../api-client';
+import moment from 'moment';
 
 const {createLogger} = Utils;
 
@@ -69,7 +70,7 @@ export default async function (transformCallback) {
 
 			const records = await transformCallback(readStream);
 			const failedRecords = records.filter(r => r.failed).map(result => {
-				return {...result, record: result.record.toObject()};
+				return {...result, record: result.record.toObject(), timestamp: moment()};
 			});
 
 			logger.log('debug', `${failedRecords.length} records failed`);
