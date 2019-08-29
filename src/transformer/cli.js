@@ -33,16 +33,16 @@ import fs from 'fs';
 import yargs from 'yargs';
 import ora from 'ora';
 
-export default async function (transformerSettings) {
+export default async function (name, transformeryargs, transformer) {
 	console.log('debug', 'commons suorittaa');
 	const args = yargs
-		.scriptName(transformerSettings.name)
+		.scriptName(name)
 		.command('$0 <file>', '', yargs => {
 			yargs
 				.positional('file', {type: 'string', describe: 'File to transform'})
 				.option('r', {alias: 'recordsOnly', default: false, type: 'boolean', describe: 'Write only record data to output (Invalid records are excluded)'})
 				.option('d', {alias: 'outputDirectory', type: 'string', describe: 'Output directory where each record file is written (Applicable only with `recordsOnly`'});
-			transformerSettings.yargs.forEach(yarg => {
+			transformeryargs.forEach(yarg => {
 				yargs.option(yarg.option, yarg.conf);
 			});
 		})
@@ -54,5 +54,5 @@ export default async function (transformerSettings) {
 	}
 
 	const spinner = ora('Transforming records').start();
-	await transformerSettings.callback(fs.createReadStream(args.file), args, spinner, fs);
+	await transformer.callback(fs.createReadStream(args.file), args, spinner, fs);
 }
