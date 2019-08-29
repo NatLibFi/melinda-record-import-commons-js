@@ -35,16 +35,17 @@ import yargs from 'yargs';
 import ora from 'ora';
 import moment from 'moment';
 
-export default async function ({name, transformCallback}) {
+export default async function ({transformerSettings, transformCallback}) {
 	const args = yargs
-		.scriptName(name)
+		.scriptName(transformerSettings.name)
 		.command('$0 <file>', '', yargs => {
 			yargs
 				.positional('file', {type: 'string', describe: 'File to transform'})
-				.option('v', {alias: 'validate', default: false, type: 'boolean', describe: 'Validate records'})
-				.option('f', {alias: 'fix', default: false, type: 'boolean', describe: 'Validate & fix records'})
 				.option('r', {alias: 'recordsOnly', default: false, type: 'boolean', describe: 'Write only record data to output (Invalid records are excluded)'})
 				.option('d', {alias: 'outputDirectory', type: 'string', describe: 'Output directory where each record file is written (Applicable only with `recordsOnly`'});
+			transformerSettings.yargs.forEach(yarg => {
+				yargs.option(yarg.option, yarg.conf);
+			});
 		})
 		.parse();
 
