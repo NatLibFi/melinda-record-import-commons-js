@@ -32,6 +32,7 @@
 import fs from 'fs';
 import yargs from 'yargs';
 import ora from 'ora';
+import path from 'path';
 
 export default async function (transformerSettings) {
 	console.log('debug', 'commons suorittaa');
@@ -54,5 +55,21 @@ export default async function (transformerSettings) {
 	}
 
 	const spinner = ora('Transforming records').start();
-	await transformerSettings.callback(fs.createReadStream(args.file), args, spinner, fs);
+	await transformerSettings.callback(fs.createReadStream(args.file), args, spinner, handleRecordsOutput);
+
+	function handleRecordsOutput(records) {
+		if (args.outputDirectory) {
+			if (!fs.existsSync(args.outputDirectory)) {
+				fs.mkdirSync(args.outputDirectory);
+			}
+
+			records
+				.forEach((record, index) => {
+					const file = path.join(args.outputDirectory, `${index}.json`);
+					fs.writeFileSync(file, JSON.stringify(record.toObject(), undefined, 2));
+				});
+		} else {
+			console.log(JSON.stringify(records.map(r => r.toObject()), undefined, 2));
+		}
+	}
 }
