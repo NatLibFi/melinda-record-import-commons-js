@@ -34,17 +34,17 @@ import yargs from 'yargs';
 import ora from 'ora';
 import path from 'path';
 
-export default async function (transformerSettings) {
+export default async ({name, yargsOptions, callback}) => {
 	console.log('debug', 'commons suorittaa');
 	const args = yargs
-		.scriptName(transformerSettings.name)
+		.scriptName(name)
 		.command('$0 <file>', '', yargs => {
 			yargs
 				.positional('file', {type: 'string', describe: 'File to transform'})
 				.option('r', {alias: 'recordsOnly', default: false, type: 'boolean', describe: 'Write only record data to output (Invalid records are excluded)'})
 				.option('d', {alias: 'outputDirectory', type: 'string', describe: 'Output directory where each record file is written (Applicable only with `recordsOnly`'});
-			transformerSettings.yargs.forEach(yarg => {
-				yargs.option(yarg.option, yarg.conf);
+			yargsOptions.forEach(({option, conf}) => {
+				yargs.option(option, conf);
 			});
 		})
 		.parse();
@@ -55,7 +55,7 @@ export default async function (transformerSettings) {
 	}
 
 	const spinner = ora('Transforming records').start();
-	await transformerSettings.callback(fs.createReadStream(args.file), args, spinner, handleRecordsOutput);
+	await callback(fs.createReadStream(args.file), args, spinner, handleRecordsOutput);
 
 	function handleRecordsOutput(records) {
 		if (args.outputDirectory) {
@@ -72,4 +72,4 @@ export default async function (transformerSettings) {
 			console.log(JSON.stringify(records.map(r => r.toObject()), undefined, 2));
 		}
 	}
-}
+};
