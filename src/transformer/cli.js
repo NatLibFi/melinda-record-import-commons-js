@@ -55,7 +55,13 @@ export default async ({name, yargsOptions, callback}) => {
 	}
 
 	const spinner = ora('Transforming records').start();
-	await callback(fs.createReadStream(args.file), args, spinner, handleRecordsOutput);
+	const options = {
+		stream: fs.createReadStream(args.file),
+		args,
+		spinner,
+		handleRecordsOutput
+	};
+	await callback(options);
 
 	function handleRecordsOutput(records) {
 		if (args.outputDirectory) {
