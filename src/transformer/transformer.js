@@ -32,13 +32,13 @@
 import amqplib from 'amqplib';
 import uuid from 'uuid/v4';
 import {Utils} from '@natlibfi/melinda-commons';
-import createValidator from './validate';
 import {registerSignalHandlers, startHealthCheckService} from '../common';
 import {createApiClient} from '../api-client';
+import moment from 'moment';
 
 const {createLogger} = Utils;
 
-export default async function (transformCallback, validateCallback) {
+export default async function (transformCallback) {
 	const {AMQP_URL, API_URL, API_USERNAME, API_PASSWORD, API_CLIENT_USER_AGENT, BLOB_ID, PROFILE_ID, ABORT_ON_INVALID_RECORDS, HEALTH_CHECK_PORT} = await import('./config');
 	const logger = createLogger();
 	const stopHealthCheckService = startHealthCheckService();
@@ -59,7 +59,6 @@ export default async function (transformCallback, validateCallback) {
 		let connection;
 		let channel;
 
-		const validate = createValidator(validateCallback);
 		const ApiClient = createApiClient({url: API_URL, username: API_USERNAME, password: API_PASSWORD, userAgent: API_CLIENT_USER_AGENT});
 		const {readStream} = await ApiClient.getBlobContent({id: BLOB_ID});
 
@@ -69,9 +68,9 @@ export default async function (transformCallback, validateCallback) {
 			connection = await amqplib.connect(AMQP_URL);
 			channel = await connection.createChannel();
 
-			const records = await transform();
+			const records = await transformCallback(readStream);
 			const failedRecords = records.filter(r => r.failed).map(result => {
-				return {...result, record: result.record.toObject()};
+				return {...result, record: result.record.toObject(), timestamp: moment()};
 			});
 
 			logger.log('debug', `${failedRecords.length} records failed`);
@@ -108,15 +107,6 @@ export default async function (transformCallback, validateCallback) {
 			if (connection) {
 				await connection.close();
 			}
-		}
-
-		async function transform() {
-			logger.log('debug', 'Transforming records');
-
-			const records = await transformCallback(readStream);
-
-			logger.log('debug', 'Validating records');
-			return validate(records, true);
 		}
 
 		async function sendRecords(channel, records, count = 0) {
