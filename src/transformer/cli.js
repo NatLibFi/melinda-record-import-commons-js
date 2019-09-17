@@ -37,7 +37,7 @@ import path from 'path';
 const EventEmiter = require('events');
 const eventEmiter = new EventEmiter();
 
-exports.eventEmiter;
+exports.EventEmiter = eventEmiter;
 
 export default async ({name, yargsOptions, callback}) => {
 	const args = yargs
@@ -68,7 +68,7 @@ export default async ({name, yargsOptions, callback}) => {
 
 	eventEmiter.on('transform started', () => {
 		console.log('emiter test');
-	})
+	});
 
 	await callback(options);
 

@@ -70,7 +70,7 @@ export default async function (transformCallback, eventsEmiter) {
 
 			eventsEmiter.on('transform started', () => {
 				console.log('emit works');
-			})
+			});
 
 			const records = await transformCallback(readStream);
 			const failedRecords = records.filter(r => r.failed).map(result => {
