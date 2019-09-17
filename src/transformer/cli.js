@@ -37,11 +37,10 @@ import path from 'path';
 const EventEmiter = require('events');
 const eventEmiter = new EventEmiter();
 
-exports.EventEmiter = eventEmiter;
 
 export default async ({name, yargsOptions, callback}) => {
 	const args = yargs
-		.scriptName(name)
+	.scriptName(name)
 		.command('$0 <file>', '', yargs => {
 			yargs
 				.positional('file', {type: 'string', describe: 'File to transform'})
@@ -53,8 +52,8 @@ export default async ({name, yargsOptions, callback}) => {
 		})
 		.parse();
 
-	if (!fs.existsSync(args.file)) {
-		console.error(`File ${args.file} does not exist`);
+		if (!fs.existsSync(args.file)) {
+			console.error(`File ${args.file} does not exist`);
 		process.exit(-1);
 	}
 
@@ -65,26 +64,28 @@ export default async ({name, yargsOptions, callback}) => {
 		spinner,
 		handleRecordsOutput
 	};
-
+	
 	eventEmiter.on('transform started', () => {
 		console.log('emiter test');
 	});
-
+	
 	await callback(options);
-
+	
 	function handleRecordsOutput(records) {
 		if (args.outputDirectory) {
 			if (!fs.existsSync(args.outputDirectory)) {
 				fs.mkdirSync(args.outputDirectory);
 			}
-
+			
 			records
-				.forEach((record, index) => {
-					const file = path.join(args.outputDirectory, `${index}.json`);
-					fs.writeFileSync(file, JSON.stringify(record.toObject(), undefined, 2));
-				});
+			.forEach((record, index) => {
+				const file = path.join(args.outputDirectory, `${index}.json`);
+				fs.writeFileSync(file, JSON.stringify(record.toObject(), undefined, 2));
+			});
 		} else {
 			console.log(JSON.stringify(records.map(r => r.toObject()), undefined, 2));
 		}
 	}
 };
+
+module.exports = eventEmiter;
