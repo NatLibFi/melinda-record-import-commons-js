@@ -33,10 +33,9 @@ import fs from 'fs';
 import yargs from 'yargs';
 import ora from 'ora';
 import path from 'path';
+import eventEmitter from '../emiter';
 
-const EventEmiter = require('events');
-const eventEmiter = new EventEmiter();
-
+const eEmitter = eventEmitter;
 
 export async function runCli({name, yargsOptions, callback}) {
 	const args = yargs
@@ -64,10 +63,10 @@ export async function runCli({name, yargsOptions, callback}) {
 		spinner,
 		handleRecordsOutput
 	};
-	
-	eventEmiter.on('transform started', () => {
-		console.log('emiter test');
-	});
+
+	eEmitter.on('transform started', (v) => {
+		console.log(v);
+	})
 	
 	await callback(options);
 	
@@ -87,5 +86,3 @@ export async function runCli({name, yargsOptions, callback}) {
 		}
 	}
 };
-
-module.exports = eventEmiter;
