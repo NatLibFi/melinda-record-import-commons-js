@@ -38,7 +38,7 @@ const EventEmiter = require('events');
 const eventEmiter = new EventEmiter();
 
 
-export default async ({name, yargsOptions, callback}) => {
+export async function runCli({name, yargsOptions, callback}) {
 	const args = yargs
 	.scriptName(name)
 		.command('$0 <file>', '', yargs => {
