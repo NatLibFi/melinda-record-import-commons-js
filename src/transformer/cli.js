@@ -37,7 +37,7 @@ import eventEmitter from '../emiter';
 
 const eEmitter = eventEmitter;
 
-export async function runCli({name, yargsOptions, callback}) {
+export default async ({name, yargsOptions, callback}) => {
 	const args = yargs
 	.scriptName(name)
 		.command('$0 <file>', '', yargs => {
