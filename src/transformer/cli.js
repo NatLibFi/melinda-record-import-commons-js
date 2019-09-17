@@ -34,6 +34,11 @@ import yargs from 'yargs';
 import ora from 'ora';
 import path from 'path';
 
+const EventEmiter = require('events');
+const eventEmiter = new EventEmiter();
+
+exports.eventEmiter;
+
 export default async ({name, yargsOptions, callback}) => {
 	const args = yargs
 		.scriptName(name)
@@ -60,6 +65,11 @@ export default async ({name, yargsOptions, callback}) => {
 		spinner,
 		handleRecordsOutput
 	};
+
+	eventEmiter.on('transform started', () => {
+		console.log('emiter test');
+	})
+
 	await callback(options);
 
 	function handleRecordsOutput(records) {
