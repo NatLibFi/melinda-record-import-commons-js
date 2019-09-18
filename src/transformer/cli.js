@@ -34,7 +34,7 @@ import yargs from 'yargs';
 import ora from 'ora';
 import path from 'path';
 
-export default async ({name, yargsOptions, callback}) => {
+export default async ({name, yargsOptions, startTransform}) => {
 	const args = yargs
 	.scriptName(name)
 		.command('$0 <file>', '', yargs => {
@@ -55,16 +55,15 @@ export default async ({name, yargsOptions, callback}) => {
 
 	const spinner = ora('Transforming records').start();
 	const options = {
-		stream: fs.createReadStream(args.file),
-		args,
 		spinner,
 		handleRecordsOutput
 	};
 
 	
-	const TransformClient = callback(options);
+	const TransformClient = startTransform(options);
 
-	TransformClient.on('begun', () => {
+	TransformClient.transformStream({stream: fs.createReadStream(args.file),
+	args}).on('begun', () => {
 		console.log('test');
 	});
 	
