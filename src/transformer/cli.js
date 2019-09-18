@@ -33,9 +33,6 @@ import fs from 'fs';
 import yargs from 'yargs';
 import ora from 'ora';
 import path from 'path';
-import eventEmitter from '../emiter';
-
-const eEmitter = eventEmitter;
 
 export default async ({name, yargsOptions, callback}) => {
 	const args = yargs
@@ -64,11 +61,10 @@ export default async ({name, yargsOptions, callback}) => {
 		handleRecordsOutput
 	};
 
-	eEmitter.on('transform started', (v) => {
-		console.log(v);
-	})
 	
-	await callback(options);
+	await callback(options).on('begun', () => {
+		console.log('test');
+	});
 	
 	function handleRecordsOutput(records) {
 		if (args.outputDirectory) {
