@@ -34,53 +34,68 @@ import yargs from 'yargs';
 import ora from 'ora';
 import path from 'path';
 
-export default async ({name, yargsOptions, startTransform}) => {
+export default async ({ name, yargsOptions, startTransform }) => {
 	const args = yargs
-	.scriptName(name)
+		.scriptName(name)
 		.command('$0 <file>', '', yargs => {
 			yargs
-				.positional('file', {type: 'string', describe: 'File to transform'})
-				.option('r', {alias: 'recordsOnly', default: false, type: 'boolean', describe: 'Write only record data to output (Invalid records are excluded)'})
-				.option('d', {alias: 'outputDirectory', type: 'string', describe: 'Output directory where each record file is written (Applicable only with `recordsOnly`'});
-			yargsOptions.forEach(({option, conf}) => {
+				.positional('file', { type: 'string', describe: 'File to transform' })
+				.option('r', { alias: 'recordsOnly', default: false, type: 'boolean', describe: 'Write only record data to output (Invalid records are excluded)' })
+				.option('d', { alias: 'outputDirectory', type: 'string', describe: 'Output directory where each record file is written (Applicable only with `recordsOnly`' });
+			yargsOptions.forEach(({ option, conf }) => {
 				yargs.option(option, conf);
 			});
 		})
 		.parse();
 
-		if (!fs.existsSync(args.file)) {
-			console.error(`File ${args.file} does not exist`);
+	if (!fs.existsSync(args.file)) {
+		console.error(`File ${args.file} does not exist`);
 		process.exit(-1);
 	}
 
 	const spinner = ora('Transforming records').start();
-	const options = {
-		spinner,
-		handleRecordsOutput
-	};
 
-	
-	const TransformClient = startTransform(options);
 
-	TransformClient.transformStream({stream: fs.createReadStream(args.file),
-	args}).on('begun', () => {
-		console.log('test');
-	});
-	
+	const TransformClient = startTransform();
+
+	TransformClient.transformStream({ stream: fs.createReadStream(args.file), args })
+		.on('spinner', spinnerState)
+		.on('handle', handleRecordsOutput)
+		.on('fail', showFailed)
+		.on('log', consoleLogRecords);
+
+	function spinnerState({ state, message }) {
+		switch (state) {
+			case 'succeed':
+				{ message ? spinner.succeed(message) : spinner.succeed() };
+				break;
+			case 'start':
+				{message ? spinner.start(message) : spinner.start};
+				break;
+		}
+	}
 
 	function handleRecordsOutput(records) {
 		if (args.outputDirectory) {
 			if (!fs.existsSync(args.outputDirectory)) {
 				fs.mkdirSync(args.outputDirectory);
 			}
-			
+
 			records
-			.forEach((record, index) => {
-				const file = path.join(args.outputDirectory, `${index}.json`);
-				fs.writeFileSync(file, JSON.stringify(record.toObject(), undefined, 2));
-			});
+				.forEach((record, index) => {
+					const file = path.join(args.outputDirectory, `${index}.json`);
+					fs.writeFileSync(file, JSON.stringify(record.toObject(), undefined, 2));
+				});
 		} else {
 			console.log(JSON.stringify(records.map(r => r.toObject()), undefined, 2));
 		}
+	}
+
+	function showFailed(message) {
+		console.error(message);
+	}
+
+	function consoleLogRecords(logs) {
+		console.log(logs);
 	}
 };
