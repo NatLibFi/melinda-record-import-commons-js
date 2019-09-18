@@ -34,7 +34,7 @@ import yargs from 'yargs';
 import ora from 'ora';
 import path from 'path';
 
-export default async ({ name, yargsOptions, Emitter, transformCLI }) => {
+export default async ({ name, yargsOptions, transformCLI }) => {
 	const args = yargs
 		.scriptName(name)
 		.command('$0 <file>', '', yargs => {
