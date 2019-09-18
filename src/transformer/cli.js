@@ -34,7 +34,7 @@ import yargs from 'yargs';
 import ora from 'ora';
 import path from 'path';
 
-export default async ({ name, yargsOptions, transformCLI }) => {
+export default async ({ name, yargsOptions, Emitter }) => {
 	const args = yargs
 		.scriptName(name)
 		.command('$0 <file>', '', yargs => {
@@ -54,7 +54,6 @@ export default async ({ name, yargsOptions, transformCLI }) => {
 	}
 
 	const spinner = ora('Transforming records').start();
-	const Emitter = transformCLI();
 
 	Emitter.transformStream({ stream: fs.createReadStream(args.file), args })
 		.on('spinner', spinnerState)
