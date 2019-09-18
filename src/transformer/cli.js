@@ -62,10 +62,13 @@ export default async ({name, yargsOptions, callback}) => {
 	};
 
 	
-	await callback(options).on('begun', () => {
+	const TransformClient = callback(options);
+
+	TransformClient.on('begun', () => {
 		console.log('test');
 	});
 	
+
 	function handleRecordsOutput(records) {
 		if (args.outputDirectory) {
 			if (!fs.existsSync(args.outputDirectory)) {
