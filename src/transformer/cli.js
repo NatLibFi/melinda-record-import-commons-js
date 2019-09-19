@@ -38,15 +38,15 @@ import {EventEmitter} from 'events';
 class TransformCLIEmitter extends EventEmitter { }
 const Emitter = new TransformCLIEmitter();
 
-export default async ({ name, yargsOptions, callback }) => {
+export default async ({name, yargsOptions, callback}) => {
 	const args = yargs
 		.scriptName(name)
 		.command('$0 <file>', '', yargs => {
 			yargs
-				.positional('file', { type: 'string', describe: 'File to transform' })
+				.positional('file', {type: 'string', describe: 'File to transform'})
 				.option('r', { alias: 'recordsOnly', default: false, type: 'boolean', describe: 'Write only record data to output (Invalid records are excluded)' })
 				.option('d', { alias: 'outputDirectory', type: 'string', describe: 'Output directory where each record file is written (Applicable only with `recordsOnly`' });
-			yargsOptions.forEach(({ option, conf }) => {
+			yargsOptions.forEach(({option, conf}) => {
 				yargs.option(option, conf);
 			});
 		})
@@ -59,16 +59,16 @@ export default async ({ name, yargsOptions, callback }) => {
 
 	const spinner = ora('Transforming records').start();
 
-	callback({ stream: fs.createReadStream(args.file), args, Emitter })
+	await callback({stream: fs.createReadStream(args.file), args, Emitter})
 		.on('spinner', spinnerState)
 		.on('handle', handleRecordsOutput)
 		.on('fail', showFailed)
 		.on('log', consoleLogRecords);
 
-	function spinnerState({ state, message }) {
+	function spinnerState({state, message}) {
 		switch (state) {
 			case 'succeed':
-				{ message ? spinner.succeed(message) : spinner.succeed() };
+				{message ? spinner.succeed(message) : spinner.succeed()};
 				break;
 			case 'start':
 				{message ? spinner.start(message) : spinner.start};
