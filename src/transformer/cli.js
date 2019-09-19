@@ -58,8 +58,13 @@ export default async ({name, yargsOptions, callback}) => {
 	}
 
 	const spinner = ora('Transforming records').start();
+	const options = {
+		stream: fs.createReadStream(args.file),
+		args,
+		Emitter
+	};
 
-	const result = await callback({stream: fs.createReadStream(args.file), args, Emitter})
+	await callback(options)
 		.on('spinner', spinnerState)
 		.on('handle', handleRecordsOutput)
 		.on('fail', showFailed)
