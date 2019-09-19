@@ -71,7 +71,7 @@ export default async ({name, yargsOptions, callback}) => {
 				.on('fail', showFailed)
 				.on('log', consoleLogRecords);
 		} catch (e) {
-			console.error('Transformation failed!')
+			console.error('Transformation failed! Error: ' + e)
 		}
 	})();
 
