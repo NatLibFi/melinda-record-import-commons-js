@@ -36,9 +36,9 @@ import path from 'path';
 import {EventEmitter} from 'events';
 
 class TransformCLIEmitter extends EventEmitter { }
-const Emitter = new TransformCLIEmitter();
 
 export default async ({name, yargsOptions, callback}) => {
+	const Emitter = new TransformCLIEmitter();
 	const args = yargs
 		.scriptName(name)
 		.command('$0 <file>', '', yargs => {
@@ -63,12 +63,17 @@ export default async ({name, yargsOptions, callback}) => {
 		args,
 		Emitter
 	};
-
-	await callback(options)
-		.on('spinner', spinnerState)
-		.on('handle', handleRecordsOutput)
-		.on('fail', showFailed)
-		.on('log', consoleLogRecords);
+	(async () => {
+		try {
+			await callback(options)
+				.on('spinner', spinnerState)
+				.on('handle', handleRecordsOutput)
+				.on('fail', showFailed)
+				.on('log', consoleLogRecords);
+		} catch (e) {
+			console.error('Transformation failed!')
+		}
+	})();
 
 	function spinnerState({state, message}) {
 		switch (state) {
