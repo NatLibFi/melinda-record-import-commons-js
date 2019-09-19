@@ -33,8 +33,12 @@ import fs from 'fs';
 import yargs from 'yargs';
 import ora from 'ora';
 import path from 'path';
+import {EventEmitter} from 'events';
 
-export default async ({ name, yargsOptions, Emitter }) => {
+class TransformCLIEmitter extends EventEmitter { }
+const Emitter = new TransformCLIEmitter();
+
+export default async ({ name, yargsOptions, callback }) => {
 	const args = yargs
 		.scriptName(name)
 		.command('$0 <file>', '', yargs => {
@@ -55,7 +59,7 @@ export default async ({ name, yargsOptions, Emitter }) => {
 
 	const spinner = ora('Transforming records').start();
 
-	Emitter.transformStream({ stream: fs.createReadStream(args.file), args })
+	callback({ stream: fs.createReadStream(args.file), args, Emitter })
 		.on('spinner', spinnerState)
 		.on('handle', handleRecordsOutput)
 		.on('fail', showFailed)
