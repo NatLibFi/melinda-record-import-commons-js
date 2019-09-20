@@ -110,7 +110,7 @@ export default async ({name, yargsOptions = [], callback}) => {
 						fs.writeFileSync(file, JSON.stringify(record.toObject(), undefined, 2));
 					});
 			} else {
-				console.log(records.length);
+				console.log(typeOf(records[0]));
 				console.log(JSON.stringify(records.map(r => r.toObject()), undefined, 2));
 			}
 		}
