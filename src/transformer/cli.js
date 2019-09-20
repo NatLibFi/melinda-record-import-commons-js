@@ -89,15 +89,14 @@ export default async ({name, yargsOptions = [], callback}) => {
 			console.log('spinner done')
 			console.log(succesRecordArray.length);
 			let records = Promise.all(succesRecordArray);
+			console.log (`${records[0] ? 'true' : 'false'}`);
 			console.log('records set')
-			if (!args.recordsOnly) {
-				console.log(failedRecordsArray.length);
+			if (!args.recordsOnly && failedRecordsArray.length > 0) {
 				records.join(Promise.all(failedRecordsArray));
 				console.log('failed joined');
 			}
 
 			console.log('mapping begun')
-			console.log (`${records[0] ? 'true' : 'false'}`);
 			records.map(r => r.record);
 			console.log('output starts!')
 			if (args.outputDirectory) {
