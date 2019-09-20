@@ -85,7 +85,7 @@ export default async function (transformCallback, Emitter) {
 				}
 			}
 
-			function transformEvent({status, message}) {
+			async function transformEvent({status, message}) {
 				{message ? logger.log('debug', message) : logger.log('debug', 'Transformation: ' + status)}
 				if (status === 'end') {
 					logger.log('debug', `${failedRecordsArray.length} records failed`);
