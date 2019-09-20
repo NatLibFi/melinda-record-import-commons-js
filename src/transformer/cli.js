@@ -81,13 +81,11 @@ export default async ({name, yargsOptions = [], callback}) => {
 		
 		}
 		if (state === 'end') {
-			console.log('End starts');
 			if (args.validate || args.fix) {
 				spinner.succeed(`Valid records: ${succesRecordArray.length}, invalid records: ${failedRecordsArray.length}`);
 			} else {
 				spinner.succeed();
 			}
-			console.log(succesRecordArray.length);
 			let records = succesRecordArray;
 			if (!args.recordsOnly && failedRecordsArray.length > 0) {
 				records.join(failedRecordsArray);
