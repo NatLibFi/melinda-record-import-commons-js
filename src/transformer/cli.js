@@ -52,9 +52,9 @@ export default async ({name, yargsOptions = [], callback}) => {
 		console.error(`File ${args.file} does not exist`);
 		process.exit(-1);
 	}
-	
+
 	const spinner = ora(`Transforming${args.validate || args.fix ? ' and validating' : ''} records`).start();
-	
+
 	const options = {
 		stream: fs.createReadStream(args.file),
 		args
@@ -85,7 +85,7 @@ export default async ({name, yargsOptions = [], callback}) => {
 			} else {
 				spinner.succeed();
 			}
-			
+
 			let records = succesRecordArray;
 
 			if (!args.recordsOnly) {
@@ -98,7 +98,7 @@ export default async ({name, yargsOptions = [], callback}) => {
 				if (!fs.existsSync(args.outputDirectory)) {
 					fs.mkdirSync(args.outputDirectory);
 				}
-	
+
 				records
 					.forEach((record, index) => {
 						const file = path.join(args.outputDirectory, `${index}.json`);
@@ -115,7 +115,7 @@ export default async ({name, yargsOptions = [], callback}) => {
 	}
 
 	function recordEvent(payload) {
-		logger.log('debug', 'Record failed: ' + !payload.failed);
+		console.log('debug', 'Record failed: ' + !payload.failed);
 		{payload.failed ? failedRecordsArray.push(payload) : succesRecordArray.push(payload)};
 	}
 };
