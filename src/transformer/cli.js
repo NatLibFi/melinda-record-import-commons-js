@@ -92,11 +92,7 @@ export default async ({name, yargsOptions = [], callback}) => {
 			if (!args.recordsOnly && failedRecordsArray.length > 0) {
 				records.join(failedRecordsArray);
 			}
-			records.map(r => {
-				console.log(r.record);
-				return r.record
-			});
-			console.log('output starts!')
+			records = records.map(r => r.record);
 			if (args.outputDirectory) {
 				if (!fs.existsSync(args.outputDirectory)) {
 					fs.mkdirSync(args.outputDirectory);
@@ -108,7 +104,6 @@ export default async ({name, yargsOptions = [], callback}) => {
 						fs.writeFileSync(file, JSON.stringify(record.toObject(), undefined, 2));
 					});
 			} else {
-				console.log(records[0]);
 				console.log(JSON.stringify(records.map(r => r.toObject()), undefined, 2));
 			}
 		}
