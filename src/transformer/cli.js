@@ -93,8 +93,7 @@ export default async ({name, yargsOptions = [], callback}) => {
 			records
 				.forEach((record, index) => {
 					const file = path.join(args.outputDirectory, `${index}.json`);
-					console.log(JSON.stringify(record.record));
-					fs.writeFileSync(file, JSON.stringify(record.record.toObject(), undefined, 2));
+					fs.writeFileSync(file, JSON.stringify(record.toObject(), undefined, 2));
 				});
 		} else {
 			console.log(JSON.stringify(records.map(r => r.toObject()), undefined, 2));
