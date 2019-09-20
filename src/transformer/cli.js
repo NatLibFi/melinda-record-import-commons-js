@@ -97,6 +97,7 @@ export default async ({name, yargsOptions = [], callback}) => {
 			}
 
 			console.log('mapping begun')
+			console.log (records[0].record);
 			records.map(r => r.record);
 			console.log('output starts!')
 			if (args.outputDirectory) {
