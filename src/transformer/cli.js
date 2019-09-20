@@ -33,6 +33,7 @@ import fs from 'fs';
 import yargs from 'yargs';
 import ora from 'ora';
 import path from 'path';
+import {fail} from 'assert';
 
 export default async ({name, yargsOptions = [], callback}) => {
 	const args = yargs
@@ -77,7 +78,7 @@ export default async ({name, yargsOptions = [], callback}) => {
 
 	async function transformEvent({state}) {
 		if (state === 'start') {
-
+		
 		}
 		if (state === 'end') {
 			console.log('End starts');
@@ -96,7 +97,7 @@ export default async ({name, yargsOptions = [], callback}) => {
 				console.log('failed joined');
 			}
 			console.log('mapping begun')
-			records = Promise.all(records.map(collectPromises));
+			records.map(r => r.record);
 			console.log('output starts!')
 			if (args.outputDirectory) {
 				if (!fs.existsSync(args.outputDirectory)) {
@@ -122,9 +123,5 @@ export default async ({name, yargsOptions = [], callback}) => {
 	function recordEvent(payload) {
 		console.log('debug', 'Record failed: ' + !payload.failed);
 		{payload.failed ? failedRecordsArray.push(payload) : succesRecordArray.push(payload)};
-	}
-
-	function collectPromises(promisedRecord) {
-		return {record: promisedRecord.record}
 	}
 };
