@@ -87,16 +87,11 @@ export default async ({name, yargsOptions = [], callback}) => {
 			} else {
 				spinner.succeed();
 			}
-			console.log('spinner done')
 			console.log(succesRecordArray.length);
 			let records = succesRecordArray;
-			console.log (`${records[0] ? 'true' : 'false'}`);
-			console.log('records set')
 			if (!args.recordsOnly && failedRecordsArray.length > 0) {
 				records.join(failedRecordsArray);
-				console.log('failed joined');
 			}
-			console.log('mapping begun')
 			records.map(r => r.record);
 			console.log('output starts!')
 			if (args.outputDirectory) {
@@ -110,7 +105,7 @@ export default async ({name, yargsOptions = [], callback}) => {
 						fs.writeFileSync(file, JSON.stringify(record.toObject(), undefined, 2));
 					});
 			} else {
-				console.log(typeOf(records[0]));
+				console.log(records[0]);
 				console.log(JSON.stringify(records.map(r => r.toObject()), undefined, 2));
 			}
 		}
@@ -121,7 +116,7 @@ export default async ({name, yargsOptions = [], callback}) => {
 	}
 
 	function recordEvent(payload) {
-		console.log('debug', 'Record failed: ' + !payload.failed);
+		console.log('debug', 'Record failed: ' + payload.failed);
 		{payload.failed ? failedRecordsArray.push(payload) : succesRecordArray.push(payload)};
 	}
 };
