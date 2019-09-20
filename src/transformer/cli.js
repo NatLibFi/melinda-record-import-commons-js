@@ -80,6 +80,7 @@ export default async ({name, yargsOptions = [], callback}) => {
 
 		}
 		if (state === 'end') {
+			console.log('End starts');
 			if (validate || fix) {
 				spinner.succeed(`Valid records: ${succesRecordArray.length}, invalid records: ${failedRecordsArray.length}`);
 			} else {
@@ -93,7 +94,7 @@ export default async ({name, yargsOptions = [], callback}) => {
 			}
 
 			records.map(r => r.record);
-
+			console.log('output starts!')
 			if (args.outputDirectory) {
 				if (!fs.existsSync(args.outputDirectory)) {
 					fs.mkdirSync(args.outputDirectory);
