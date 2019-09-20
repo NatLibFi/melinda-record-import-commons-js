@@ -86,13 +86,15 @@ export default async ({name, yargsOptions = [], callback}) => {
 			} else {
 				spinner.succeed();
 			}
-
+			console.log('spinner done')
 			let records = succesRecordArray;
-
+			console.log('records set')
 			if (!args.recordsOnly) {
 				records.join(failedRecordsArray);
+				console.log('failed joined');
 			}
 
+			console.log('mapping begun')
 			records.map(r => r.record);
 			console.log('output starts!')
 			if (args.outputDirectory) {
