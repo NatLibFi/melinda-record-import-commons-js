@@ -96,7 +96,7 @@ export default async ({name, yargsOptions = [], callback}) => {
 				console.log('failed joined');
 			}
 			console.log('mapping begun')
-			records = Promise.all(records.map(collectPromices))
+			records = Promise.all(records.map(collectPromises))
 			console.log('output starts!')
 			if (args.outputDirectory) {
 				if (!fs.existsSync(args.outputDirectory)) {
@@ -109,6 +109,7 @@ export default async ({name, yargsOptions = [], callback}) => {
 						fs.writeFileSync(file, JSON.stringify(record.toObject(), undefined, 2));
 					});
 			} else {
+				console.log(records.length);
 				console.log(JSON.stringify(records.map(r => r.toObject()), undefined, 2));
 			}
 		}
@@ -123,7 +124,7 @@ export default async ({name, yargsOptions = [], callback}) => {
 		{payload.failed ? failedRecordsArray.push(payload) : succesRecordArray.push(payload)};
 	}
 
-	function collectPromices(promisedRecord) {
+	function collectPromises(promisedRecord) {
 		return {record: promisedRecord.record}
 	}
 };
