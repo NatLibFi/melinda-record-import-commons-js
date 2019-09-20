@@ -87,9 +87,11 @@ export default async ({name, yargsOptions = [], callback}) => {
 				spinner.succeed();
 			}
 			console.log('spinner done')
+			console.log(succesRecordArray.length);
 			let records = Promise.all(succesRecordArray);
 			console.log('records set')
 			if (!args.recordsOnly) {
+				console.log(failedRecordsArray.length);
 				records.join(Promise.all(failedRecordsArray));
 				console.log('failed joined');
 			}
