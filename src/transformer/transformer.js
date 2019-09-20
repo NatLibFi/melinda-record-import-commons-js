@@ -70,14 +70,26 @@ export default async function (transformCallback) {
 
 			const TransformClient = transformCallback(readStream);
 
-			TransformClient
-				.on('transform', transformEvent);
+			let succesRecordArray = [];
+			let failedRecordsArray = [];
 
-			async function transformEvent({status, payload}) {
+			TransformClient
+				.on('transform', transformEvent)
+				.on('log', logEvent)
+				.on('record', recordEvent);
+
+			function logEvent(message) {
+				logger.log(message);
+			}
+
+			function recordEvent({payload}) {
+				logger.log('debug', 'Record failed: ' + !payload.failed);
+				{payload.failed ? failedRecordsArray.push(payload) : succesRecordArray.push(payload)};
+			}
+
+			async function transformEvent({status}) {
 				logger.log('debug', 'Transformation: ' + status);
-				if (status === 'end' && payload) {
-					const succesRecordArray = payload.filter(r => !r.failed);
-					const failedRecordsArray = payload.filter(r => r.failed);
+				if (status === 'end') {
 
 					logger.log('debug', `${failedRecordsArray.length} records failed`);
 					
