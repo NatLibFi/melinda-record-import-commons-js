@@ -38,7 +38,7 @@ import moment from 'moment';
 
 const {createLogger} = Utils;
 
-export default async function (transformCallback, Emitter) {
+export default async function (transformCallback) {
 	const {AMQP_URL, API_URL, API_USERNAME, API_PASSWORD, API_CLIENT_USER_AGENT, BLOB_ID, PROFILE_ID, ABORT_ON_INVALID_RECORDS, HEALTH_CHECK_PORT} = await import('./config');
 	const logger = createLogger();
 	const stopHealthCheckService = startHealthCheckService();
@@ -67,27 +67,18 @@ export default async function (transformCallback, Emitter) {
 		try {
 			connection = await amqplib.connect(AMQP_URL);
 			channel = await connection.createChannel();
-			let failedRecordsArray = [];
-			let succesRecordArray = [];
 
-			await transformCallback(readStream, Emitter)
-				.on('transform', transformEvent)
-				.on('record', recordEvent);
+			const TransformClient = transformCallback(readStream);
 
-			function recordEvent({status, message, payload}) {
-				if (payload) {
-					payload.map(result => {
-						return {...result, record: result.record.toObject(), timestamp: moment()};
-					});
-					{payload.failed ? failedRecordsArray.push(payload) : succesRecordArray.push(payload)};
-				} else {
-					{message ? logger.log('debug', message) : logger.log('debug', 'Record: ' + status)};
-				}
-			}
+			TransformClient
+				.on('transform', transformEvent);
 
-			async function transformEvent({status, message}) {
-				{message ? logger.log('debug', message) : logger.log('debug', 'Transformation: ' + status)}
-				if (status === 'end') {
+			async function transformEvent({status, payload}) {
+				logger.log('debug', 'Transformation: ' + status);
+				if (status === 'end' && payload) {
+					const succesRecordArray = payload.filter(r => !r.failed);
+					const failedRecordsArray = payload.filter(r => r.failed);
+
 					logger.log('debug', `${failedRecordsArray.length} records failed`);
 					
 					await ApiClient.setTransformationDone({
