@@ -96,7 +96,7 @@ export default async ({name, yargsOptions = [], callback}) => {
 				console.log('failed joined');
 			}
 			console.log('mapping begun')
-			records = Promise.all(records.map(collectPromises))
+			records = Promise.all(records.map(collectPromises));
 			console.log('output starts!')
 			if (args.outputDirectory) {
 				if (!fs.existsSync(args.outputDirectory)) {
