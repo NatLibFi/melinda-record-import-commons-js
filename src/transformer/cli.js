@@ -53,7 +53,7 @@ export default async ({name, yargsOptions = [], callback}) => {
 		process.exit(-1);
 	}
 
-	const spinner = ora(`Transforming${args.validate || args.fix ? ' and validating' : ''} records`).start();
+	const spinner = ora(`Transforming${args.validate ? ' and validating' : ''}${args.fix ? ' and fixing' : ''} records`).start();
 
 	const options = {
 		stream: fs.createReadStream(args.file),
@@ -87,10 +87,10 @@ export default async ({name, yargsOptions = [], callback}) => {
 				spinner.succeed();
 			}
 			console.log('spinner done')
-			let records = succesRecordArray;
+			let records = Promise.all(succesRecordArray);
 			console.log('records set')
 			if (!args.recordsOnly) {
-				records.join(failedRecordsArray);
+				records.join(Promise.all(failedRecordsArray));
 				console.log('failed joined');
 			}
 
