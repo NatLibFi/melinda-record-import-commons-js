@@ -75,7 +75,7 @@ export default async ({name, yargsOptions = [], callback}) => {
 		}
 	})();
 
-	function transformEvent({state}) {
+	async function transformEvent({state}) {
 		if (state === 'start') {
 
 		}
@@ -88,16 +88,15 @@ export default async ({name, yargsOptions = [], callback}) => {
 			}
 			console.log('spinner done')
 			console.log(succesRecordArray.length);
-			let records = Promise.all(succesRecordArray);
+			let records = succesRecordArray;
 			console.log (`${records[0] ? 'true' : 'false'}`);
 			console.log('records set')
 			if (!args.recordsOnly && failedRecordsArray.length > 0) {
-				records.join(Promise.all(failedRecordsArray));
+				records.join(failedRecordsArray);
 				console.log('failed joined');
 			}
-
 			console.log('mapping begun')
-			records.map(r => r.record);
+			records = Promise.all(records.map(collectPromices))
 			console.log('output starts!')
 			if (args.outputDirectory) {
 				if (!fs.existsSync(args.outputDirectory)) {
@@ -122,5 +121,9 @@ export default async ({name, yargsOptions = [], callback}) => {
 	function recordEvent(payload) {
 		console.log('debug', 'Record failed: ' + !payload.failed);
 		{payload.failed ? failedRecordsArray.push(payload) : succesRecordArray.push(payload)};
+	}
+
+	function collectPromices(promisedRecord) {
+		return {record: promisedRecord.record}
 	}
 };
