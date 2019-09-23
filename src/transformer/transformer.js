@@ -92,7 +92,7 @@ export default async function (transformCallback) {
 					await ApiClient.setTransformationDone({
 						id: BLOB_ID,
 						numberOfRecords: succesRecordArray.length + failedRecordsArray.length,
-						failedRecordsArray
+						failedRecords: failedRecordsArray
 					});
 
 					logger.log('info', 'Transformation done');
