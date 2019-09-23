@@ -76,20 +76,23 @@ export default async ({name, yargsOptions = [], callback}) => {
 	} else {
 		spinner.succeed();
 	}
+
 	let records = succesRecordArray;
 	if (!args.recordsOnly && failedRecordsArray.length > 0) {
 		records.join(failedRecordsArray);
 	}
+
 	records = records.map(r => r.record);
+
 	if (args.outputDirectory) {
 		if (!fs.existsSync(args.outputDirectory)) {
 			fs.mkdirSync(args.outputDirectory);
 		}
 
 		records
-			.forEach((record, index) => {
+			.forEach((r, index) => {
 				const file = path.join(args.outputDirectory, `${index}.json`);
-				fs.writeFileSync(file, JSON.stringify(record.toObject(), undefined, 2));
+				fs.writeFileSync(file, JSON.stringify(r.toObject(), undefined, 2));
 			});
 	} else {
 		console.log(JSON.stringify(records.map(r => r.toObject()), undefined, 2));
