@@ -70,47 +70,39 @@ export default async function (transformCallback) {
 
 			let succesRecordArray = [];
 			let failedRecordsArray = [];
-			const TransformClient = transformCallback(readStream);
 
-			(async () => {
-				try {
-					TransformClient
-						.on('transform', transformEvent)
-						.on('log', logEvent)
-						.on('record', recordEvent);
-				} catch (e) {
-					console.error('Transformation failed! Error: ' + e)
-				}
-			})();
+			const TransformClient = transformCallback(readStream, handle);
 
-			async function transformEvent({status}) {
-				logger.log('debug', 'Transformation: ' + status);
-				if (status === 'end') {
+			await new Promise((resolve, reject) => {
+				TransformClient
+					.on('end', () => resolve(true))
+					.on('error', () => reject)
+					.on('log', logEvent)
+					.on('record', recordEvent);
+			});
 
-					logger.log('debug', `${failedRecordsArray.length} records failed`);
+			logger.log('debug', `${failedRecordsArray.length} records failed`);
 
-					await ApiClient.setTransformationDone({
-						id: BLOB_ID,
-						numberOfRecords: succesRecordArray.length + failedRecordsArray.length,
-						failedRecords: failedRecordsArray
-					});
+			await ApiClient.setTransformationDone({
+				id: BLOB_ID,
+				numberOfRecords: succesRecordArray.length + failedRecordsArray.length,
+				failedRecords: failedRecordsArray
+			});
 
-					logger.log('info', 'Transformation done');
+			logger.log('info', 'Transformation done');
 
-					if (ABORT_ON_INVALID_RECORDS && failedRecordsArray.length > 0) {
-						logger.log('info', `Not sending records to queue because ${failedRecordsArray.length} records failed and ABORT_ON_INVALID_RECORDS is true`);
-						await ApiClient.setTransformationFailed({id: BLOB_ID, error: failedRecords});
-					} else {
-						await channel.assertQueue(BLOB_ID, {durable: true});
-						// Await channel.assertExchange(BLOB_ID, 'direct', {autoDelete: true});
-						// await channel.bindQueue(PROFILE_ID, BLOB_ID, BLOB_ID);
+			if (ABORT_ON_INVALID_RECORDS && failedRecordsArray.length > 0) {
+				logger.log('info', `Not sending records to queue because ${failedRecordsArray.length} records failed and ABORT_ON_INVALID_RECORDS is true`);
+				await ApiClient.setTransformationFailed({id: BLOB_ID, error: failedRecords});
+			} else {
+				await channel.assertQueue(BLOB_ID, {durable: true});
+				// Await channel.assertExchange(BLOB_ID, 'direct', {autoDelete: true});
+				// await channel.bindQueue(PROFILE_ID, BLOB_ID, BLOB_ID);
 
-						const count = await sendRecords(channel, succesRecordArray.map(r => r.record.toObject()));
+				const count = await sendRecords(channel, succesRecordArray.map(r => r.record.toObject()));
 
-						// Await channel.unbindQueue(PROFILE_ID, BLOB_ID, BLOB_ID);
-						logger.log('info', `${count} records sent to queue ${PROFILE_ID}`);
-					}
-				}
+				// Await channel.unbindQueue(PROFILE_ID, BLOB_ID, BLOB_ID);
+				logger.log('info', `${count} records sent to queue ${PROFILE_ID}`);
 			}
 
 			function logEvent(message) {

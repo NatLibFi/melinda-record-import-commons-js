@@ -64,46 +64,35 @@ export default async ({name, yargsOptions = [], callback}) => {
 	let succesRecordArray = [];
 	let failedRecordsArray = [];
 
-	(async () => {
-		try {
-			TransformClient
-				.on('transform', transformEvent)
-				.on('log', logEvent)
-				.on('record', recordEvent);
-		} catch (e) {
-			console.error('Transformation failed! Error: ' + e)
-		}
-	})();
+	await new Promise((resolve, reject) => {
+		TransformClient
+			.on('end', () => resolve(true))
+			.on('log', logEvent)
+			.on('record', recordEvent);
+	})
 
-	async function transformEvent({state}) {
-		if (state === 'start') {
-		
+	if (args.validate || args.fix) {
+		spinner.succeed(`Valid records: ${succesRecordArray.length}, invalid records: ${failedRecordsArray.length}`);
+	} else {
+		spinner.succeed();
+	}
+	let records = succesRecordArray;
+	if (!args.recordsOnly && failedRecordsArray.length > 0) {
+		records.join(failedRecordsArray);
+	}
+	records = records.map(r => r.record);
+	if (args.outputDirectory) {
+		if (!fs.existsSync(args.outputDirectory)) {
+			fs.mkdirSync(args.outputDirectory);
 		}
-		if (state === 'end') {
-			if (args.validate || args.fix) {
-				spinner.succeed(`Valid records: ${succesRecordArray.length}, invalid records: ${failedRecordsArray.length}`);
-			} else {
-				spinner.succeed();
-			}
-			let records = succesRecordArray;
-			if (!args.recordsOnly && failedRecordsArray.length > 0) {
-				records.join(failedRecordsArray);
-			}
-			records = records.map(r => r.record);
-			if (args.outputDirectory) {
-				if (!fs.existsSync(args.outputDirectory)) {
-					fs.mkdirSync(args.outputDirectory);
-				}
 
-				records
-					.forEach((record, index) => {
-						const file = path.join(args.outputDirectory, `${index}.json`);
-						fs.writeFileSync(file, JSON.stringify(record.toObject(), undefined, 2));
-					});
-			} else {
-				console.log(JSON.stringify(records.map(r => r.toObject()), undefined, 2));
-			}
-		}
+		records
+			.forEach((record, index) => {
+				const file = path.join(args.outputDirectory, `${index}.json`);
+				fs.writeFileSync(file, JSON.stringify(record.toObject(), undefined, 2));
+			});
+	} else {
+		console.log(JSON.stringify(records.map(r => r.toObject()), undefined, 2));
 	}
 
 	function logEvent(logs) {
