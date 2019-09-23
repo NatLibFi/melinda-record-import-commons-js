@@ -82,7 +82,7 @@ export default async ({name, yargsOptions = [], callback}) => {
 		records.join(failedRecordsArray);
 	}
 
-	records = records.map(r => r.record.toObject());
+	records = await Promise.all( records.map(r => r.record.toObject()));
 
 	if (args.outputDirectory) {
 		if (!fs.existsSync(args.outputDirectory)) {
