@@ -38,7 +38,7 @@ import moment from 'moment';
 
 const {createLogger} = Utils;
 
-export default async function (transformCallback) {
+export default async ({transformCallback}) => {
 	const {AMQP_URL, API_URL, API_USERNAME, API_PASSWORD, API_CLIENT_USER_AGENT, BLOB_ID, PROFILE_ID, ABORT_ON_INVALID_RECORDS, HEALTH_CHECK_PORT} = await import('./config');
 	const logger = createLogger();
 	const stopHealthCheckService = startHealthCheckService();
@@ -68,9 +68,9 @@ export default async function (transformCallback) {
 			connection = await amqplib.connect(AMQP_URL);
 			channel = await connection.createChannel();
 
+			const TransformClient = transformCallback(readStream);
 			let succesRecordArray = [];
 			let failedRecordsArray = [];
-			const TransformClient = transformCallback(readStream);
 
 			(async () => {
 				try {
