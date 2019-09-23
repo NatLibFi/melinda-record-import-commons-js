@@ -33,7 +33,6 @@ import fs from 'fs';
 import yargs from 'yargs';
 import ora from 'ora';
 import path from 'path';
-import {fail} from 'assert';
 
 export default async ({name, yargsOptions = [], callback}) => {
 	const args = yargs

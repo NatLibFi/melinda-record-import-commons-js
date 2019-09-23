@@ -38,7 +38,7 @@ import moment from 'moment';
 
 const {createLogger} = Utils;
 
-export default async function (transformCallback) {
+export default async (transformCallback) => {
 	const {AMQP_URL, API_URL, API_USERNAME, API_PASSWORD, API_CLIENT_USER_AGENT, BLOB_ID, PROFILE_ID, ABORT_ON_INVALID_RECORDS, HEALTH_CHECK_PORT} = await import('./config');
 	const logger = createLogger();
 	const stopHealthCheckService = startHealthCheckService();
@@ -69,36 +69,32 @@ export default async function (transformCallback) {
 			channel = await connection.createChannel();
 
 			const TransformClient = transformCallback(readStream);
-
 			let succesRecordArray = [];
 			let failedRecordsArray = [];
 
-			TransformClient
-				.on('transform', transformEvent)
-				.on('log', logEvent)
-				.on('record', recordEvent);
-
-			function logEvent(message) {
-				logger.log(message);
-			}
-
-			function recordEvent({payload}) {
-				logger.log('debug', 'Record failed: ' + !payload.failed);
-				{payload.failed ? failedRecordsArray.push(payload) : succesRecordArray.push(payload)};
-			}
+			(async () => {
+				try {
+					TransformClient
+						.on('transform', transformEvent)
+						.on('log', logEvent)
+						.on('record', recordEvent);
+				} catch (e) {
+					console.error('Transformation failed! Error: ' + e)
+				}
+			})();
 
 			async function transformEvent({status}) {
 				logger.log('debug', 'Transformation: ' + status);
 				if (status === 'end') {
 
 					logger.log('debug', `${failedRecordsArray.length} records failed`);
-					
+
 					await ApiClient.setTransformationDone({
 						id: BLOB_ID,
 						numberOfRecords: succesRecordArray.length + failedRecordsArray.length,
 						failedRecordsArray
 					});
-					
+
 					logger.log('info', 'Transformation done');
 
 					if (ABORT_ON_INVALID_RECORDS && failedRecordsArray.length > 0) {
@@ -108,13 +104,22 @@ export default async function (transformCallback) {
 						await channel.assertQueue(BLOB_ID, {durable: true});
 						// Await channel.assertExchange(BLOB_ID, 'direct', {autoDelete: true});
 						// await channel.bindQueue(PROFILE_ID, BLOB_ID, BLOB_ID);
-		
+
 						const count = await sendRecords(channel, succesRecordArray.map(r => r.record.toObject()));
-		
+
 						// Await channel.unbindQueue(PROFILE_ID, BLOB_ID, BLOB_ID);
 						logger.log('info', `${count} records sent to queue ${PROFILE_ID}`);
 					}
 				}
+			}
+
+			function logEvent(message) {
+				logger.log(message);
+			}
+
+			function recordEvent({payload}) {
+				logger.log('debug', 'Record failed: ' + payload.failed);
+				{payload.failed ? failedRecordsArray.push(payload) : succesRecordArray.push(payload)};
 			}
 		} catch (err) {
 			logger.log('error', `Failed transforming blob: ${err.stack}`);
