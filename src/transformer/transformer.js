@@ -117,7 +117,7 @@ export default async function (transformCallback) {
 				logger.log(message);
 			}
 
-			function recordEvent({payload}) {
+			function recordEvent(payload) {
 				logger.log('debug', 'Record failed: ' + payload.failed);
 				payload.timeStamp = moment();
 				{payload.failed ? failedRecordsArray.push(payload) : succesRecordArray.push(payload)};
