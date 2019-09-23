@@ -95,10 +95,7 @@ export default async ({name, yargsOptions = [], callback}) => {
 				fs.writeFileSync(file, JSON.stringify(r, undefined, 2));
 			});
 	} else {
-		records
-		.forEach(r => {
-			console.log(JSON.stringify(r), undefined, 2));
-		})
+		console.log(JSON.stringify(records, undefined, 2));
 	}
 
 	function logEvent(logs) {
