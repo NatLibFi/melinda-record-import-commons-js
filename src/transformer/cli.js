@@ -77,12 +77,12 @@ export default async ({name, yargsOptions = [], callback}) => {
 		spinner.succeed();
 	}
 
-	let records = succesRecordArray;
+	let records = await Promise.all(succesRecordArray);
 	if (!args.recordsOnly && failedRecordsArray.length > 0) {
-		records.join(failedRecordsArray);
+		records.join(await Promise.all(failedRecordsArray));
 	}
 
-	records = await Promise.all( records.map(r => r.record.toObject()));
+	records = records.map(r => r.record.toObject());
 
 	if (args.outputDirectory) {
 		if (!fs.existsSync(args.outputDirectory)) {
