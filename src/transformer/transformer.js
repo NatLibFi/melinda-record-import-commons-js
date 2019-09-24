@@ -69,7 +69,7 @@ export default async function (transformCallback) {
 			connection = await amqplib.connect(AMQP_URL);
 			channel = await connection.createChannel();
 			let hasFailed = false;
-			const TransformClient = transformCallback(readStream, handle);
+			const TransformClient = transformCallback(readStream);
 
 			await new Promise((resolve, reject) => {
 				TransformClient
