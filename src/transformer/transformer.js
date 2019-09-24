@@ -93,7 +93,7 @@ export default async function (transformCallback) {
 				logger.log(message);
 			}
 
-			function recordEvent(payload) {
+			async function recordEvent(payload) {
 				logger.log('debug', 'Record failed: ' + payload.failed);
 				if (payload.failed) {
 					hasFailed = true;
