@@ -70,14 +70,17 @@ export default async function (transformCallback) {
 			channel = await connection.createChannel();
 			let hasFailed = false;
 			const TransformClient = transformCallback(readStream);
+			const pendingPromises = [];
 
 			await new Promise((resolve, reject) => {
 				TransformClient
-					.on('end', () => resolve(true))
+					.on('end', () => resolve(Promise.all(pendingPromises)))
 					.on('error', () => reject)
 					.on('log', logEvent)
 					.on('record', recordEvent);
 			});
+
+			await Promise.all(promises);
 
 			logger.log('info', 'Transformation done');
 
@@ -99,18 +102,19 @@ export default async function (transformCallback) {
 					hasFailed = true;
 				}
 
-				if (!ABORT_ON_INVALID_RECORDS || (ABORT_ON_INVALID_RECORDS && !hasFailed)) {
-					await channel.assertQueue(BLOB_ID, {durable: true});
-					sendRecord(channel, payload.record.toObject());
-					logger.log('info', `Record sent to queue ${PROFILE_ID}`);
-				}
-
 				payload.timeStamp = moment();
 
-				await ApiClient.transformedRecord({
+				pendingPromises.push(ApiClient.transformedRecord({
 					id: BLOB_ID,
 					record: payload
-				});
+				}));
+
+				if (!ABORT_ON_INVALID_RECORDS || (ABORT_ON_INVALID_RECORDS && !hasFailed)) {
+					await channel.assertQueue(BLOB_ID, {durable: true});
+					const message = Buffer.from(JSON.stringify(payload.record));
+					pendingPromises.push(channel.sendToQueue(BLOB_ID, message, {persistent: true, messageId: uuid()}));
+					logger.log('info', `Record sent to queue ${PROFILE_ID}`);
+				}
 			}
 		} catch (err) {
 			logger.log('error', `Failed transforming blob: ${err.stack}`);
@@ -125,12 +129,5 @@ export default async function (transformCallback) {
 			}
 		}
 
-		async function sendRecord(channel, record) {
-			if (record) {
-				const message = Buffer.from(JSON.stringify(record));
-				logger.log('debug', 'Sending a record to the queue');
-				await channel.sendToQueue(BLOB_ID, message, {persistent: true, messageId: uuid()});
-			}
-		}
 	}
 }
