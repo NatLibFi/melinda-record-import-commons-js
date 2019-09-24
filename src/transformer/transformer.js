@@ -72,19 +72,24 @@ export default async function (transformCallback) {
 			const TransformClient = transformCallback(readStream);
 			const pendingPromises = [];
 
-			await new Promise((resolve, reject) => {
-				TransformClient
-					.on('end', () => resolve(Promise.all(pendingPromises)))
-					.on('error', () => reject)
-					.on('log', logEvent)
-					.on('record', recordEvent);
-			});
+			try {
+				await new Promise((resolve, reject) => {
+					TransformClient
+						.on('end', () => resolve(Promise.all(pendingPromises)
+						.catch(err => logger.log('error', `Promise all failed: ${err.stack}`))))
+						.on('error', () => reject)
+						.on('log', logEvent)
+						.on('record', recordEvent);
+				});
+			} catch (err) {
+				logger.log('error', `Emitter promise error: ${err.stack}`)
+			}
 
 			logger.log('info', 'Transformation done');
 
 			if (ABORT_ON_INVALID_RECORDS && hasFailed) {
 				logger.log('info', `Not sending records to queue because some records failed and ABORT_ON_INVALID_RECORDS is true`);
-				await ApiClient.setTransformationFailed({id: BLOB_ID, error: 'Abort on invalid records'});
+				await ApiClient.setTransformationFailed({id: BLOB_ID, error: {message: 'Some records have failed'}});
 			} else {
 				logger.log('info', `Setting blob state ${BLOB_STATE.TRANSFORMED}¸¸`);
 				await ApiClient.setTransformationDone({id: BLOB_ID});
