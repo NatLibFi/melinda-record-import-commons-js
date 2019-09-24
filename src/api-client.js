@@ -208,11 +208,12 @@ export function createApiClient({url, username, password, userAgent = 'Record im
 		});
 	}
 
-	async function setTransformationDone({id}) {
+	async function setTransformationDone({id, numberOfRecords}) {
 		await updateBlobMetadata({
 			id,
 			payload: {
-				op: BLOB_UPDATE_OPERATIONS.transformationDone
+				op: BLOB_UPDATE_OPERATIONS.transformationDone,
+				numberOfRecords
 			}
 		});
 	}

@@ -71,6 +71,7 @@ export default async function (transformCallback) {
 			let hasFailed = false;
 			const TransformClient = transformCallback(readStream);
 			const pendingPromises = [];
+			let numberOfRecords = 0;
 
 			try {
 				await new Promise((resolve, reject) => {
@@ -92,7 +93,7 @@ export default async function (transformCallback) {
 				await ApiClient.setTransformationFailed({id: BLOB_ID, error: {message: 'Some records have failed'}});
 			} else {
 				logger.log('info', `Setting blob state ${BLOB_STATE.TRANSFORMED}¸¸`);
-				await ApiClient.setTransformationDone({id: BLOB_ID});
+				await ApiClient.setTransformationDone({id: BLOB_ID, numberOfRecords});
 			}
 
 			function logEvent(message) {
@@ -100,6 +101,7 @@ export default async function (transformCallback) {
 			}
 
 			async function recordEvent(payload) {
+				numberOfRecords++;
 				logger.log('debug', 'Record failed: ' + payload.failed);
 				if (payload.failed) {
 					hasFailed = true;
