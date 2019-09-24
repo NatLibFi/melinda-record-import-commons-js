@@ -44,6 +44,11 @@ export default async function (transformCallback) {
 	const {AMQP_URL, API_URL, API_USERNAME, API_PASSWORD, API_CLIENT_USER_AGENT, BLOB_ID, PROFILE_ID, ABORT_ON_INVALID_RECORDS, HEALTH_CHECK_PORT} = await import('./config');
 	const logger = createLogger();
 	const stopHealthCheckService = startHealthCheckService();
+	let hasFailed = false;
+	const setTimeoutPromise = promisify(setTimeout);
+	const pendingPromises = [];
+	let numberOfRecords = 0;
+	let inProcess = -1;
 
 	registerSignalHandlers({stopHealthCheckService});
 
@@ -63,67 +68,35 @@ export default async function (transformCallback) {
 
 		const ApiClient = createApiClient({url: API_URL, username: API_USERNAME, password: API_PASSWORD, userAgent: API_CLIENT_USER_AGENT});
 		const {readStream} = await ApiClient.getBlobContent({id: BLOB_ID});
+		const TransformClient = transformCallback(readStream);
 
 		logger.log('info', `Starting transformation for blob ${BLOB_ID}`);
 
 		try {
 			connection = await amqplib.connect(AMQP_URL);
 			channel = await connection.createChannel();
-			let hasFailed = false;
-			const TransformClient = transformCallback(readStream);
-			const setTimeoutPromise = promisify(setTimeout);
-			const pendingPromises = [setTimeoutPromise(3000)];
-			let numberOfRecords = 0;
 
 			try {
 				await new Promise((resolve, reject) => {
 					TransformClient
-						.on('end', () => resolve(Promise.all(pendingPromises)
-						.catch(err => logger.log('error', `Promise all failed: ${err.stack}`))))
+						.on('start', setCounter)
+						.on('end', () => resolve(Promise.all(pendingPromises && inProcess === 0)))
 						.on('error', () => reject)
 						.on('log', logEvent)
 						.on('record', recordEvent);
 				});
 			} catch (err) {
-				logger.log('error', `Emitter promise error: ${err.stack}`)
+				logger.log('error', `Emitter promise error: ${err.stack}`);
 			}
 
 			logger.log('info', 'Transformation done');
 
 			if (ABORT_ON_INVALID_RECORDS && hasFailed) {
-				logger.log('info', `Not sending records to queue because some records failed and ABORT_ON_INVALID_RECORDS is true`);
+				logger.log('info', 'Not sending records to queue because some records failed and ABORT_ON_INVALID_RECORDS is true');
 				await ApiClient.setTransformationFailed({id: BLOB_ID, error: {message: 'Some records have failed'}});
 			} else {
 				logger.log('info', `Setting blob state ${BLOB_STATE.TRANSFORMED}¸¸`);
 				await ApiClient.setTransformationDone({id: BLOB_ID, numberOfRecords});
-			}
-
-			function logEvent(message) {
-				logger.log(message);
-			}
-
-			async function recordEvent(payload) {
-				numberOfRecords++;
-				logger.log('debug', 'Record failed: ' + payload.failed);
-				if (payload.failed) {
-					hasFailed = true;
-				}
-
-				payload.timeStamp = moment();
-
-				if (payload.failed) {
-					pendingPromises.push(ApiClient.transformedRecordFailed({
-						id: BLOB_ID,
-						record: payload.record
-					}));
-				}
-
-				if (!ABORT_ON_INVALID_RECORDS || (ABORT_ON_INVALID_RECORDS && !hasFailed)) {
-					await channel.assertQueue(BLOB_ID, {durable: true});
-					const message = Buffer.from(JSON.stringify(payload.record));
-					pendingPromises.push(channel.sendToQueue(BLOB_ID, message, {persistent: true, messageId: uuid()}));
-					logger.log('debug', `Record sent to queue as profile: ${PROFILE_ID}`);
-				}
 			}
 		} catch (err) {
 			logger.log('error', `Failed transforming blob: ${err.stack}`);
@@ -138,5 +111,38 @@ export default async function (transformCallback) {
 			}
 		}
 
+		function setCounter(value) {
+			inProcess = value;
+		}
+
+		function logEvent(message) {
+			logger.log(message);
+		}
+
+		async function recordEvent(payload) {
+			numberOfRecords++;
+			logger.log('debug', 'Record failed: ' + payload.failed);
+			if (payload.failed) {
+				hasFailed = true;
+				pendingPromises.push(
+					ApiClient.transformedRecordFailed({
+						id: BLOB_ID,
+						record: payload.record
+					})
+				);
+			}
+
+			payload.timeStamp = moment();
+
+			if (!ABORT_ON_INVALID_RECORDS || (ABORT_ON_INVALID_RECORDS && !hasFailed)) {
+				await channel.assertQueue(BLOB_ID, {durable: true});
+				const message = Buffer.from(JSON.stringify(payload.record));
+				pendingPromises.push(channel.sendToQueue(BLOB_ID, message, {persistent: true, messageId: uuid()}));
+				logger.log('debug', `Record sent to queue as profile: ${PROFILE_ID}`);
+				inProcess--;
+			} else {
+				inProcess--;
+			}
+		}
 	}
 }

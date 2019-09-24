@@ -64,12 +64,12 @@ export default async ({name, yargsOptions = [], callback}) => {
 	let succesRecordArray = [];
 	let failedRecordsArray = [];
 
-	await new Promise((resolve, reject) => {
+	await new Promise(resolve => {
 		TransformClient
 			.on('end', () => resolve(true))
 			.on('log', logEvent)
 			.on('record', recordEvent);
-	})
+	});
 
 	if (args.validate || args.fix) {
 		spinner.succeed(`Valid records: ${succesRecordArray.length}, invalid records: ${failedRecordsArray.length}`);
@@ -89,7 +89,7 @@ export default async ({name, yargsOptions = [], callback}) => {
 			if (!fs.existsSync(args.outputDirectory)) {
 				fs.mkdirSync(args.outputDirectory);
 			}
-	
+
 			records
 				.forEach((r, index) => {
 					const file = path.join(args.outputDirectory, `${index}.json`);
@@ -105,7 +105,11 @@ export default async ({name, yargsOptions = [], callback}) => {
 	}
 
 	function recordEvent(payload) {
-		//console.log('debug', 'Record failed: ' + payload.failed);
-		{payload.failed ? failedRecordsArray.push(payload) : succesRecordArray.push(payload)};
+		// Console.log('debug', 'Record failed: ' + payload.failed);
+		if (payload.failed) {
+			failedRecordsArray.push(payload);
+		} else {
+			succesRecordArray.push(payload);
+		}
 	}
 };
