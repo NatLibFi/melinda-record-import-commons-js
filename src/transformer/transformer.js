@@ -36,6 +36,7 @@ import {registerSignalHandlers, startHealthCheckService} from '../common';
 import {createApiClient} from '../api-client';
 import moment from 'moment';
 import {BLOB_STATE} from '../constants';
+import {promisify} from 'util';
 
 const {createLogger} = Utils;
 
@@ -70,7 +71,8 @@ export default async function (transformCallback) {
 			channel = await connection.createChannel();
 			let hasFailed = false;
 			const TransformClient = transformCallback(readStream);
-			const pendingPromises = [];
+			const setTimeoutPromise = promisify(setTimeout);
+			const pendingPromises = [setTimeoutPromise(3000)];
 			let numberOfRecords = 0;
 
 			try {
