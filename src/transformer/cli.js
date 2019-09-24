@@ -82,23 +82,23 @@ export default async ({name, yargsOptions = [], callback}) => {
 		records.join(failedRecordsArray);
 	}
 
-	Promise.all(records).then(records = records.map(r => r.record));
-	console.log(records);
+	Promise.all(records).then(handleOutput(records));
 
-	if (args.outputDirectory) {
-		if (!fs.existsSync(args.outputDirectory)) {
-			fs.mkdirSync(args.outputDirectory);
+	function handleOutput(records) {
+		if (args.outputDirectory) {
+			if (!fs.existsSync(args.outputDirectory)) {
+				fs.mkdirSync(args.outputDirectory);
+			}
+	
+			records
+				.forEach((r, index) => {
+					const file = path.join(args.outputDirectory, `${index}.json`);
+					fs.writeFileSync(file, JSON.stringify(r.record, undefined, 2));
+				});
+		} else {
+			console.log(JSON.stringify(records.map(r => r.record), undefined, 2));
 		}
-
-		records
-			.forEach((r, index) => {
-				const file = path.join(args.outputDirectory, `${index}.json`);
-				fs.writeFileSync(file, JSON.stringify(r, undefined, 2));
-			});
-	} else {
-		console.log(JSON.stringify(records.map(r), undefined, 2));
 	}
-
 
 	function logEvent(logs) {
 		console.log(logs);
