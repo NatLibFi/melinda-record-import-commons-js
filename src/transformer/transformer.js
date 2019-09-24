@@ -67,14 +67,8 @@ export default async function (transformCallback) {
 
 		let hasFailed = false;
 		const setTimeoutPromise = promisify(setTimeout);
-		const allPromisesMade = new Promise((resolve) => {
-			if (inProcess === 0) {
-				resolve(true);
-			}
-		})
-		const pendingPromises = [allPromisesMade];
+		const pendingPromises = [];
 		let numberOfRecords = 0;
-		let inProcess = -1;
 
 		logger.log('info', `Starting transformation for blob ${BLOB_ID}`);
 
@@ -85,7 +79,6 @@ export default async function (transformCallback) {
 			try {
 				await new Promise((resolve, reject) => {
 					TransformClient
-						.on('start', setCounter)
 						.on('end', () => resolve(Promise.all(pendingPromises)))
 						.on('error', () => reject)
 						.on('log', logEvent)
@@ -105,17 +98,18 @@ export default async function (transformCallback) {
 				await ApiClient.setTransformationDone({id: BLOB_ID, numberOfRecords});
 			}
 
-			function setCounter(value) {
-				inProcess = value;
-			}
-
 			function logEvent(message) {
 				logger.log(message);
 			}
 
 			async function recordEvent(payload) {
+				if (pendingPromises.length < 3){
+					pendingPromises.push(setTimeoutPromise(100));
+				}
+
 				numberOfRecords++;
 				logger.log('debug', 'Record failed: ' + payload.failed);
+
 				if (payload.failed) {
 					hasFailed = true;
 					pendingPromises.push(
@@ -133,9 +127,6 @@ export default async function (transformCallback) {
 					const message = Buffer.from(JSON.stringify(payload.record));
 					pendingPromises.push(channel.sendToQueue(BLOB_ID, message, {persistent: true, messageId: uuid()}));
 					logger.log('debug', `Record sent to queue as profile: ${PROFILE_ID}`);
-					inProcess--;
-				} else {
-					inProcess--;
 				}
 			}
 		} catch (err) {
