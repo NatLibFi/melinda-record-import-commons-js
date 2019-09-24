@@ -67,7 +67,12 @@ export default async function (transformCallback) {
 
 		let hasFailed = false;
 		const setTimeoutPromise = promisify(setTimeout);
-		const pendingPromises = [];
+		const allPromisesMade = new Promise((resolve) => {
+			if (inProcess === 0) {
+				resolve(true);
+			}
+		})
+		const pendingPromises = [allPromisesMade];
 		let numberOfRecords = 0;
 		let inProcess = -1;
 
@@ -81,7 +86,7 @@ export default async function (transformCallback) {
 				await new Promise((resolve, reject) => {
 					TransformClient
 						.on('start', setCounter)
-						.on('end', () => resolve(Promise.all(pendingPromises, inProcess === 0)))
+						.on('end', () => resolve(Promise.all(pendingPromises)))
 						.on('error', () => reject)
 						.on('log', logEvent)
 						.on('record', recordEvent);
