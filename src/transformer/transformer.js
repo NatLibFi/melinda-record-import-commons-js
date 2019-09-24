@@ -80,8 +80,6 @@ export default async function (transformCallback) {
 					.on('record', recordEvent);
 			});
 
-			await Promise.all(promises);
-
 			logger.log('info', 'Transformation done');
 
 			if (ABORT_ON_INVALID_RECORDS && hasFailed) {
@@ -113,7 +111,7 @@ export default async function (transformCallback) {
 					await channel.assertQueue(BLOB_ID, {durable: true});
 					const message = Buffer.from(JSON.stringify(payload.record));
 					pendingPromises.push(channel.sendToQueue(BLOB_ID, message, {persistent: true, messageId: uuid()}));
-					logger.log('info', `Record sent to queue ${PROFILE_ID}`);
+					logger.log('debug', `Record sent to queue as profile: ${PROFILE_ID}`);
 				}
 			}
 		} catch (err) {

@@ -34,10 +34,11 @@ import {Utils} from '@natlibfi/melinda-commons';
 import {BLOB_UPDATE_OPERATIONS} from './constants';
 import {ApiError} from './error';
 
-const {generateAuthorizationHeader} = Utils;
+const {generateAuthorizationHeader, createLogger} = Utils;
 
 export function createApiClient({url, username, password, userAgent = 'Record import API client / Javascript'}) {
 	let authHeader;
+	const logger = createLogger();
 
 	return {
 		getBlobs, createBlob, getBlobMetadata, deleteBlob,
@@ -304,6 +305,7 @@ export function createApiClient({url, username, password, userAgent = 'Record im
 	}
 
 	async function updateBlobMetadata({id, payload}) {
+		logger.log('debug', `updateBlobMetadata: ${payload.op}`);
 		const response = await doRequest(`${url}/blobs/${id}`, {
 			method: 'POST',
 			body: JSON.stringify(payload),
