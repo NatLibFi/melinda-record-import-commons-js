@@ -77,12 +77,14 @@ export default async ({name, yargsOptions = [], callback}) => {
 		spinner.succeed();
 	}
 
-	let records = await Promise.all(succesRecordArray);
+	let records = succesRecordArray;
 	if (!args.recordsOnly && failedRecordsArray.length > 0) {
-		records.join(await Promise.all(failedRecordsArray));
+		records.join(failedRecordsArray);
 	}
 
-	records = records.map(r => r.record.toObject());
+	Promise.all(records);
+	console.log(records);
+	records = records.map(r => r.record);
 
 	if (args.outputDirectory) {
 		if (!fs.existsSync(args.outputDirectory)) {
@@ -97,6 +99,7 @@ export default async ({name, yargsOptions = [], callback}) => {
 	} else {
 		console.log(JSON.stringify(records, undefined, 2));
 	}
+
 
 	function logEvent(logs) {
 		console.log(logs);
