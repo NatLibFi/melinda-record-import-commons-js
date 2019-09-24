@@ -107,10 +107,12 @@ export default async function (transformCallback) {
 
 				payload.timeStamp = moment();
 
-				pendingPromises.push(ApiClient.transformedRecord({
-					id: BLOB_ID,
-					record: payload
-				}));
+				if (payload.failed) {
+					pendingPromises.push(ApiClient.transformedRecordFailed({
+						id: BLOB_ID,
+						record: payload.record
+					}));
+				}
 
 				if (!ABORT_ON_INVALID_RECORDS || (ABORT_ON_INVALID_RECORDS && !hasFailed)) {
 					await channel.assertQueue(BLOB_ID, {durable: true});
