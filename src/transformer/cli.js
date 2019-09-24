@@ -83,6 +83,7 @@ export default async ({name, yargsOptions = [], callback}) => {
 	}
 
 	Promise.all(records).then(records = records.map(r => r.record));
+	console.log(records);
 
 	if (args.outputDirectory) {
 		if (!fs.existsSync(args.outputDirectory)) {
