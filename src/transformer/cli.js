@@ -81,7 +81,8 @@ export default async ({name, yargsOptions = [], callback}) => {
 	if (!args.recordsOnly && failedRecordsArray.length > 0) {
 		records.join(failedRecordsArray);
 	}
-	
+
+	Promise.all(records).then(records = records.map(r => r.record.toObject()));
 
 	if (args.outputDirectory) {
 		if (!fs.existsSync(args.outputDirectory)) {
@@ -104,6 +105,6 @@ export default async ({name, yargsOptions = [], callback}) => {
 
 	function recordEvent(payload) {
 		//console.log('debug', 'Record failed: ' + payload.failed);
-		{payload.failed ? failedRecordsArray.push(payload.record.toObject()) : succesRecordArray.push(payload.record.toObject())};
+		{payload.failed ? failedRecordsArray.push(payload) : succesRecordArray.push(payload)};
 	}
 };
