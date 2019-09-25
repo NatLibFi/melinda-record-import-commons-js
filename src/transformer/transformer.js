@@ -99,7 +99,7 @@ export default async function (transformCallback) {
 			}
 
 			function logEvent(message) {
-				logger.log(message);
+				logger.log('debug', message);
 			}
 
 			async function recordEvent(payload) {
