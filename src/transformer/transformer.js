@@ -31,6 +31,7 @@
 
 import amqplib from 'amqplib';
 import uuid from 'uuid/v4';
+import {promisify} from 'util';
 import {Utils} from '@natlibfi/melinda-commons';
 import {registerSignalHandlers, startHealthCheckService} from '../common';
 import {createApiClient} from '../api-client';
@@ -70,6 +71,7 @@ export default async function (transformCallback) {
 			channel = await connection.createChannel();
 			let hasFailed = false;
 			const TransformClient = transformCallback(readStream);
+			const setTimeoutPromise = promisify(setTimeout);
 			const pendingPromises = [];
 			let counter = -1;
 			let numberOfRecords = 0;
@@ -83,7 +85,7 @@ export default async function (transformCallback) {
 			try {
 				await new Promise((resolve, reject) => {
 					TransformClient
-						.on('end', () => resolve(Promise.all(pendingPromises)))
+						.on('end', resolve(Promise.all(pendingPromises)))
 						.on('error', () => reject)
 						.on('log', logEvent)
 						.on('counter', setCounter)
@@ -133,6 +135,11 @@ export default async function (transformCallback) {
 					logger.log('debug', `Record sent to queue as profile: ${PROFILE_ID}`);
 				}
 				numberOfRecords++;
+				
+				if (counter && counter === numberOfRecords) {
+					TransformClient.emit('end');
+				}
+
 				logger.log('debug', `numRecords ${numberOfRecords}`)
 			}
 		} catch (err) {
