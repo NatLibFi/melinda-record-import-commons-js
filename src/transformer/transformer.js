@@ -72,21 +72,21 @@ export default async function (transformCallback) {
 			let hasFailed = false;
 			const TransformClient = transformCallback(readStream);
 			const setTimeoutPromise = promisify(setTimeout);
-			const pendingPromises = [];
-			let counter;
+			const pendingPromises = [setTimeoutPromise(100)];
+			let counter = -1;
 			let numberOfRecords = 0;
 
 			try {
 				await new Promise((resolve, reject) => {
 					TransformClient
-						.on('end', resolve(Promise.all(pendingPromises)))
+						.on('end', () => resolve(Promise.all(pendingPromises)))
 						.on('error', () => reject)
 						.on('log', logEvent)
 						.on('counter', setCounter)
 						.on('record', recordEvent);
 				});
 			} catch (err) {
-				logger.log('error', `Emitter promise error: ${err.stack}`)
+				logger.log('error', `Emitter promise error: ${err.stack}`);
 			}
 
 			logger.log('info', 'Transformation done');
@@ -94,13 +94,13 @@ export default async function (transformCallback) {
 			doFinisher();
 
 			async function doFinisher() {
-				if (counter !== numberOfRecords){
+				if (counter !== numberOfRecords) {
 					await setTimeoutPromise(100);
 					return doFinisher();
 				}
 
 				if (ABORT_ON_INVALID_RECORDS && hasFailed) {
-					logger.log('info', `Not sending records to queue because some records failed and ABORT_ON_INVALID_RECORDS is true`);
+					logger.log('info', 'Not sending records to queue because some records failed and ABORT_ON_INVALID_RECORDS is true');
 					await ApiClient.setTransformationFailed({id: BLOB_ID, error: {message: 'Some records have failed'}});
 				} else {
 					logger.log('info', `Setting blob state ${BLOB_STATE.TRANSFORMED}¸¸`);
@@ -109,7 +109,7 @@ export default async function (transformCallback) {
 			}
 
 			function setCounter(amount) {
-				logger.log('debug', `counter is set to ${amount}`)
+				logger.log('debug', `counter is set to ${amount}`);
 				counter = amount;
 			}
 
@@ -137,9 +137,10 @@ export default async function (transformCallback) {
 					pendingPromises.push(channel.sendToQueue(BLOB_ID, message, {persistent: true, messageId: uuid()}));
 					logger.log('debug', `Record sent to queue as profile: ${PROFILE_ID}`);
 				}
+
 				numberOfRecords++;
 
-				logger.log('debug', `numRecords ${numberOfRecords}`)
+				logger.log('debug', `numRecords ${numberOfRecords}`);
 			}
 		} catch (err) {
 			logger.log('error', `Failed transforming blob: ${err.stack}`);
