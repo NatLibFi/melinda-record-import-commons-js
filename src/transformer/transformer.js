@@ -104,7 +104,7 @@ export default async function (transformCallback) {
 				await ApiClient.setTransformationDone({id: BLOB_ID, numberOfRecords});
 			}
 
-			function logEvent(message) {
+			function logEvent({message}) {
 				logger.log(message);
 			}
 
