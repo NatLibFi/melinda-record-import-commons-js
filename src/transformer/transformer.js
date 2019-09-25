@@ -71,18 +71,24 @@ export default async function (transformCallback) {
 			channel = await connection.createChannel();
 			let hasFailed = false;
 			const TransformClient = transformCallback(readStream);
-			const setTimeoutPromise = promisify(setTimeout);
-			const pendingPromises = [setTimeoutPromise(3000)];
+			const pendingPromises = [];
 			let numberOfRecords = 0;
-			
+			let counter;
+			pendingPromises.push(new Promise((resolve) => {
+				if (counter && counter === numberOfRecords) {
+					resolve(true);
+				}
+			}))
+
+
 			try {
 				await new Promise((resolve, reject) => {
 					TransformClient
-						.on('end', () => resolve(Promise.all(pendingPromises)
-							.catch(err => logger.log('error', `Promise all failed: ${err.stack}`))))
+						.on('end', () => resolve(Promise.all(pendingPromises)))
 						.on('error', () => reject)
 						.on('log', logEvent)
-						.on('record', recordEvent);
+						.on('record', recordEvent)
+						.on('counter', (amount) => {counter = amount});
 				});
 			} catch (err) {
 				logger.log('error', `Emitter promise error: ${err.stack}`)
@@ -103,7 +109,6 @@ export default async function (transformCallback) {
 			}
 
 			async function recordEvent(payload) {
-				numberOfRecords++;
 				logger.log('debug', 'Record failed: ' + payload.failed);
 				if (payload.failed) {
 					hasFailed = true;
@@ -123,6 +128,7 @@ export default async function (transformCallback) {
 					pendingPromises.push(channel.sendToQueue(BLOB_ID, message, {persistent: true, messageId: uuid()}));
 					logger.log('debug', `Record sent to queue as profile: ${PROFILE_ID}`);
 				}
+				numberOfRecords++;
 			}
 		} catch (err) {
 			logger.log('error', `Failed transforming blob: ${err.stack}`);
