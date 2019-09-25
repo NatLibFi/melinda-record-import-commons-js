@@ -63,35 +63,35 @@ export default async function (transformCallback) {
 
 		const ApiClient = createApiClient({url: API_URL, username: API_USERNAME, password: API_PASSWORD, userAgent: API_CLIENT_USER_AGENT});
 		const {readStream} = await ApiClient.getBlobContent({id: BLOB_ID});
-		const TransformClient = transformCallback(readStream);
-
-		let hasFailed = false;
-		const setTimeoutPromise = promisify(setTimeout);
-		const pendingPromises = [];
-		let numberOfRecords = 0;
 
 		logger.log('info', `Starting transformation for blob ${BLOB_ID}`);
 
 		try {
 			connection = await amqplib.connect(AMQP_URL);
 			channel = await connection.createChannel();
-
+			let hasFailed = false;
+			const TransformClient = transformCallback(readStream);
+			const setTimeoutPromise = promisify(setTimeout);
+			const pendingPromises = [setTimeoutPromise(3000)];
+			let numberOfRecords = 0;
+			
 			try {
 				await new Promise((resolve, reject) => {
 					TransformClient
-						.on('end', () => resolve(Promise.all(pendingPromises)))
+						.on('end', () => resolve(Promise.all(pendingPromises)
+							.catch(err => logger.log('error', `Promise all failed: ${err.stack}`))))
 						.on('error', () => reject)
 						.on('log', logEvent)
 						.on('record', recordEvent);
 				});
 			} catch (err) {
-				logger.log('error', `Emitter promise error: ${err.stack}`);
+				logger.log('error', `Emitter promise error: ${err.stack}`)
 			}
 
 			logger.log('info', 'Transformation done');
 
 			if (ABORT_ON_INVALID_RECORDS && hasFailed) {
-				logger.log('info', 'Not sending records to queue because some records failed and ABORT_ON_INVALID_RECORDS is true');
+				logger.log('info', `Not sending records to queue because some records failed and ABORT_ON_INVALID_RECORDS is true`);
 				await ApiClient.setTransformationFailed({id: BLOB_ID, error: {message: 'Some records have failed'}});
 			} else {
 				logger.log('info', `Setting blob state ${BLOB_STATE.TRANSFORMED}¸¸`);
@@ -103,13 +103,8 @@ export default async function (transformCallback) {
 			}
 
 			async function recordEvent(payload) {
-				if (pendingPromises.length < 3){
-					pendingPromises.push(setTimeoutPromise(100));
-				}
-
 				numberOfRecords++;
 				logger.log('debug', 'Record failed: ' + payload.failed);
-
 				if (payload.failed) {
 					hasFailed = true;
 					pendingPromises.push(
@@ -141,5 +136,6 @@ export default async function (transformCallback) {
 				await connection.close();
 			}
 		}
+
 	}
 }
