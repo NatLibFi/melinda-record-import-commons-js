@@ -70,12 +70,11 @@ export default async function (transformCallback) {
 			connection = await amqplib.connect(AMQP_URL);
 			channel = await connection.createChannel();
 			let hasFailed = false;
+			const setTimeoutPromise = promisify(setTimeout);
 			const TransformClient = transformCallback(readStream);
 			const pendingPromises = [];
 			let numberOfRecords = 0;
-			let counter;
-			let triggerPromise = new Promise();
-			pendingPromises.push(triggerPromise);
+
 
 			try {
 				await new Promise((resolve, reject) => {
@@ -83,8 +82,7 @@ export default async function (transformCallback) {
 						.on('end', () => resolve(Promise.all(pendingPromises)))
 						.on('error', () => reject)
 						.on('log', logEvent)
-						.on('record', recordEvent)
-						.on('counter', setCounter);
+						.on('record', recordEvent);
 				});
 			} catch (err) {
 				logger.log('error', `Emitter promise error: ${err.stack}`)
@@ -100,15 +98,12 @@ export default async function (transformCallback) {
 				await ApiClient.setTransformationDone({id: BLOB_ID, numberOfRecords});
 			}
 
-			function setCounter(amount){
-				counter = amount;
-			}
-
 			function logEvent(message) {
-				logger.log('debug', message);
+				logger.log(message);
 			}
 
 			async function recordEvent(payload) {
+				pendingPromises.push(setTimeoutPromise(100));
 				logger.log('debug', 'Record failed: ' + payload.failed);
 				if (payload.failed) {
 					hasFailed = true;
@@ -117,22 +112,18 @@ export default async function (transformCallback) {
 							id: BLOB_ID,
 							record: payload.record
 						})
-					);
-				}
-
-				payload.timeStamp = moment();
-
-				if (!ABORT_ON_INVALID_RECORDS || (ABORT_ON_INVALID_RECORDS && !hasFailed)) {
-					await channel.assertQueue(BLOB_ID, {durable: true});
-					const message = Buffer.from(JSON.stringify(payload.record));
-					pendingPromises.push(channel.sendToQueue(BLOB_ID, message, {persistent: true, messageId: uuid()}));
-					logger.log('debug', `Record sent to queue as profile: ${PROFILE_ID}`);
-				}
-				numberOfRecords++;
-				logger.log('debug', `numRec: ${numberOfRecords} counter: ${counter}`)
-				if (numberOfRecords === counter) {
-					triggerPromise.resolve();
-				}
+						);
+					}
+					
+					payload.timeStamp = moment();
+					
+					if (!ABORT_ON_INVALID_RECORDS || (ABORT_ON_INVALID_RECORDS && !hasFailed)) {
+						await channel.assertQueue(BLOB_ID, {durable: true});
+						const message = Buffer.from(JSON.stringify(payload.record));
+						pendingPromises.push(channel.sendToQueue(BLOB_ID, message, {persistent: true, messageId: uuid()}));
+						logger.log('debug', `Record sent to queue as profile: ${PROFILE_ID}`);
+					}
+					numberOfRecords++;
 			}
 		} catch (err) {
 			logger.log('error', `Failed transforming blob: ${err.stack}`);
