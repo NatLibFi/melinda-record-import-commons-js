@@ -91,12 +91,21 @@ export default async function (transformCallback) {
 
 			logger.log('info', 'Transformation done');
 
-			if (ABORT_ON_INVALID_RECORDS && hasFailed) {
-				logger.log('info', `Not sending records to queue because some records failed and ABORT_ON_INVALID_RECORDS is true`);
-				await ApiClient.setTransformationFailed({id: BLOB_ID, error: {message: 'Some records have failed'}});
-			} else {
-				logger.log('info', `Setting blob state ${BLOB_STATE.TRANSFORMED}¸¸`);
-				await ApiClient.setTransformationDone({id: BLOB_ID, numberOfRecords});
+			doFinisher();
+
+			async function doFinisher() {
+				if (counter !== numberOfRecords){
+					await setTimeoutPromise(100);
+					return doFinisher();
+				}
+
+				if (ABORT_ON_INVALID_RECORDS && hasFailed) {
+					logger.log('info', `Not sending records to queue because some records failed and ABORT_ON_INVALID_RECORDS is true`);
+					await ApiClient.setTransformationFailed({id: BLOB_ID, error: {message: 'Some records have failed'}});
+				} else {
+					logger.log('info', `Setting blob state ${BLOB_STATE.TRANSFORMED}¸¸`);
+					await ApiClient.setTransformationDone({id: BLOB_ID, numberOfRecords});
+				}
 			}
 
 			function setCounter(amount) {
@@ -129,10 +138,6 @@ export default async function (transformCallback) {
 					logger.log('debug', `Record sent to queue as profile: ${PROFILE_ID}`);
 				}
 				numberOfRecords++;
-
-				if (counter && counter === numberOfRecords) {
-					TransformClient.emit('end');
-				}
 
 				logger.log('debug', `numRecords ${numberOfRecords}`)
 			}
