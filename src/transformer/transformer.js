@@ -82,7 +82,7 @@ export default async function (transformCallback) {
 							Promise.all(
 								pendingPromises,
 								new Promise((resolve) => {
-									if (counter, counter === numberOfRecords) {
+									if (counter && counter === numberOfRecords) {
 										resolve(true);
 									}
 								})
@@ -125,19 +125,19 @@ export default async function (transformCallback) {
 							id: BLOB_ID,
 							record: payload.record
 						})
-						);
-					}
-					
-					payload.timeStamp = moment();
-					
-					if (!ABORT_ON_INVALID_RECORDS || (ABORT_ON_INVALID_RECORDS && !hasFailed)) {
-						await channel.assertQueue(BLOB_ID, {durable: true});
-						const message = Buffer.from(JSON.stringify(payload.record));
-						pendingPromises.push(channel.sendToQueue(BLOB_ID, message, {persistent: true, messageId: uuid()}));
-						logger.log('debug', `Record sent to queue as profile: ${PROFILE_ID}`);
-					}
-					numberOfRecords++;
-					logger.log('debug', `numRecords ${numberOfRecords}`)
+					);
+				}
+
+				payload.timeStamp = moment();
+
+				if (!ABORT_ON_INVALID_RECORDS || (ABORT_ON_INVALID_RECORDS && !hasFailed)) {
+					await channel.assertQueue(BLOB_ID, {durable: true});
+					const message = Buffer.from(JSON.stringify(payload.record));
+					pendingPromises.push(channel.sendToQueue(BLOB_ID, message, {persistent: true, messageId: uuid()}));
+					logger.log('debug', `Record sent to queue as profile: ${PROFILE_ID}`);
+				}
+				numberOfRecords++;
+				logger.log('debug', `numRecords ${numberOfRecords}`)
 			}
 		} catch (err) {
 			logger.log('error', `Failed transforming blob: ${err.stack}`);
@@ -151,6 +151,5 @@ export default async function (transformCallback) {
 				await connection.close();
 			}
 		}
-
 	}
 }
