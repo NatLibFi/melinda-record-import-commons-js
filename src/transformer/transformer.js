@@ -73,7 +73,7 @@ export default async function (transformCallback) {
 			const TransformClient = transformCallback(readStream);
 			const setTimeoutPromise = promisify(setTimeout);
 			const pendingPromises = [];
-			let counter = -1;
+			let counter;
 			let numberOfRecords = 0;
 
 			try {
