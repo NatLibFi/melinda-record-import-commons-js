@@ -36,7 +36,6 @@ import {registerSignalHandlers, startHealthCheckService} from '../common';
 import {createApiClient} from '../api-client';
 import moment from 'moment';
 import {BLOB_STATE} from '../constants';
-import {promisify} from 'util';
 
 const {createLogger} = Utils;
 
@@ -70,7 +69,6 @@ export default async function (transformCallback) {
 			connection = await amqplib.connect(AMQP_URL);
 			channel = await connection.createChannel();
 			let hasFailed = false;
-			const setTimeoutPromise = promisify(setTimeout);
 			const TransformClient = transformCallback(readStream);
 			const pendingPromises = [];
 			let counter = -1;
@@ -119,7 +117,6 @@ export default async function (transformCallback) {
 			}
 
 			async function recordEvent(payload) {
-				pendingPromises.push(setTimeoutPromise(1000));
 				logger.log('debug', 'Record failed: ' + payload.failed);
 				if (payload.failed) {
 					hasFailed = true;
