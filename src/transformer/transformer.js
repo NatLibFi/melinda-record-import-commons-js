@@ -74,12 +74,8 @@ export default async function (transformCallback) {
 			const pendingPromises = [];
 			let numberOfRecords = 0;
 			let counter;
-			pendingPromises.push(new Promise((resolve) => {
-				if (counter && counter === numberOfRecords) {
-					resolve(true);
-				}
-			}))
-
+			let triggerPromise = new Promise();
+			pendingPromises.push(triggerPromise);
 
 			try {
 				await new Promise((resolve, reject) => {
@@ -88,7 +84,7 @@ export default async function (transformCallback) {
 						.on('error', () => reject)
 						.on('log', logEvent)
 						.on('record', recordEvent)
-						.on('counter', (amount) => {counter = amount});
+						.on('counter', setCounter);
 				});
 			} catch (err) {
 				logger.log('error', `Emitter promise error: ${err.stack}`)
@@ -102,6 +98,10 @@ export default async function (transformCallback) {
 			} else {
 				logger.log('info', `Setting blob state ${BLOB_STATE.TRANSFORMED}¸¸`);
 				await ApiClient.setTransformationDone({id: BLOB_ID, numberOfRecords});
+			}
+
+			function setCounter(amount){
+				counter = amount;
 			}
 
 			function logEvent(message) {
@@ -129,6 +129,10 @@ export default async function (transformCallback) {
 					logger.log('debug', `Record sent to queue as profile: ${PROFILE_ID}`);
 				}
 				numberOfRecords++;
+				logger.log('debug', `numRec: ${numberOfRecords} counter: ${counter}`)
+				if (numberOfRecords === counter) {
+					triggerPromise.resolve();
+				}
 			}
 		} catch (err) {
 			logger.log('error', `Failed transforming blob: ${err.stack}`);
