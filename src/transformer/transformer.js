@@ -73,15 +73,26 @@ export default async function (transformCallback) {
 			const setTimeoutPromise = promisify(setTimeout);
 			const TransformClient = transformCallback(readStream);
 			const pendingPromises = [];
+			let counter = -1;
 			let numberOfRecords = 0;
 
 
 			try {
 				await new Promise((resolve, reject) => {
 					TransformClient
-						.on('end', () => resolve(Promise.all(pendingPromises)))
+						.on('end', () => resolve(
+							Promise.all(
+								pendingPromises,
+								new Promise((resolve) => {
+									if (counter, counter === numberOfRecords) {
+										resolve(true);
+									}
+								})
+							)
+						))
 						.on('error', () => reject)
 						.on('log', logEvent)
+						.on('counter', setCounter)
 						.on('record', recordEvent);
 				});
 			} catch (err) {
@@ -98,12 +109,17 @@ export default async function (transformCallback) {
 				await ApiClient.setTransformationDone({id: BLOB_ID, numberOfRecords});
 			}
 
+			function setCounter(amount) {
+				logger.log('debug', `counter is set to ${amount}`)
+				counter = amount;
+			}
+
 			function logEvent(message) {
 				logger.log('debug', message);
 			}
 
 			async function recordEvent(payload) {
-				pendingPromises.push(setTimeoutPromise(100));
+				pendingPromises.push(setTimeoutPromise(1000));
 				logger.log('debug', 'Record failed: ' + payload.failed);
 				if (payload.failed) {
 					hasFailed = true;
@@ -124,6 +140,7 @@ export default async function (transformCallback) {
 						logger.log('debug', `Record sent to queue as profile: ${PROFILE_ID}`);
 					}
 					numberOfRecords++;
+					logger.log('debug', `numRecords ${numberOfRecords}`)
 			}
 		} catch (err) {
 			logger.log('error', `Failed transforming blob: ${err.stack}`);
