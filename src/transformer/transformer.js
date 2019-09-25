@@ -79,7 +79,7 @@ export default async function (transformCallback) {
 			try {
 				await new Promise((resolve, reject) => {
 					TransformClient
-						.on('end', resolve(await Promise.all(pendingPromises)))
+						.on('end', resolve(Promise.all(pendingPromises)))
 						.on('error', () => reject)
 						.on('log', logEvent)
 						.on('counter', setCounter)
