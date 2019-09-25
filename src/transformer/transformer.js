@@ -74,20 +74,16 @@ export default async function (transformCallback) {
 			let counter = -1;
 			let numberOfRecords = 0;
 
+			pendingPromises.push(new Promise((resolve) => {
+				if (counter && counter === numberOfRecords) {
+					resolve(true);
+				}
+			}));
 
 			try {
 				await new Promise((resolve, reject) => {
 					TransformClient
-						.on('end', () => resolve(
-							Promise.all(
-								pendingPromises,
-								new Promise((resolve) => {
-									if (counter && counter === numberOfRecords) {
-										resolve(true);
-									}
-								})
-							)
-						))
+						.on('end', () => resolve(Promise.all(pendingPromises)))
 						.on('error', () => reject)
 						.on('log', logEvent)
 						.on('counter', setCounter)
