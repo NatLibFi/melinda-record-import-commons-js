@@ -31,7 +31,6 @@
 
 import amqplib from 'amqplib';
 import uuid from 'uuid/v4';
-import {promisify} from 'util';
 import {Utils} from '@natlibfi/melinda-commons';
 import {registerSignalHandlers, startHealthCheckService} from '../common';
 import {createApiClient} from '../api-client';
@@ -63,18 +62,17 @@ export default async function (transformCallback) {
 
 		const ApiClient = createApiClient({url: API_URL, username: API_USERNAME, password: API_PASSWORD, userAgent: API_CLIENT_USER_AGENT});
 		const {readStream} = await ApiClient.getBlobContent({id: BLOB_ID});
-		
+
 		logger.log('info', `Starting transformation for blob ${BLOB_ID}`);
-		
+
 		try {
 			connection = await amqplib.connect(AMQP_URL);
 			channel = await connection.createChannel();
 			let hasFailed = false;
-			const setTimeoutPromise = promisify(setTimeout);
 			const pendingPromises = [];
 			let counter = -1;
 			let numberOfRecords = 0;
-			
+
 			const TransformClient = transformCallback(readStream);
 			try {
 				await new Promise((resolve, reject) => {
@@ -91,23 +89,16 @@ export default async function (transformCallback) {
 
 			logger.log('info', 'Transformation done');
 
-			doFinisher();
 
-			async function doFinisher() {
-				if (counter !== numberOfRecords) {
-					logger.log('debug', 'doFinishre timeout!');
-					await setTimeoutPromise(100);
-					return doFinisher();
-				}
 
-				if (ABORT_ON_INVALID_RECORDS && hasFailed) {
-					logger.log('info', 'Not sending records to queue because some records failed and ABORT_ON_INVALID_RECORDS is true');
-					await ApiClient.setTransformationFailed({id: BLOB_ID, error: {message: 'Some records have failed'}});
-				} else {
-					logger.log('info', `Setting blob state ${BLOB_STATE.TRANSFORMED}¸¸`);
-					await ApiClient.setTransformationDone({id: BLOB_ID, numberOfRecords});
-				}
+			if (ABORT_ON_INVALID_RECORDS && hasFailed) {
+				logger.log('info', 'Not sending records to queue because some records failed and ABORT_ON_INVALID_RECORDS is true');
+				await ApiClient.setTransformationFailed({id: BLOB_ID, error: {message: 'Some records have failed'}});
+			} else {
+				logger.log('info', `Setting blob state ${BLOB_STATE.TRANSFORMED}¸¸`);
+				await ApiClient.setTransformationDone({id: BLOB_ID, numberOfRecords});
 			}
+
 
 			function setCounter(amount) {
 				logger.log('debug', `counter is set to ${amount}`);
@@ -140,11 +131,11 @@ export default async function (transformCallback) {
 				}
 
 				numberOfRecords++;
-				if (numberOfRecords === counter){
+				logger.log('debug', `numRecords ${numberOfRecords}`);
+
+				if (numberOfRecords === counter) {
 					TransformClient.emit('end');
 				}
-
-				logger.log('debug', `numRecords ${numberOfRecords}`);
 			}
 		} catch (err) {
 			logger.log('error', `Failed transforming blob: ${err.stack}`);
