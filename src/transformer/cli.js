@@ -63,11 +63,14 @@ export default async ({name, yargsOptions = [], callback}) => {
 	const TransformClient = callback(options);
 	let succesRecordArray = [];
 	let failedRecordsArray = [];
+	let counter = -1;
+	let numberOfRecords = 0;
 
 	await new Promise(resolve => {
 		TransformClient
 			.on('end', () => resolve(true))
 			.on('log', logEvent)
+			.on('counter', setCounter)
 			.on('record', recordEvent);
 	});
 
@@ -100,6 +103,11 @@ export default async ({name, yargsOptions = [], callback}) => {
 		}
 	}
 
+	function setCounter(amount) {
+		console.log('debug', `Expecting ${amount} records`);
+		counter = amount;
+	}
+
 	function logEvent(logs) {
 		console.log(logs);
 	}
@@ -110,6 +118,11 @@ export default async ({name, yargsOptions = [], callback}) => {
 			failedRecordsArray.push(payload);
 		} else {
 			succesRecordArray.push(payload);
+		}
+
+		numberOfRecords++;
+		if (numberOfRecords === counter) {
+			TransformClient.emit('end');
 		}
 	}
 };

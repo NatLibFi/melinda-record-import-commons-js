@@ -67,9 +67,9 @@ export default async function (transformCallback) {
 		const ApiClient = createApiClient({url: API_URL, username: API_USERNAME, password: API_PASSWORD, userAgent: API_CLIENT_USER_AGENT});
 		const {readStream} = await ApiClient.getBlobContent({id: BLOB_ID});
 		let TransformClient;
-		
+
 		logger.log('info', `Starting transformation for blob ${BLOB_ID}`);
-		
+
 		try {
 			connection = await amqplib.connect(AMQP_URL);
 			channel = await connection.createChannel();
