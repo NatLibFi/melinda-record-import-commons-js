@@ -97,7 +97,6 @@ export default async function (transformCallback) {
 				await ApiClient.setTransformationDone({id: BLOB_ID, numberOfRecords});
 			}
 
-
 			function setCounter(amount) {
 				logger.log('debug', `counter is set to ${amount}`);
 				counter = amount;
@@ -110,7 +109,7 @@ export default async function (transformCallback) {
 			async function recordEvent(payload) {
 				logger.log('debug', 'Record failed: ' + payload.failed);
 				payload.timeStamp = moment();
-				
+
 				if (payload.failed) {
 					hasFailed = true;
 					pendingPromises.push(
