@@ -122,6 +122,7 @@ export default async ({name, yargsOptions = [], callback}) => {
 
 		numberOfRecords++;
 		if (numberOfRecords === counter) {
+			TransformClient.emit('log', 'ending');
 			TransformClient.emit('end');
 		}
 	}
