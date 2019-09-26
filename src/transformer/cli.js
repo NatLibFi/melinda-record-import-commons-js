@@ -108,12 +108,12 @@ export default async ({name, yargsOptions = [], callback}) => {
 		counter = amount;
 	}
 
-	function logEvent(logs) {
-		console.log(logs);
+	function logEvent(log) {
+		console.log(log);
 	}
 
 	function recordEvent(payload) {
-		// Console.log('debug', 'Record failed: ' + payload.failed);
+		console.log('debug', 'Record failed: ' + payload.failed);
 		if (payload.failed) {
 			failedRecordsArray.push(payload);
 		} else {
