@@ -107,17 +107,16 @@ export default async ({name, yargsOptions = [], callback}) => {
 		console.log('debug', `Expecting ${amount} records`);
 		counter = amount;
 		if (numberOfRecords === counter) {
-			TransformClient.emit('log', 'ending');
 			TransformClient.emit('end');
 		}
 	}
 
 	function logEvent(log) {
-		console.log(log);
+		console.log('debug', log);
 	}
 
 	function recordEvent(payload) {
-		console.log('debug', 'Record failed: ' + payload.failed);
+		// Console.log('debug', 'Record failed: ' + payload.failed);
 		if (payload.failed) {
 			failedRecordsArray.push(payload);
 		} else {
@@ -126,7 +125,6 @@ export default async ({name, yargsOptions = [], callback}) => {
 
 		numberOfRecords++;
 		if (numberOfRecords === counter) {
-			TransformClient.emit('log', 'ending');
 			TransformClient.emit('end');
 		}
 	}

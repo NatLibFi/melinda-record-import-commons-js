@@ -113,6 +113,10 @@ export default async function (transformCallback) {
 		function setCounter(amount) {
 			logger.log('debug', `counter is set to ${amount}`);
 			counter = amount;
+			if (numberOfRecords === counter) {
+				logger.log('info', `Beginning end process. Handled records ${numberOfRecords}/${counter}`);
+				TransformClient.emit('end');
+			}
 		}
 
 		function logEvent(message) {
