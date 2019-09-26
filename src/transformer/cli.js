@@ -106,6 +106,10 @@ export default async ({name, yargsOptions = [], callback}) => {
 	function setCounter(amount) {
 		console.log('debug', `Expecting ${amount} records`);
 		counter = amount;
+		if (numberOfRecords === counter) {
+			TransformClient.emit('log', 'ending');
+			TransformClient.emit('end');
+		}
 	}
 
 	function logEvent(log) {
