@@ -140,6 +140,9 @@ export default async function (transformCallback) {
 				}
 
 				numberOfRecords++;
+				if (numberOfRecords === counter){
+					TransformClient.emit('end');
+				}
 
 				logger.log('debug', `numRecords ${numberOfRecords}`);
 			}
