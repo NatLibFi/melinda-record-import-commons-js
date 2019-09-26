@@ -89,8 +89,6 @@ export default async function (transformCallback) {
 
 			logger.log('info', 'Transformation done');
 
-
-
 			if (ABORT_ON_INVALID_RECORDS && hasFailed) {
 				logger.log('info', 'Not sending records to queue because some records failed and ABORT_ON_INVALID_RECORDS is true');
 				await ApiClient.setTransformationFailed({id: BLOB_ID, error: {message: 'Some records have failed'}});
@@ -111,6 +109,8 @@ export default async function (transformCallback) {
 
 			async function recordEvent(payload) {
 				logger.log('debug', 'Record failed: ' + payload.failed);
+				payload.timeStamp = moment();
+				
 				if (payload.failed) {
 					hasFailed = true;
 					pendingPromises.push(
@@ -119,21 +119,20 @@ export default async function (transformCallback) {
 							record: payload.record
 						})
 					);
-				}
-
-				payload.timeStamp = moment();
-
-				if (!ABORT_ON_INVALID_RECORDS || (ABORT_ON_INVALID_RECORDS && !hasFailed)) {
-					await channel.assertQueue(BLOB_ID, {durable: true});
-					const message = Buffer.from(JSON.stringify(payload.record));
-					pendingPromises.push(channel.sendToQueue(BLOB_ID, message, {persistent: true, messageId: uuid()}));
-					logger.log('debug', `Record sent to queue as profile: ${PROFILE_ID}`);
+				} else {
+					if ((!ABORT_ON_INVALID_RECORDS || (ABORT_ON_INVALID_RECORDS && !hasFailed))) {
+						await channel.assertQueue(BLOB_ID, {durable: true});
+						const message = Buffer.from(JSON.stringify(payload.record));
+						pendingPromises.push(channel.sendToQueue(BLOB_ID, message, {persistent: true, messageId: uuid()}));
+						logger.log('debug', `Record sent to queue as profile: ${PROFILE_ID}`);
+					}
 				}
 
 				numberOfRecords++;
-				logger.log('debug', `numRecords ${numberOfRecords}`);
+				logger.log('debug', `Handled numberOfRecords ${numberOfRecords}`);
 
 				if (numberOfRecords === counter) {
+					logger.log('info', `Beginning end process. Handled records ${numberOfRecords}/${counter}`)
 					TransformClient.emit('end');
 				}
 			}
