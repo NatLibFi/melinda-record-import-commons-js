@@ -63,10 +63,9 @@ export default async function (transformCallback) {
 
 		const ApiClient = createApiClient({url: API_URL, username: API_USERNAME, password: API_PASSWORD, userAgent: API_CLIENT_USER_AGENT});
 		const {readStream} = await ApiClient.getBlobContent({id: BLOB_ID});
-		const TransformClient = transformCallback(readStream);
-
+		
 		logger.log('info', `Starting transformation for blob ${BLOB_ID}`);
-
+		
 		try {
 			connection = await amqplib.connect(AMQP_URL);
 			channel = await connection.createChannel();
@@ -75,7 +74,8 @@ export default async function (transformCallback) {
 			const pendingPromises = [];
 			let counter = -1;
 			let numberOfRecords = 0;
-
+			
+			const TransformClient = transformCallback(readStream);
 			try {
 				await new Promise((resolve, reject) => {
 					TransformClient
@@ -95,6 +95,7 @@ export default async function (transformCallback) {
 
 			async function doFinisher() {
 				if (counter !== numberOfRecords) {
+					logger.log('debug', 'doFinishre timeout!');
 					await setTimeoutPromise(100);
 					return doFinisher();
 				}
