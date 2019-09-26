@@ -59,21 +59,21 @@ export default async function (transformCallback) {
 	async function startTransformation() {
 		let connection;
 		let channel;
+		let hasFailed = false;
+		const pendingPromises = [];
+		let counter = -1;
+		let numberOfRecords = 0;
 
 		const ApiClient = createApiClient({url: API_URL, username: API_USERNAME, password: API_PASSWORD, userAgent: API_CLIENT_USER_AGENT});
 		const {readStream} = await ApiClient.getBlobContent({id: BLOB_ID});
+		const TransformClient = transformCallback(readStream);
 
 		logger.log('info', `Starting transformation for blob ${BLOB_ID}`);
 
 		try {
 			connection = await amqplib.connect(AMQP_URL);
 			channel = await connection.createChannel();
-			let hasFailed = false;
-			const pendingPromises = [];
-			let counter = -1;
-			let numberOfRecords = 0;
 
-			const TransformClient = transformCallback(readStream);
 			try {
 				await new Promise((resolve, reject) => {
 					TransformClient
@@ -96,45 +96,6 @@ export default async function (transformCallback) {
 				logger.log('info', `Setting blob state ${BLOB_STATE.TRANSFORMED}¸¸`);
 				await ApiClient.setTransformationDone({id: BLOB_ID, numberOfRecords});
 			}
-
-			function setCounter(amount) {
-				logger.log('debug', `counter is set to ${amount}`);
-				counter = amount;
-			}
-
-			function logEvent(message) {
-				logger.log('debug', message);
-			}
-
-			async function recordEvent(payload) {
-				logger.log('debug', 'Record failed: ' + payload.failed);
-				payload.timeStamp = moment();
-
-				if (payload.failed) {
-					hasFailed = true;
-					pendingPromises.push(
-						ApiClient.transformedRecordFailed({
-							id: BLOB_ID,
-							record: payload.record
-						})
-					);
-				} else {
-					if ((!ABORT_ON_INVALID_RECORDS || (ABORT_ON_INVALID_RECORDS && !hasFailed))) {
-						await channel.assertQueue(BLOB_ID, {durable: true});
-						const message = Buffer.from(JSON.stringify(payload.record));
-						pendingPromises.push(channel.sendToQueue(BLOB_ID, message, {persistent: true, messageId: uuid()}));
-						logger.log('debug', `Record sent to queue as profile: ${PROFILE_ID}`);
-					}
-				}
-
-				numberOfRecords++;
-				logger.log('debug', `Handled numberOfRecords ${numberOfRecords}`);
-
-				if (numberOfRecords === counter) {
-					logger.log('info', `Beginning end process. Handled records ${numberOfRecords}/${counter}`)
-					TransformClient.emit('end');
-				}
-			}
 		} catch (err) {
 			logger.log('error', `Failed transforming blob: ${err.stack}`);
 			await ApiClient.setTransformationFailed({id: BLOB_ID, error: err.stack});
@@ -145,6 +106,43 @@ export default async function (transformCallback) {
 
 			if (connection) {
 				await connection.close();
+			}
+		}
+
+		function setCounter(amount) {
+			logger.log('debug', `counter is set to ${amount}`);
+			counter = amount;
+		}
+
+		function logEvent(message) {
+			logger.log('debug', message);
+		}
+
+		async function recordEvent(payload) {
+			logger.log('debug', 'Record failed: ' + payload.failed);
+			payload.timeStamp = moment();
+
+			if (payload.failed) {
+				hasFailed = true;
+				pendingPromises.push(
+					ApiClient.transformedRecordFailed({
+						id: BLOB_ID,
+						record: payload.record
+					})
+				);
+			} else if ((!ABORT_ON_INVALID_RECORDS || (ABORT_ON_INVALID_RECORDS && !hasFailed))) {
+				await channel.assertQueue(BLOB_ID, {durable: true});
+				const message = Buffer.from(JSON.stringify(payload.record));
+				pendingPromises.push(channel.sendToQueue(BLOB_ID, message, {persistent: true, messageId: uuid()}));
+				logger.log('debug', `Record sent to queue as profile: ${PROFILE_ID}`);
+			}
+
+			numberOfRecords++;
+			logger.log('debug', `Handled numberOfRecords ${numberOfRecords}`);
+
+			if (numberOfRecords === counter) {
+				logger.log('info', `Beginning end process. Handled records ${numberOfRecords}/${counter}`);
+				TransformClient.emit('end');
 			}
 		}
 	}
