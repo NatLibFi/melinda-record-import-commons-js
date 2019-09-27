@@ -82,7 +82,7 @@ export default async ({name, yargsOptions = [], callback}) => {
 
 	let records = succesRecordArray;
 	if (!args.recordsOnly && failedRecordsArray.length > 0) {
-		records.join(failedRecordsArray);
+		records = [...records, ...failedRecordsArray];
 	}
 
 	Promise.all(records).then(handleOutput(records));

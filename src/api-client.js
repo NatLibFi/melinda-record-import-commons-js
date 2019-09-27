@@ -44,7 +44,8 @@ export function createApiClient({url, username, password, userAgent = 'Record im
 		getBlobs, createBlob, getBlobMetadata, deleteBlob,
 		getBlobContent, deleteBlobContent,
 		getProfile, modifyProfile, queryProfiles, deleteProfile,
-		setTransformationDone, setTransformationFailed, setRecordProcessed, transformedRecordFailed, setAborted, updateState
+		setTransformationDone, setTransformationFailed, setRecordProcessed,
+		transformedRecordFailed, setAborted, updateState
 	};
 
 	async function createBlob({blob, type, profile}) {
