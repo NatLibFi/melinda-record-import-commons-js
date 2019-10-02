@@ -85,7 +85,7 @@ export default async function (transformCallback) {
 					})
 					.on('error', () => reject)
 					.on('record', recordEvent)
-					.on('resolve', resolve(Promise.all(pendingPromises)));
+					.on('resolve', () => resolve(Promise.all(pendingPromises)));
 			});
 
 			logger.log('info', 'Transformation done');
