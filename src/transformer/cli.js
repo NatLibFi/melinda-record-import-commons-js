@@ -63,14 +63,10 @@ export default async ({name, yargsOptions = [], callback}) => {
 	const TransformClient = callback(options);
 	let succesRecordArray = [];
 	let failedRecordsArray = [];
-	let counter = -1;
-	let numberOfRecords = 0;
 
 	await new Promise(resolve => {
 		TransformClient
-			.on('counter', counterEvent)
 			.on('end', () => resolve(true))
-			.on('log', logEvent)
 			.on('error', errorEvent)
 			.on('record', recordEvent);
 	});
@@ -104,15 +100,6 @@ export default async ({name, yargsOptions = [], callback}) => {
 		}
 	}
 
-	function logEvent(log) {
-		console.log(log);
-	}
-
-	function counterEvent(amount) {
-		console.log('counter event');
-		counter = amount;
-	}
-
 	function errorEvent(err) {
 		console.log('error', err);
 	}
@@ -123,11 +110,6 @@ export default async ({name, yargsOptions = [], callback}) => {
 			failedRecordsArray.push(payload);
 		} else {
 			succesRecordArray.push(payload);
-		}
-
-		numberOfRecords++;
-		if (numberOfRecords === counter) {
-			TransformClient.emit('end');
 		}
 	}
 };
