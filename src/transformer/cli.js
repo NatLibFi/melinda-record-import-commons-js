@@ -66,7 +66,10 @@ export default async ({name, yargsOptions = [], callback}) => {
 
 	await new Promise(resolve => {
 		TransformClient
-			.on('end', () => resolve(true))
+			.on('end', () => {
+				console.log('info', 'ending');
+				resolve(true);
+			})
 			.on('error', errorEvent)
 			.on('record', recordEvent);
 	});
