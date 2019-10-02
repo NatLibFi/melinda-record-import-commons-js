@@ -66,10 +66,7 @@ export default async ({name, yargsOptions = [], callback}) => {
 
 	await new Promise(resolve => {
 		TransformClient
-			.on('end', () => {
-				console.log('ending');
-				resolve();
-			})
+			.on('end', () => resolve())
 			.on('error', errorEvent)
 			.on('record', recordEvent);
 	});
@@ -108,7 +105,7 @@ export default async ({name, yargsOptions = [], callback}) => {
 	}
 
 	function recordEvent(payload) {
-		// Console.log('debug', 'Record failed: ' + payload.failed);
+		console.log('debug', 'Record failed: ' + payload.failed);
 		if (payload.failed) {
 			failedRecordsArray.push(payload);
 		} else {
