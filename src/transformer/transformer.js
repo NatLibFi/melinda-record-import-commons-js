@@ -61,8 +61,7 @@ export default async function (transformCallback) {
 		let channel;
 		let hasFailed = false;
 		const pendingPromises = [];
-		let counter = -1;
-		let numberOfRecords = 0;
+		let numberOfRecords;
 
 		const ApiClient = createApiClient({url: API_URL, username: API_USERNAME, password: API_PASSWORD, userAgent: API_CLIENT_USER_AGENT});
 		const {readStream} = await ApiClient.getBlobContent({id: BLOB_ID});
@@ -78,10 +77,11 @@ export default async function (transformCallback) {
 			try {
 				await new Promise((resolve, reject) => {
 					TransformClient
-						.on('end', () => resolve(Promise.all(pendingPromises)))
+						.on('end', count => {
+							numberOfRecords = count;
+							resolve(Promise.all(pendingPromises));
+						})
 						.on('error', () => reject)
-						.on('log', logEvent)
-						.on('counter', setCounter)
 						.on('record', recordEvent);
 				});
 			} catch (err) {
@@ -110,19 +110,6 @@ export default async function (transformCallback) {
 			}
 		}
 
-		function setCounter(amount) {
-			logger.log('debug', `counter is set to ${amount}`);
-			counter = amount;
-			if (numberOfRecords === counter) {
-				logger.log('info', `Beginning end process. Handled records ${numberOfRecords}/${counter}`);
-				TransformClient.emit('end');
-			}
-		}
-
-		function logEvent(message) {
-			logger.log('debug', message);
-		}
-
 		async function recordEvent(payload) {
 			logger.log('debug', 'Record failed: ' + payload.failed);
 			payload.timeStamp = moment();
@@ -140,14 +127,6 @@ export default async function (transformCallback) {
 				const message = Buffer.from(JSON.stringify(payload.record));
 				pendingPromises.push(channel.sendToQueue(BLOB_ID, message, {persistent: true, messageId: uuid()}));
 				logger.log('debug', `Record sent to queue as profile: ${PROFILE_ID}`);
-			}
-
-			numberOfRecords++;
-			logger.log('debug', `Handled numberOfRecords ${numberOfRecords}`);
-
-			if (numberOfRecords === counter) {
-				logger.log('info', `Beginning end process. Handled records ${numberOfRecords}/${counter}`);
-				TransformClient.emit('end');
 			}
 		}
 	}
