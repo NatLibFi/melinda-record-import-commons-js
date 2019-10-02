@@ -69,10 +69,8 @@ export default async ({name, yargsOptions = [], callback}) => {
 	await new Promise(resolve => {
 		TransformClient
 			.on('counter', counterEvent)
-			.on('end', () => {
-				console.log('debug', 'ending');
-				resolve(true);
-			})
+			.on('end', () => resolve(true))
+			.on('log', logEvent)
 			.on('error', errorEvent)
 			.on('record', recordEvent);
 	});
@@ -104,6 +102,10 @@ export default async ({name, yargsOptions = [], callback}) => {
 		} else {
 			console.log(JSON.stringify(records.map(r => r.record), undefined, 2));
 		}
+	}
+
+	function logEvent(log) {
+		console.log(log);
 	}
 
 	function counterEvent(amount) {
