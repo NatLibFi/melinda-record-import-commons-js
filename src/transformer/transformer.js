@@ -128,13 +128,21 @@ export default async function (transformCallback) {
 				await channel.assertQueue(BLOB_ID, {durable: true});
 				const message = Buffer.from(JSON.stringify(payload.record));
 				pendingPromises.push(
-					Promise.all(channel.sendToQueue(BLOB_ID, message, {persistent: true, messageId: uuid()}))
-						.then(
-							sentRecords++,
-							numberOfRecords && sentRecords === numberOfRecords ? TransformClient.emit('resolve') : null
-						)
+					Promise.resolve(channel.sendToQueue(BLOB_ID, message, {persistent: true, messageId: uuid()}))
+						.then(() => {
+							logger.log('debug', `Record sent to queue as profile: ${PROFILE_ID}`);
+							recordSent();
+						})
 				);
-				logger.log('debug', `Record sent to queue as profile: ${PROFILE_ID}`);
+			} else {
+				recordSent();
+			}
+		}
+
+		function recordSent() {
+			sentRecords++;
+			if (numberOfRecords && sentRecords === numberOfRecords) {
+				TransformClient.emit('resolve');
 			}
 		}
 	}
