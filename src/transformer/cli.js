@@ -107,6 +107,7 @@ export default async ({name, yargsOptions = [], callback}) => {
 	}
 
 	function counterEvent(amount) {
+		console.log('counter event');
 		counter = amount;
 	}
 
