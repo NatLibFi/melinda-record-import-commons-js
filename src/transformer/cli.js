@@ -105,7 +105,7 @@ export default async ({name, yargsOptions = [], callback}) => {
 	}
 
 	function recordEvent(payload) {
-		console.log('debug', 'Record failed: ' + payload.failed);
+		// Console.log('debug', 'Record failed: ' + payload.failed);
 		if (payload.failed) {
 			failedRecordsArray.push(payload);
 		} else {
