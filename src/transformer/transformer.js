@@ -62,6 +62,7 @@ export default async function (transformCallback) {
 		let hasFailed = false;
 		const pendingPromises = [];
 		let numberOfRecords;
+		let sentRecords = 0;
 
 		const ApiClient = createApiClient({url: API_URL, username: API_USERNAME, password: API_PASSWORD, userAgent: API_CLIENT_USER_AGENT});
 		const {readStream} = await ApiClient.getBlobContent({id: BLOB_ID});
@@ -78,10 +79,13 @@ export default async function (transformCallback) {
 				TransformClient
 					.on('end', count => {
 						numberOfRecords = count;
-						resolve(Promise.all(pendingPromises));
+						if (numberOfRecords === sentRecords) {
+							TransformClient.emit('resolve');
+						}
 					})
 					.on('error', () => reject)
-					.on('record', recordEvent);
+					.on('record', recordEvent)
+					.on('resolve', resolve(Promise.all(pendingPromises)));
 			});
 
 			logger.log('info', 'Transformation done');
@@ -118,11 +122,18 @@ export default async function (transformCallback) {
 						record: payload.record
 					})
 				);
-			} else if ((!ABORT_ON_INVALID_RECORDS || (ABORT_ON_INVALID_RECORDS && !hasFailed))) {
+			}
+
+			if ((!ABORT_ON_INVALID_RECORDS || (ABORT_ON_INVALID_RECORDS && !hasFailed))) {
 				await channel.assertQueue(BLOB_ID, {durable: true});
 				const message = Buffer.from(JSON.stringify(payload.record));
 				pendingPromises.push(channel.sendToQueue(BLOB_ID, message, {persistent: true, messageId: uuid()}));
 				logger.log('debug', `Record sent to queue as profile: ${PROFILE_ID}`);
+			}
+
+			sentRecords++;
+			if (numberOfRecords && sentRecords === numberOfRecords) {
+				TransformClient.emit('resolve');
 			}
 		}
 	}
