@@ -127,13 +127,14 @@ export default async function (transformCallback) {
 			if ((!ABORT_ON_INVALID_RECORDS || (ABORT_ON_INVALID_RECORDS && !hasFailed))) {
 				await channel.assertQueue(BLOB_ID, {durable: true});
 				const message = Buffer.from(JSON.stringify(payload.record));
-				pendingPromises.push(channel.sendToQueue(BLOB_ID, message, {persistent: true, messageId: uuid()}));
+				pendingPromises.push(
+					Promise.all(channel.sendToQueue(BLOB_ID, message, {persistent: true, messageId: uuid()}))
+						.then(
+							sentRecords++,
+							numberOfRecords && sentRecords === numberOfRecords ? TransformClient.emit('resolve') : null
+						)
+				);
 				logger.log('debug', `Record sent to queue as profile: ${PROFILE_ID}`);
-			}
-
-			sentRecords++;
-			if (numberOfRecords && sentRecords === numberOfRecords) {
-				TransformClient.emit('resolve');
 			}
 		}
 	}
