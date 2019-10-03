@@ -95,7 +95,7 @@ export default async function (transformCallback) {
 				await ApiClient.setTransformationFailed({id: BLOB_ID, error: {message: 'Some records have failed'}});
 			} else {
 				logger.log('info', `Setting blob state ${BLOB_STATE.TRANSFORMED}¸¸`);
-				await ApiClient.setTransformationDone({id: BLOB_ID, numberOfRecords});
+				await ApiClient.setTransformationDone({id: BLOB_ID});
 			}
 		} catch (err) {
 			logger.log('error', `Failed transforming blob: ${err.stack}`);
@@ -117,9 +117,15 @@ export default async function (transformCallback) {
 			if (payload.failed) {
 				hasFailed = true;
 				pendingPromises.push(
-					ApiClient.transformedRecordFailed({
+					ApiClient.transformedRecord({
 						id: BLOB_ID,
 						record: payload.record
+					})
+				);
+			} else {
+				pendingPromises.push(
+					ApiClient.transformedRecord({
+						id: BLOB_ID
 					})
 				);
 			}
