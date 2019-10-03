@@ -73,13 +73,17 @@ export default async function (transformCallback) {
 			channel = await connection.createChannel();
 			TransformClient = transformCallback(readStream);
 
-			await new Promise((resolve, reject) => {
+			await new Promise(resolve => {
 				TransformClient
 					.on('end', async () => {
+						console.log(pendingPromises.length);
 						await Promise.all(pendingPromises);
+						console.log(pendingPromises.length);
 						resolve();
 					})
-					.on('error', () => reject)
+					.on('error', err => {
+						console.log('error', `Transformer error: ${err instanceof Error ? err.stack : err}`);
+					})
 					.on('record', async payload => {
 						pendingPromises.push(recordEvent(payload));
 
