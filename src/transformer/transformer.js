@@ -84,7 +84,7 @@ export default async function (transformCallback) {
 						pendingPromises.push(recordEvent(payload));
 
 						async function recordEvent(payload) {
-							logger.log('debug', 'Record failed: ' + payload.failed);
+							// Logger.log('debug', 'Record failed: ' + payload.failed);
 							payload.timeStamp = moment();
 
 							if (payload.failed) {
@@ -103,7 +103,7 @@ export default async function (transformCallback) {
 								channel.assertQueue(BLOB_ID, {durable: true});
 								const message = Buffer.from(JSON.stringify(payload.record));
 								await channel.sendToQueue(BLOB_ID, message, {persistent: true, messageId: uuid()});
-								logger.log('debug', `Record sent to queue as profile: ${PROFILE_ID}`);
+								// Logger.log('debug', `Record sent to queue as profile: ${PROFILE_ID}`);
 							}
 						}
 					});
