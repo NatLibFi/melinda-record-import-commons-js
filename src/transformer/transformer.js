@@ -123,7 +123,6 @@ export default async function (transformCallback) {
 			});
 
 			if (result === true) {
-				logger.log('info', 'Transformation done');
 				if (ABORT_ON_INVALID_RECORDS && hasFailed) {
 					logger.log('info', 'Not sending records to queue because some records failed and ABORT_ON_INVALID_RECORDS is true');
 					await ApiClient.setTransformationFailed({id: BLOB_ID, error: {message: 'Some records have failed'}});
