@@ -75,7 +75,7 @@ export default async function (transformCallback) {
 
 			const result = await new Promise((resolve, reject) => {
 				TransformClient
-					.on('end', async count => {
+					.on('end', async (count = 0) => {
 						logger.log('debug', `Transformer has handled ${pendingPromises.length / 2} / ${count} record promises to line`);
 						await Promise.all(pendingPromises);
 						logger.log('debug', `Transforming is done (${pendingPromises.length / 2} / ${count})`);
@@ -121,6 +121,8 @@ export default async function (transformCallback) {
 						}
 					});
 			});
+
+			logger.log('debug', result);
 
 			if (result.state === 'fulfilled') {
 				logger.log('info', 'Transformation done');
