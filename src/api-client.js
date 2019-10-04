@@ -44,7 +44,7 @@ export function createApiClient({url, username, password, userAgent = 'Record im
 		getBlobs, createBlob, getBlobMetadata, deleteBlob,
 		getBlobContent, deleteBlobContent,
 		getProfile, modifyProfile, queryProfiles, deleteProfile,
-		setTransformationDone, setTransformationFailed, setRecordProcessed,
+		setTransformationFailed, setRecordProcessed,
 		transformedRecord, setAborted, updateState
 	};
 
@@ -205,15 +205,6 @@ export function createApiClient({url, username, password, userAgent = 'Record im
 			id,
 			payload: {
 				op: BLOB_UPDATE_OPERATIONS.abort
-			}
-		});
-	}
-
-	async function setTransformationDone({id}) {
-		await updateBlobMetadata({
-			id,
-			payload: {
-				op: BLOB_UPDATE_OPERATIONS.transformationDone
 			}
 		});
 	}
