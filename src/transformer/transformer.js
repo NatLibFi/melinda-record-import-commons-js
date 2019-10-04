@@ -85,43 +85,38 @@ export default async function (transformCallback) {
 						console.log('error', `Transformer error: ${err instanceof Error ? err.stack : err}`);
 					})
 					.on('record', async payload => {
-						pendingPromises.push(recordEvent(payload));
+						payload.timeStamp = moment();
+						pendingPromises.push(sendRecodToQueue(payload));
+						pendingPromises.push(updateBlob(payload));
 
-						function recordEvent(payload) {
-							// Logger.log('debug', 'Record failed: ' + payload.failed);
-							payload.timeStamp = moment();
-
-							return Promise.all(sendRecodToQueue(channel, payload), updateBlob(payload));
-
-							async function sendRecodToQueue(payload) {
-								if ((!ABORT_ON_INVALID_RECORDS || (ABORT_ON_INVALID_RECORDS && !hasFailed))) {
-									try {
-										channel.assertQueue(BLOB_ID, {durable: true});
-										const message = Buffer.from(JSON.stringify(payload.record));
-										await channel.sendToQueue(BLOB_ID, message, {persistent: true, messageId: uuid()});
-									} catch (err) {
-										logger.log('error', `Error while sending record to queue: ${err instanceof Error ? err.stack : err}`);
-									}
-									// Logger.log('debug', `Record sent to queue as profile: ${PROFILE_ID}`);
-								}
-							}
-
-							async function updateBlob(payload) {
+						async function sendRecodToQueue(payload) {
+							if ((!ABORT_ON_INVALID_RECORDS || (ABORT_ON_INVALID_RECORDS && !hasFailed))) {
 								try {
-									if (payload.failed) {
-										hasFailed = true;
-										await ApiClient.transformedRecord({
-											id: BLOB_ID,
-											record: payload.record
-										});
-									} else {
-										await ApiClient.transformedRecord({
-											id: BLOB_ID
-										});
-									}
+									channel.assertQueue(BLOB_ID, {durable: true});
+									const message = Buffer.from(JSON.stringify(payload.record));
+									await channel.sendToQueue(BLOB_ID, message, {persistent: true, messageId: uuid()});
 								} catch (err) {
-									logger.log('error', `Error while updating blob: ${err instanceof Error ? err.stack : err}`);
+									logger.log('error', `Error while sending record to queue: ${err instanceof Error ? err.stack : err}`);
 								}
+								// Logger.log('debug', `Record sent to queue as profile: ${PROFILE_ID}`);
+							}
+						}
+
+						async function updateBlob(payload) {
+							try {
+								if (payload.failed) {
+									hasFailed = true;
+									await ApiClient.transformedRecord({
+										id: BLOB_ID,
+										record: payload.record
+									});
+								} else {
+									await ApiClient.transformedRecord({
+										id: BLOB_ID
+									});
+								}
+							} catch (err) {
+								logger.log('error', `Error while updating blob: ${err instanceof Error ? err.stack : err}`);
 							}
 						}
 					});
