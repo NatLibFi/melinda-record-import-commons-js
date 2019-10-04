@@ -40,7 +40,7 @@ import {BLOB_STATE} from '../constants';
 const {createLogger} = Utils;
 
 export default async function (transformCallback) {
-	const {AMQP_URL, API_URL, API_USERNAME, API_PASSWORD, API_CLIENT_USER_AGENT, BLOB_ID, PROFILE_ID, ABORT_ON_INVALID_RECORDS, HEALTH_CHECK_PORT} = await import('./config');
+	const {AMQP_URL, API_URL, API_USERNAME, API_PASSWORD, API_CLIENT_USER_AGENT, BLOB_ID, ABORT_ON_INVALID_RECORDS, HEALTH_CHECK_PORT} = await import('./config');
 	const logger = createLogger();
 	const stopHealthCheckService = startHealthCheckService();
 
@@ -76,14 +76,14 @@ export default async function (transformCallback) {
 			const result = await new Promise((resolve, reject) => {
 				TransformClient
 					.on('end', async (count = 0) => {
-						logger.log('debug', `Transformer has handled ${pendingPromises.length / 2} / ${count} record promises to line`);
+						logger.log('debug', `Transformer has handled ${pendingPromises.length / 2} / ${count} record promises to line, weiting them to be resolved`);
 						await Promise.all(pendingPromises);
-						logger.log('debug', `Transforming is done (${pendingPromises.length / 2} / ${count})`);
+						logger.log('debug', `Transforming is done (${pendingPromises.length / 2} / ${count} Promises resolved)`);
 						resolve(true);
 					})
 					.on('error', err => {
 						console.log('error', `Transformer error: ${err instanceof Error ? err.stack : err}`);
-						reject();
+						reject(err);
 					})
 					.on('record', async payload => {
 						payload.timeStamp = moment();
@@ -122,16 +122,14 @@ export default async function (transformCallback) {
 					});
 			});
 
-			logger.log('debug', result);
-
-			if (result.state === 'fulfilled') {
+			if (result === true) {
 				logger.log('info', 'Transformation done');
 				if (ABORT_ON_INVALID_RECORDS && hasFailed) {
 					logger.log('info', 'Not sending records to queue because some records failed and ABORT_ON_INVALID_RECORDS is true');
 					await ApiClient.setTransformationFailed({id: BLOB_ID, error: {message: 'Some records have failed'}});
 				} else {
 					logger.log('info', `Setting blob state ${BLOB_STATE.TRANSFORMED}¸¸`);
-					// Await ApiClient.updateState({id: BLOB_ID, state: BLOB_STATE.TRANSFORMED});
+					await ApiClient.updateState({id: BLOB_ID, state: BLOB_STATE.TRANSFORMED});
 				}
 			} else {
 				logger.log('info', 'Transformation failed');
