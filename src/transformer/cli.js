@@ -101,7 +101,7 @@ export default async ({name, yargsOptions = [], callback}) => {
 						counter++;
 						fs.writeFileSync(file, JSON.stringify(record, undefined, 2));
 					} else {
-						console.log(JSON.stringify(record.map(record), undefined, 2));
+						console.log(JSON.stringify(record, undefined, 2));
 					}
 				}
 			});
