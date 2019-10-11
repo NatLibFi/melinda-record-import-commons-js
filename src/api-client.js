@@ -190,12 +190,12 @@ export function createApiClient({url, username, password, userAgent = 'Record im
 		throw new ApiError(response.status);
 	}
 
-	async function transformedRecord({id, record = null}) {
+	async function transformedRecord({id, failedRecord = undefined}) {
 		await updateBlobMetadata({
 			id,
 			payload: {
 				op: BLOB_UPDATE_OPERATIONS.transformedRecord,
-				transformedRecord: record
+				error: failedRecord
 			}
 		});
 	}
