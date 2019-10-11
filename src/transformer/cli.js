@@ -33,8 +33,13 @@ import fs from 'fs';
 import yargs from 'yargs';
 import ora from 'ora';
 import path from 'path';
+import {Utils} from '@natlibfi/melinda-commons';
+
+const {createLogger} = Utils;
 
 export default async ({name, yargsOptions = [], callback}) => {
+	const logger = createLogger();
+
 	const args = yargs
 		.scriptName(name)
 		.command('$0 <file>', '', yargs => {
@@ -49,7 +54,7 @@ export default async ({name, yargsOptions = [], callback}) => {
 		.parse();
 
 	if (!fs.existsSync(args.file)) {
-		console.error(`File ${args.file} does not exist`);
+		logger.log('error', `File ${args.file} does not exist`);
 		process.exit(-1);
 	}
 
@@ -61,6 +66,7 @@ export default async ({name, yargsOptions = [], callback}) => {
 	};
 
 	await new Promise((resolve, reject) => {
+		logger.log('debug', args);
 		const TransformEmitter = callback(options);
 		const pendingPromises = [];
 		let counter = 0;
@@ -102,6 +108,7 @@ export default async ({name, yargsOptions = [], callback}) => {
 						fs.writeFileSync(file, JSON.stringify(record, undefined, 2));
 					} else {
 						console.log(JSON.stringify(record, undefined, 2));
+						counter++;
 					}
 				}
 			});
