@@ -60,62 +60,53 @@ export default async ({name, yargsOptions = [], callback}) => {
 		args
 	};
 
-	const TransformClient = callback(options);
-	let succesRecordArray = [];
-	let failedRecordsArray = [];
-	let pendingPromises = [];
+	let counter = 0;
 
-	await new Promise(resolve => {
-		TransformClient
+	await new Promise((resolve, reject) => {
+		const TransformEmitter = callback(options);
+		const pendingPromises = [];
+
+		TransformEmitter
 			.on('end', async () => {
 				Promise.all(pendingPromises);
 				resolve();
 			})
-			.on('error', errorEvent)
+			.on('error', err => {
+				console.log('error', err);
+				reject(err);
+			})
 			.on('record', async payload => {
 				pendingPromises.push(recordEvent(payload));
 
 				async function recordEvent(payload) {
 					// Console.log('debug', 'Record failed: ' + payload.failed);
+					await Promise.all(payload);
 					if (payload.failed) {
-						failedRecordsArray.push(payload);
+						if (!args.recordsOnly) {
+							// Send record to be handled
+							handleOutput(payload.record);
+						}
 					} else {
-						succesRecordArray.push(payload);
+						// Send record to be handled
+						handleOutput(payload.record);
 					}
 				}
 			});
 	});
 
-	if (args.validate || args.fix) {
-		spinner.succeed(`Valid records: ${succesRecordArray.length}, invalid records: ${failedRecordsArray.length}`);
-	} else {
-		spinner.succeed();
-	}
+	spinner.succeed();
 
-	let records = succesRecordArray;
-	if (!args.recordsOnly && failedRecordsArray.length > 0) {
-		records = [...records, ...failedRecordsArray];
-	}
-
-	Promise.all(records).then(handleOutput(records));
-
-	function handleOutput(records) {
+	function handleOutput(record) {
 		if (args.outputDirectory) {
 			if (!fs.existsSync(args.outputDirectory)) {
 				fs.mkdirSync(args.outputDirectory);
 			}
 
-			records
-				.forEach((r, index) => {
-					const file = path.join(args.outputDirectory, `${index}.json`);
-					fs.writeFileSync(file, JSON.stringify(r.record, undefined, 2));
-				});
+			const file = path.join(args.outputDirectory, `${counter}.json`);
+			fs.writeFileSync(file, JSON.stringify(record, undefined, 2));
+			counter++;
 		} else {
-			console.log(JSON.stringify(records.map(r => r.record), undefined, 2));
+			console.log(JSON.stringify(record.map(record), undefined, 2));
 		}
-	}
-
-	function errorEvent(err) {
-		console.log('error', err);
 	}
 };

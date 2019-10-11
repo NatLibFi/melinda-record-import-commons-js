@@ -59,38 +59,47 @@ export default async function (transformCallback) {
 	async function startTransformation() {
 		let connection;
 		let channel;
-		let hasFailed = false;
-		const pendingPromises = [];
 
 		const ApiClient = createApiClient({url: API_URL, username: API_USERNAME, password: API_PASSWORD, userAgent: API_CLIENT_USER_AGENT});
 		const {readStream} = await ApiClient.getBlobContent({id: BLOB_ID});
-		let TransformClient;
 
 		logger.log('info', `Starting transformation for blob ${BLOB_ID}`);
 
 		try {
 			connection = await amqplib.connect(AMQP_URL);
 			channel = await connection.createChannel();
-			TransformClient = transformCallback(readStream);
+			const TransformEmitter = transformCallback(readStream);
+			let hasFailed = false;
+			const pendingPromises = [];
 
-			const result = await new Promise((resolve, reject) => {
-				TransformClient
+			await new Promise((resolve, reject) => {
+				TransformEmitter
 					.on('end', async (count = 0) => {
-						logger.log('debug', `Transformer has handled ${pendingPromises.length / 2} / ${count} record promises to line, weiting them to be resolved`);
+						logger.log('debug', `Transformer has handled ${pendingPromises.length / 2} / ${count} record promises to line, waiting them to be resolved`);
 						await Promise.all(pendingPromises);
 						logger.log('debug', `Transforming is done (${pendingPromises.length / 2} / ${count} Promises resolved)`);
+
+						if (ABORT_ON_INVALID_RECORDS && hasFailed) {
+							logger.log('info', 'Not sending records to queue because some records failed and ABORT_ON_INVALID_RECORDS is true');
+							await ApiClient.setTransformationFailed({id: BLOB_ID, error: {message: 'Some records have failed'}});
+						} else {
+							logger.log('info', `Setting blob state ${BLOB_STATE.TRANSFORMED}¸¸`);
+							await ApiClient.updateState({id: BLOB_ID, state: BLOB_STATE.TRANSFORMED});
+						}
+
 						resolve(true);
 					})
 					.on('error', err => {
-						console.log('error', `Transformer error: ${err instanceof Error ? err.stack : err}`);
+						logger.log('info', 'Transformation failed');
+						ApiClient.setTransformationFailed({id: BLOB_ID, error: err});
 						reject(err);
 					})
 					.on('record', async payload => {
 						payload.timeStamp = moment();
-						pendingPromises.push(sendRecodToQueue(payload));
+						pendingPromises.push(sendRecordToQueue(payload));
 						pendingPromises.push(updateBlob(payload));
 
-						async function sendRecodToQueue(payload) {
+						async function sendRecordToQueue(payload) {
 							if ((!ABORT_ON_INVALID_RECORDS || (ABORT_ON_INVALID_RECORDS && !hasFailed))) {
 								try {
 									channel.assertQueue(BLOB_ID, {durable: true});
@@ -121,18 +130,6 @@ export default async function (transformCallback) {
 						}
 					});
 			});
-
-			if (result === true) {
-				if (ABORT_ON_INVALID_RECORDS && hasFailed) {
-					logger.log('info', 'Not sending records to queue because some records failed and ABORT_ON_INVALID_RECORDS is true');
-					await ApiClient.setTransformationFailed({id: BLOB_ID, error: {message: 'Some records have failed'}});
-				} else {
-					logger.log('info', `Setting blob state ${BLOB_STATE.TRANSFORMED}¸¸`);
-					await ApiClient.updateState({id: BLOB_ID, state: BLOB_STATE.TRANSFORMED});
-				}
-			} else {
-				logger.log('info', 'Transformation failed');
-			}
 		} catch (err) {
 			logger.log('error', `Failed transforming blob: ${err.stack}`);
 			await ApiClient.setTransformationFailed({id: BLOB_ID, error: err.stack});
