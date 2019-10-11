@@ -68,6 +68,7 @@ export default async ({name, yargsOptions = [], callback}) => {
 		TransformEmitter
 			.on('end', async () => {
 				Promise.all(pendingPromises);
+				spinner.succeed();
 				resolve();
 			})
 			.on('error', err => {
@@ -106,6 +107,4 @@ export default async ({name, yargsOptions = [], callback}) => {
 				}
 			});
 	});
-
-	spinner.succeed();
 };
