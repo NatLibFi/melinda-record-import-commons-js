@@ -80,7 +80,6 @@ export default async ({name, yargsOptions = [], callback}) => {
 
 				async function recordEvent(payload) {
 					// Console.log('debug', 'Record failed: ' + payload.failed);
-					await Promise.all(payload);
 					if (payload.failed) {
 						if (!args.recordsOnly) {
 							// Send record to be handled
