@@ -65,8 +65,8 @@ export default async ({name, yargsOptions = [], callback}) => {
 		args
 	};
 
+	logger.log('debug', args);
 	await new Promise((resolve, reject) => {
-		logger.log('debug', args);
 		const TransformEmitter = callback(options);
 		const pendingPromises = [];
 		let counter = 0;
