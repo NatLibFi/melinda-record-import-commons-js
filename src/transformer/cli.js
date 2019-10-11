@@ -60,11 +60,10 @@ export default async ({name, yargsOptions = [], callback}) => {
 		args
 	};
 
-	let counter = 0;
-
 	await new Promise((resolve, reject) => {
 		const TransformEmitter = callback(options);
 		const pendingPromises = [];
+		let counter = 0;
 
 		TransformEmitter
 			.on('end', async () => {
@@ -91,22 +90,22 @@ export default async ({name, yargsOptions = [], callback}) => {
 						handleOutput(payload.record);
 					}
 				}
+
+				function handleOutput(record) {
+					if (args.outputDirectory) {
+						if (!fs.existsSync(args.outputDirectory)) {
+							fs.mkdirSync(args.outputDirectory);
+						}
+
+						const file = path.join(args.outputDirectory, `${counter}.json`);
+						counter++;
+						fs.writeFileSync(file, JSON.stringify(record, undefined, 2));
+					} else {
+						console.log(JSON.stringify(record.map(record), undefined, 2));
+					}
+				}
 			});
 	});
 
 	spinner.succeed();
-
-	function handleOutput(record) {
-		if (args.outputDirectory) {
-			if (!fs.existsSync(args.outputDirectory)) {
-				fs.mkdirSync(args.outputDirectory);
-			}
-
-			const file = path.join(args.outputDirectory, `${counter}.json`);
-			fs.writeFileSync(file, JSON.stringify(record, undefined, 2));
-			counter++;
-		} else {
-			console.log(JSON.stringify(record.map(record), undefined, 2));
-		}
-	}
 };
