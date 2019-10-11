@@ -60,11 +60,10 @@ export default async ({name, yargsOptions = [], callback}) => {
 
 	const spinner = ora(`Transforming${args.validate ? ' and validating' : ''}${args.fix ? ' and fixing' : ''} records`).start();
 
-	const stream =fs.createReadStream(args.file);
+	const stream = fs.createReadStream(args.file);
 
-	console.log('debug', args);
 	await new Promise((resolve, reject) => {
-		const TransformEmitter = callback(spinner, args);
+		const TransformEmitter = callback(stream, args);
 		const pendingPromises = [];
 		let counter = 0;
 
