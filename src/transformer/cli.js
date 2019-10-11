@@ -74,7 +74,7 @@ export default async ({name, yargsOptions = [], callback}) => {
 				resolve();
 			})
 			.on('error', err => {
-				console.log('error', err);
+				logger.log('error', err);
 				reject(err);
 			})
 			.on('record', async payload => {
