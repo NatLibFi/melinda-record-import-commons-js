@@ -68,7 +68,7 @@ export default async function (transformCallback) {
 		try {
 			connection = await amqplib.connect(AMQP_URL);
 			channel = await connection.createChannel();
-			const TransformEmitter = transformCallback(readStream);
+			const TransformEmitter = transformCallback(readStream, {});
 			let hasFailed = false;
 			const pendingPromises = [];
 
@@ -114,7 +114,6 @@ export default async function (transformCallback) {
 
 						async function updateBlob(payload) {
 							await Promise.all(payload);
-							console.log(payload);
 							try {
 								if (payload.failed) {
 									hasFailed = true;
