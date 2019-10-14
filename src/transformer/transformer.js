@@ -102,13 +102,15 @@ export default async function (transformCallback) {
 						pendingPromises.push(updateBlob(payload));
 
 						async function sendRecordToQueue(payload) {
-							if ((!ABORT_ON_INVALID_RECORDS || (ABORT_ON_INVALID_RECORDS && !hasFailed))) {
-								try {
-									channel.assertQueue(BLOB_ID, {durable: true});
-									const message = Buffer.from(JSON.stringify(payload.record));
-									await channel.sendToQueue(BLOB_ID, message, {persistent: true, messageId: uuid()});
-								} catch (err) {
-									logger.log('error', `Error while sending record to queue: ${err instanceof Error ? err.stack : err}`);
+							if (!payload.failed) {
+								if ((!ABORT_ON_INVALID_RECORDS || (ABORT_ON_INVALID_RECORDS && !hasFailed))) {
+									try {
+										channel.assertQueue(BLOB_ID, {durable: true});
+										const message = Buffer.from(JSON.stringify(payload.record));
+										await channel.sendToQueue(BLOB_ID, message, {persistent: true, messageId: uuid()});
+									} catch (err) {
+										logger.log('error', `Error while sending record to queue: ${err instanceof Error ? err.stack : err}`);
+									}
 								}
 							}
 						}
@@ -119,7 +121,7 @@ export default async function (transformCallback) {
 									hasFailed = true;
 									await ApiClient.transformedRecord({
 										id: BLOB_ID,
-										record: payload.record
+										error: payload.record
 									});
 								} else {
 									await ApiClient.transformedRecord({
