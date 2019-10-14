@@ -96,7 +96,7 @@ export default async function (transformCallback) {
 					})
 					.on('record', async payload => {
 						payload.timeStamp = moment();
-						logger.log('debug', `payload: ${payload}`);
+						logger.log('debug', `payload: ${JSON.stringify(payload)}`);
 						pendingPromises.push(sendRecordToQueue(payload));
 						pendingPromises.push(updateBlob(payload));
 
