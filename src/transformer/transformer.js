@@ -89,9 +89,9 @@ export default async function (transformCallback) {
 
 						resolve(true);
 					})
-					.on('error', err => {
+					.on('error', async err => {
 						logger.log('info', 'Transformation failed');
-						ApiClient.setTransformationFailed({id: BLOB_ID, error: err});
+						await ApiClient.setTransformationFailed({id: BLOB_ID, error: err});
 						reject(err);
 					})
 					.on('record', async payload => {
