@@ -34,12 +34,12 @@ import uuid from 'uuid/v4';
 import {Utils} from '@natlibfi/melinda-commons';
 import {registerSignalHandlers, startHealthCheckService} from '../common';
 import {createApiClient} from '../api-client';
-import moment from 'moment';
+import {BLOB_STATE} from '../constants';
 
 const {createLogger} = Utils;
 
 export default async function (transformCallback) {
-	const {AMQP_URL, API_URL, API_USERNAME, API_PASSWORD, API_CLIENT_USER_AGENT, BLOB_ID, PROFILE_ID, ABORT_ON_INVALID_RECORDS, HEALTH_CHECK_PORT} = await import('./config');
+	const {AMQP_URL, API_URL, API_USERNAME, API_PASSWORD, API_CLIENT_USER_AGENT, BLOB_ID, ABORT_ON_INVALID_RECORDS, HEALTH_CHECK_PORT} = await import('./config');
 	const logger = createLogger();
 	const stopHealthCheckService = startHealthCheckService();
 
@@ -67,35 +67,69 @@ export default async function (transformCallback) {
 		try {
 			connection = await amqplib.connect(AMQP_URL);
 			channel = await connection.createChannel();
+			const TransformEmitter = transformCallback(readStream, {});
+			let hasFailed = false;
+			const pendingPromises = [];
 
-			const records = await transformCallback(readStream);
-			const failedRecords = records.filter(r => r.failed).map(result => {
-				return {...result, record: result.record.toObject(), timestamp: moment()};
+			await new Promise((resolve, reject) => {
+				TransformEmitter
+					.on('end', async (count = 0) => {
+						logger.log('debug', `Transformer has handled ${pendingPromises.length / 2} / ${count} record promises to line, waiting them to be resolved`);
+						await Promise.all(pendingPromises);
+						logger.log('debug', `Transforming is done (${pendingPromises.length / 2} / ${count} Promises resolved)`);
+
+						if (ABORT_ON_INVALID_RECORDS && hasFailed) {
+							logger.log('info', 'Not sending records to queue because some records failed and ABORT_ON_INVALID_RECORDS is true');
+							await ApiClient.setTransformationFailed({id: BLOB_ID, error: {message: 'Some records have failed'}});
+						} else {
+							logger.log('info', `Setting blob state ${BLOB_STATE.TRANSFORMED}¸¸`);
+							await ApiClient.updateState({id: BLOB_ID, state: BLOB_STATE.TRANSFORMED});
+						}
+
+						resolve(true);
+					})
+					.on('error', async err => {
+						logger.log('info', 'Transformation failed');
+						await ApiClient.setTransformationFailed({id: BLOB_ID, error: err});
+						reject(err);
+					})
+					.on('record', async payload => {
+						pendingPromises.push(sendRecordToQueue());
+						pendingPromises.push(updateBlob());
+
+						async function sendRecordToQueue() {
+							if (!payload.failed) {
+								if ((!ABORT_ON_INVALID_RECORDS || (ABORT_ON_INVALID_RECORDS && !hasFailed))) {
+									try {
+										channel.assertQueue(BLOB_ID, {durable: true});
+										const message = Buffer.from(JSON.stringify(payload.record));
+										await channel.sendToQueue(BLOB_ID, message, {persistent: true, messageId: uuid()});
+									} catch (err) {
+										logger.log('error', `Error while sending record to queue: ${err instanceof Error ? err.stack : err}`);
+									}
+								}
+							}
+						}
+
+						async function updateBlob() {
+							try {
+								if (payload.failed) {
+									hasFailed = true;
+									await ApiClient.transformedRecord({
+										id: BLOB_ID,
+										error: payload
+									});
+								} else {
+									await ApiClient.transformedRecord({
+										id: BLOB_ID
+									});
+								}
+							} catch (err) {
+								logger.log('error', `Error while updating blob: ${err instanceof Error ? err.stack : err}`);
+							}
+						}
+					});
 			});
-
-			logger.log('debug', `${failedRecords.length} records failed`);
-
-			await ApiClient.setTransformationDone({
-				id: BLOB_ID,
-				numberOfRecords: records.length,
-				failedRecords
-			});
-
-			logger.log('info', 'Transformation done');
-
-			if (ABORT_ON_INVALID_RECORDS && failedRecords.length > 0) {
-				logger.log('info', `Not sending records to queue because ${failedRecords.length} records failed and ABORT_ON_INVALID_RECORDS is true`);
-				await ApiClient.setTransformationFailed({id: BLOB_ID, error: failedRecords});
-			} else {
-				await channel.assertQueue(BLOB_ID, {durable: true});
-				// Await channel.assertExchange(BLOB_ID, 'direct', {autoDelete: true});
-				// await channel.bindQueue(PROFILE_ID, BLOB_ID, BLOB_ID);
-
-				const count = await sendRecords(channel, records.filter(r => !r.failed).map(r => r.record.toObject()));
-
-				// Await channel.unbindQueue(PROFILE_ID, BLOB_ID, BLOB_ID);
-				logger.log('info', `${count} records sent to queue ${PROFILE_ID}`);
-			}
 		} catch (err) {
 			logger.log('error', `Failed transforming blob: ${err.stack}`);
 			await ApiClient.setTransformationFailed({id: BLOB_ID, error: err.stack});
@@ -107,19 +141,6 @@ export default async function (transformCallback) {
 			if (connection) {
 				await connection.close();
 			}
-		}
-
-		async function sendRecords(channel, records, count = 0) {
-			const record = records.shift();
-
-			if (record) {
-				const message = Buffer.from(JSON.stringify(record));
-				logger.log('debug', 'Sending a record to the queue');
-				await channel.sendToQueue(BLOB_ID, message, {persistent: true, messageId: uuid()});
-				return sendRecords(channel, records, count + 1);
-			}
-
-			return count;
 		}
 	}
 }

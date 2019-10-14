@@ -34,16 +34,18 @@ import {Utils} from '@natlibfi/melinda-commons';
 import {BLOB_UPDATE_OPERATIONS} from './constants';
 import {ApiError} from './error';
 
-const {generateAuthorizationHeader} = Utils;
+const {generateAuthorizationHeader, createLogger} = Utils;
 
 export function createApiClient({url, username, password, userAgent = 'Record import API client / Javascript'}) {
 	let authHeader;
+	const logger = createLogger();
 
 	return {
 		getBlobs, createBlob, getBlobMetadata, deleteBlob,
 		getBlobContent, deleteBlobContent,
 		getProfile, modifyProfile, queryProfiles, deleteProfile,
-		setTransformationDone, setTransformationFailed, setRecordProcessed, setAborted, updateState
+		setTransformationFailed, setRecordProcessed,
+		transformedRecord, setAborted, updateState
 	};
 
 	async function createBlob({blob, type, profile}) {
@@ -188,6 +190,16 @@ export function createApiClient({url, username, password, userAgent = 'Record im
 		throw new ApiError(response.status);
 	}
 
+	async function transformedRecord({id, error = undefined}) {
+		await updateBlobMetadata({
+			id,
+			payload: {
+				op: BLOB_UPDATE_OPERATIONS.transformedRecord,
+				error
+			}
+		});
+	}
+
 	async function setAborted({id}) {
 		await updateBlobMetadata({
 			id,
@@ -197,22 +209,12 @@ export function createApiClient({url, username, password, userAgent = 'Record im
 		});
 	}
 
-	async function setTransformationDone({id, numberOfRecords, failedRecords}) {
-		await updateBlobMetadata({
-			id,
-			payload: {
-				op: BLOB_UPDATE_OPERATIONS.transformationDone,
-				numberOfRecords, failedRecords
-			}
-		});
-	}
-
 	async function setTransformationFailed({id, error}) {
 		await updateBlobMetadata({
 			id,
 			payload: {
-				error,
-				op: BLOB_UPDATE_OPERATIONS.transformationFailed
+				op: BLOB_UPDATE_OPERATIONS.transformationFailed,
+				error
 			}
 		});
 	}
@@ -294,6 +296,7 @@ export function createApiClient({url, username, password, userAgent = 'Record im
 	}
 
 	async function updateBlobMetadata({id, payload}) {
+		logger.log('debug', `updateBlobMetadata: ${payload.op}`);
 		const response = await doRequest(`${url}/blobs/${id}`, {
 			method: 'POST',
 			body: JSON.stringify(payload),

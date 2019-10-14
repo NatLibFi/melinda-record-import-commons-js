@@ -33,8 +33,13 @@ import fs from 'fs';
 import yargs from 'yargs';
 import ora from 'ora';
 import path from 'path';
+import {Utils} from '@natlibfi/melinda-commons';
+
+const {createLogger} = Utils;
 
 export default async ({name, yargsOptions = [], callback}) => {
+	const logger = createLogger();
+
 	const args = yargs
 		.scriptName(name)
 		.command('$0 <file>', '', yargs => {
@@ -49,32 +54,59 @@ export default async ({name, yargsOptions = [], callback}) => {
 		.parse();
 
 	if (!fs.existsSync(args.file)) {
-		console.error(`File ${args.file} does not exist`);
+		logger.log('error', `File ${args.file} does not exist`);
 		process.exit(-1);
 	}
 
-	const spinner = ora('Transforming records').start();
-	const options = {
-		stream: fs.createReadStream(args.file),
-		args,
-		spinner,
-		handleRecordsOutput
-	};
-	await callback(options);
+	const spinner = ora(`Transforming${args.validate ? ' and validating' : ''}${args.fix ? ' and fixing' : ''} records`).start();
 
-	function handleRecordsOutput(records) {
-		if (args.outputDirectory) {
-			if (!fs.existsSync(args.outputDirectory)) {
-				fs.mkdirSync(args.outputDirectory);
-			}
+	const stream = fs.createReadStream(args.file);
+	const TransformEmitter = callback(stream, args);
+	const pendingPromises = [];
 
-			records
-				.forEach((record, index) => {
-					const file = path.join(args.outputDirectory, `${index}.json`);
-					fs.writeFileSync(file, JSON.stringify(record.toObject(), undefined, 2));
-				});
-		} else {
-			console.log(JSON.stringify(records.map(r => r.toObject()), undefined, 2));
-		}
-	}
+	await new Promise((resolve, reject) => {
+		let counter = 0;
+
+		TransformEmitter
+			.on('end', async () => {
+				Promise.all(pendingPromises);
+				spinner.succeed();
+				resolve();
+			})
+			.on('error', err => {
+				logger.log('error', err);
+				reject(err);
+			})
+			.on('record', async payload => {
+				pendingPromises.push(recordEvent(payload));
+
+				async function recordEvent(payload) {
+					// Console.log('debug', 'Record failed: ' + payload.failed);
+					if (payload.failed) {
+						if (!args.recordsOnly) {
+							// Send record to be handled
+							handleOutput(payload.record);
+						}
+					} else {
+						// Send record to be handled
+						handleOutput(payload.record);
+					}
+				}
+
+				function handleOutput(record) {
+					if (args.outputDirectory) {
+						if (!fs.existsSync(args.outputDirectory)) {
+							fs.mkdirSync(args.outputDirectory);
+						}
+
+						const file = path.join(args.outputDirectory, `${counter}.json`);
+						counter++;
+						fs.writeFileSync(file, JSON.stringify(record, undefined, 2));
+					} else {
+						console.log(JSON.stringify(record, undefined, 2));
+						counter++;
+					}
+				}
+			});
+	});
 };

@@ -37,8 +37,7 @@ export const BLOB_STATE = {
 
 export const BLOB_UPDATE_OPERATIONS = {
 	abort: 'abort',
-	transformationStarted: 'transformationStarted',
-	transformationDone: 'transformationDone',
+	transformedRecord: 'transformedRecord',
 	transformationFailed: 'transformationFailed',
 	recordProcessed: 'recordProcessed',
 	updateState: 'updateState'
