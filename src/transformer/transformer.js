@@ -100,7 +100,6 @@ export default async function (transformCallback) {
 						pendingPromises.push(updateBlob(payload));
 
 						async function sendRecordToQueue(payload) {
-							await Promise.all(payload);
 							if ((!ABORT_ON_INVALID_RECORDS || (ABORT_ON_INVALID_RECORDS && !hasFailed))) {
 								try {
 									channel.assertQueue(BLOB_ID, {durable: true});
@@ -113,7 +112,6 @@ export default async function (transformCallback) {
 						}
 
 						async function updateBlob(payload) {
-							await Promise.all(payload);
 							try {
 								if (payload.failed) {
 									hasFailed = true;
