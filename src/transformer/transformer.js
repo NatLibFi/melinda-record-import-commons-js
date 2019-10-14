@@ -34,7 +34,6 @@ import uuid from 'uuid/v4';
 import {Utils} from '@natlibfi/melinda-commons';
 import {registerSignalHandlers, startHealthCheckService} from '../common';
 import {createApiClient} from '../api-client';
-import moment from 'moment';
 import {BLOB_STATE} from '../constants';
 
 const {createLogger} = Utils;
@@ -95,11 +94,10 @@ export default async function (transformCallback) {
 						reject(err);
 					})
 					.on('record', async payload => {
-						payload.timeStamp = moment();
-						pendingPromises.push(sendRecordToQueue(payload));
-						pendingPromises.push(updateBlob(payload));
+						pendingPromises.push(sendRecordToQueue());
+						pendingPromises.push(updateBlob());
 
-						async function sendRecordToQueue(payload) {
+						async function sendRecordToQueue() {
 							if (!payload.failed) {
 								if ((!ABORT_ON_INVALID_RECORDS || (ABORT_ON_INVALID_RECORDS && !hasFailed))) {
 									try {
@@ -113,13 +111,13 @@ export default async function (transformCallback) {
 							}
 						}
 
-						async function updateBlob(payload) {
+						async function updateBlob() {
 							try {
 								if (payload.failed) {
 									hasFailed = true;
 									await ApiClient.transformedRecord({
 										id: BLOB_ID,
-										error: payload.record
+										error: payload
 									});
 								} else {
 									await ApiClient.transformedRecord({
