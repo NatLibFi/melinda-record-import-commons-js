@@ -83,27 +83,28 @@ export default async ({name, yargsOptions = [], callback}) => {
 				async function recordEvent(payload) {
 					// Console.log('debug', 'Record failed: ' + payload.failed);
 					if (payload.failed) {
-						if (!args.recordsOnly) {
-							// Send record to be handled
-							handleOutput(payload.record);
-						}
-					} else {
 						// Send record to be handled
+						if (!args.recordsOnly) {
+							handleOutput(payload);
+						}
+					} else if (args.recordsOnly) {
 						handleOutput(payload.record);
+					} else {
+						handleOutput(payload);
 					}
 				}
 
-				function handleOutput(record) {
+				function handleOutput(payload) {
 					if (args.outputDirectory) {
 						if (!fs.existsSync(args.outputDirectory)) {
 							fs.mkdirSync(args.outputDirectory);
 						}
 
 						const file = path.join(args.outputDirectory, `${counter}.json`);
+						fs.writeFileSync(file, JSON.stringify(payload, undefined, 2));
 						counter++;
-						fs.writeFileSync(file, JSON.stringify(record, undefined, 2));
 					} else {
-						console.log(JSON.stringify(record, undefined, 2));
+						console.log(JSON.stringify(payload, undefined, 2));
 						counter++;
 					}
 				}
