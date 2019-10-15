@@ -85,15 +85,15 @@ export default async ({name, yargsOptions = [], callback}) => {
 					if (payload.failed) {
 						if (!args.recordsOnly) {
 							// Send record to be handled
-							handleOutput(payload.record);
+							handleOutput(payload);
 						}
 					} else {
 						// Send record to be handled
-						handleOutput(payload.record);
+						handleOutput(payload);
 					}
 				}
 
-				function handleOutput(record) {
+				function handleOutput(payload) {
 					if (args.outputDirectory) {
 						if (!fs.existsSync(args.outputDirectory)) {
 							fs.mkdirSync(args.outputDirectory);
@@ -101,9 +101,22 @@ export default async ({name, yargsOptions = [], callback}) => {
 
 						const file = path.join(args.outputDirectory, `${counter}.json`);
 						counter++;
-						fs.writeFileSync(file, JSON.stringify(record, undefined, 2));
+						if (args.recordsOnly) {
+							fs.writeFileSync(file, JSON.stringify(payload.record, undefined, 2));
+						} else if (args.validate || args.fix) {
+							fs.writeFileSync(file, JSON.stringify(payload, undefined, 2));
+						} else {
+							fs.writeFileSync(file, JSON.stringify(payload.record, undefined, 2));
+						}
 					} else {
-						console.log(JSON.stringify(record, undefined, 2));
+						if (args.recordsOnly) {
+							console.log(JSON.stringify(payload.record, undefined, 2));
+						} else if (args.validate || args.fix) {
+							console.log(JSON.stringify(payload, undefined, 2));
+						} else {
+							console.log(JSON.stringify(payload.record, undefined, 2));
+						}
+
 						counter++;
 					}
 				}
