@@ -45,6 +45,7 @@ export default async ({name, yargsOptions = [], callback}) => {
 		.command('$0 <file>', '', yargs => {
 			yargs
 				.positional('file', {type: 'string', describe: 'File to transform'})
+				.option('r', {alias: 'recordsOnly', default: false, type: 'boolean', describe: 'Write only record data to output (Invalid records are excluded)'})
 				.option('d', {alias: 'outputDirectory', type: 'string', describe: 'Output directory where each record file is written (Applicable only with `recordsOnly`'});
 			yargsOptions.forEach(({option, conf}) => {
 				yargs.option(option, conf);
@@ -81,6 +82,19 @@ export default async ({name, yargsOptions = [], callback}) => {
 
 				async function recordEvent(payload) {
 					// Console.log('debug', 'Record failed: ' + payload.failed);
+					if (payload.failed) {
+						// Send record to be handled
+						if (!args.recordsOnly) {
+							handleOutput(payload);
+						}
+					} else if (args.recordsOnly) {
+						handleOutput(payload.record);
+					} else {
+						handleOutput(payload);
+					}
+				}
+
+				function handleOutput(payload) {
 					if (args.outputDirectory) {
 						if (!fs.existsSync(args.outputDirectory)) {
 							fs.mkdirSync(args.outputDirectory);
