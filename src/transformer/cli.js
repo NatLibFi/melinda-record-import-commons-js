@@ -45,7 +45,6 @@ export default async ({name, yargsOptions = [], callback}) => {
 		.command('$0 <file>', '', yargs => {
 			yargs
 				.positional('file', {type: 'string', describe: 'File to transform'})
-				.option('r', {alias: 'recordsOnly', default: false, type: 'boolean', describe: 'Write only record data to output (Invalid records are excluded)'})
 				.option('d', {alias: 'outputDirectory', type: 'string', describe: 'Output directory where each record file is written (Applicable only with `recordsOnly`'});
 			yargsOptions.forEach(({option, conf}) => {
 				yargs.option(option, conf);
@@ -82,41 +81,16 @@ export default async ({name, yargsOptions = [], callback}) => {
 
 				async function recordEvent(payload) {
 					// Console.log('debug', 'Record failed: ' + payload.failed);
-					if (payload.failed) {
-						if (!args.recordsOnly) {
-							// Send record to be handled
-							handleOutput(payload);
-						}
-					} else {
-						// Send record to be handled
-						handleOutput(payload);
-					}
-				}
-
-				function handleOutput(payload) {
 					if (args.outputDirectory) {
 						if (!fs.existsSync(args.outputDirectory)) {
 							fs.mkdirSync(args.outputDirectory);
 						}
 
 						const file = path.join(args.outputDirectory, `${counter}.json`);
+						fs.writeFileSync(file, JSON.stringify(payload, undefined, 2));
 						counter++;
-						if (args.recordsOnly) {
-							fs.writeFileSync(file, JSON.stringify(payload.record, undefined, 2));
-						} else if (args.validate || args.fix) {
-							fs.writeFileSync(file, JSON.stringify(payload, undefined, 2));
-						} else {
-							fs.writeFileSync(file, JSON.stringify(payload.record, undefined, 2));
-						}
 					} else {
-						if (args.recordsOnly) {
-							console.log(JSON.stringify(payload.record, undefined, 2));
-						} else if (args.validate || args.fix) {
-							console.log(JSON.stringify(payload, undefined, 2));
-						} else {
-							console.log(JSON.stringify(payload.record, undefined, 2));
-						}
-
+						console.log(JSON.stringify(payload, undefined, 2));
 						counter++;
 					}
 				}
