@@ -46,6 +46,7 @@ export const BLOB_UPDATE_OPERATIONS = {
 export const RECORD_IMPORT_STATE = {
 	CREATED: 'CREATED',
 	UPDATED: 'UPDATED',
+	ACTION_NEEDED: 'ACTION_NEEDED',
 	INVALID: 'INVALID',
 	DUPLICATE: 'DUPLICATE',
 	ERROR: 'ERROR',
@@ -58,18 +59,17 @@ export const QUEUE_NAME_BULK = 'BULK';
 export const QUEUE_NAME_REPLY_BULK = 'REPLY_BULK';
 export const QUEUE_NAME_REPLY_PRIO = 'REPLY_PRIO';
 
-// Merge updated and created to DONE?
 export const CHUNK_STATE = {
-	IN_QUEUE: 'IN_QUEUE',
-	CREATED: 'CREATED',
-	UPDATED: 'UPDATED',
 	ACTION_NEEDED: 'ACTION_NEEDED',
-	ERROR: 'ERROR'
+	DONE: 'DONE',
+	ERROR: 'ERROR',
+	IN_QUEUE: 'IN_QUEUE'
 };
 
 export const OPERATIONS = [
 	'update',
-	'create'
+	'create',
+	'migrate'
 ];
 
 export const CHUNK_SIZE = 50;
