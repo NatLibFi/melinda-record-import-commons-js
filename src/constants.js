@@ -51,3 +51,25 @@ export const RECORD_IMPORT_STATE = {
 	ERROR: 'ERROR',
 	SKIPPED: 'SKIPPED'
 };
+
+// Rest-import-queue-constants
+export const QUEUE_NAME_PRIO = 'PRIO';
+export const QUEUE_NAME_BULK = 'BULK';
+export const QUEUE_NAME_REPLY_BULK = 'REPLY_BULK';
+export const QUEUE_NAME_REPLY_PRIO = 'REPLY_PRIO';
+
+// Merge updated and created to DONE?
+export const CHUNK_STATE = {
+	IN_QUEUE: 'IN_QUEUE',
+	CREATED: 'CREATED',
+	UPDATED: 'UPDATED',
+	ACTION_NEEDED: 'ACTION_NEEDED',
+	ERROR: 'ERROR'
+};
+
+export const OPERATIONS = [
+	'update',
+	'create'
+];
+
+export const CHUNK_SIZE = 50;
