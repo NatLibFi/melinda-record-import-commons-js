@@ -55,8 +55,10 @@ export const RECORD_IMPORT_STATE = {
 };
 
 // Rest-import-queue-constants
-export const QUEUE_NAME_PRIO = 'PRIO';
-export const QUEUE_NAME_BULK = 'BULK';
+export const QUEUE_NAME_BULK_CREATE = 'BULK_CREATE';
+export const QUEUE_NAME_BULK_UPDATE = 'BULK_UPDATE';
+export const QUEUE_NAME_PRIO_CREATE = 'PRIO_CREATE';
+export const QUEUE_NAME_PRIO_UPDATE = 'PRIO_UPDATE';
 export const QUEUE_NAME_REPLY_BULK = 'REPLY_BULK';
 export const QUEUE_NAME_REPLY_PRIO = 'REPLY_PRIO';
 
@@ -69,8 +71,7 @@ export const CHUNK_STATE = {
 
 export const OPERATIONS = [
 	'update',
-	'create',
-	'migrate'
+	'create'
 ];
 
 export const CHUNK_SIZE = 50;
