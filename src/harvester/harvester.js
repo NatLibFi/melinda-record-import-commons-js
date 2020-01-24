@@ -26,8 +26,6 @@
 *
 */
 
-/* eslint-disable import/default */
-
 import {registerSignalHandlers} from '../common';
 import {createApiClient} from '../api-client';
 import {Utils} from '@natlibfi/melinda-commons';

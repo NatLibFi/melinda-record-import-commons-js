@@ -53,28 +53,3 @@ export const RECORD_IMPORT_STATE = {
 	ERROR: 'ERROR',
 	SKIPPED: 'SKIPPED'
 };
-
-// Rest-import-queue-constants
-export const QUEUE_ITEM_STATE = {
-	UPLOADING: 'UPLOADING',
-	PENDING_QUEUING: 'PENDING_QUEUING',
-	QUEUING_IN_PROGRESS: 'QUEUING_IN_PROGRESS',
-	IN_QUEUE: 'IN_QUEUE',
-	IN_PROCESS: 'IN_PROCESS',
-	DONE: 'DONE',
-	ERROR: 'ERROR'
-};
-
-export const PRIO_IMPORT_QUEUES = {
-	CREATE: 'CREATE',
-	REPLY: 'REPLY',
-	REQUESTS: 'REQUESTS',
-	UPDATE: 'UPDATE'
-};
-
-export const OPERATIONS = [
-	'update',
-	'create'
-];
-
-export const CHUNK_SIZE = 50;

@@ -26,9 +26,6 @@
 *
 */
 
-/* Not sure why this is needed only in this module... */
-/* eslint-disable import/default */
-
 import amqplib from 'amqplib';
 import uuid from 'uuid/v4';
 import {Utils} from '@natlibfi/melinda-commons';

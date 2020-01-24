@@ -322,7 +322,7 @@ export function createApiClient({url, username, password, userAgent = 'Record im
 
 			if (response.status === HttpStatus.UNAUTHORIZED) {
 				const token = await getAuthToken();
-				authHeader = `Bearer ${token}`; // eslint-disable-line require-atomic-updates
+				authHeader = `Bearer ${token}`;
 				options.headers.Authorization = authHeader;
 
 				return fetch(reqUrl, options);
@@ -332,7 +332,7 @@ export function createApiClient({url, username, password, userAgent = 'Record im
 		}
 
 		const token = await getAuthToken();
-		authHeader = `Bearer ${token}`; // eslint-disable-line require-atomic-updates
+		authHeader = `Bearer ${token}`;
 		options.headers.Authorization = authHeader;
 
 		return fetch(reqUrl, options);

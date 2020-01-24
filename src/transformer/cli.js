@@ -26,9 +26,6 @@
 *
 */
 
-/* Not sure why this is needed only in this module... */
-/* eslint-disable import/default */
-
 import fs from 'fs';
 import yargs from 'yargs';
 import ora from 'ora';
