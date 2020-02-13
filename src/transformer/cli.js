@@ -74,6 +74,7 @@ export default async ({name, yargsOptions = [], callback}) => {
 				resolve();
 			})
 			.on('error', err => {
+				console.error('FOO');
 				spinner.fail();
 				reject(err);
 			})
