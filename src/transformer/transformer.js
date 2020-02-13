@@ -90,7 +90,7 @@ export default async function (transformCallback) {
 					})
 					.on('error', async err => {
 						logger.log('info', 'Transformation failed');
-						await ApiClient.setTransformationFailed({id: BLOB_ID, error: err});
+						await ApiClient.setTransformationFailed({id: BLOB_ID, error: JSON.stringify(err)});
 						reject(err);
 					})
 					.on('record', async payload => {
