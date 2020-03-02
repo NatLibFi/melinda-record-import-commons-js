@@ -42,9 +42,9 @@ export default async function (transformCallback) {
 	const {AMQP_URL, API_URL, API_USERNAME, API_PASSWORD, API_CLIENT_USER_AGENT, BLOB_ID, ABORT_ON_INVALID_RECORDS, HEALTH_CHECK_PORT} = await import('./config');
 	const logger = createLogger();
 	const stopHealthCheckService = startHealthCheckService();
-	
+
 	registerSignalHandlers({stopHealthCheckService});
-	
+
 	try {
 		await startTransformation(HEALTH_CHECK_PORT);
 		stopHealthCheckService();
@@ -54,88 +54,88 @@ export default async function (transformCallback) {
 		logger.log('error', err instanceof Error ? err.stack : err);
 		process.exit(1);
 	}
-	
+
 	async function startTransformation() {
 		let connection;
 		let channel;
-		
+
 		const ApiClient = createApiClient({url: API_URL, username: API_USERNAME, password: API_PASSWORD, userAgent: API_CLIENT_USER_AGENT});
 		const {readStream} = await ApiClient.getBlobContent({id: BLOB_ID});
-		
+
 		logger.log('info', `Starting transformation for blob ${BLOB_ID}`);
-		
+
 		try {
 			let hasFailed = false;
 
 			connection = await amqplib.connect(AMQP_URL);
 			channel = await connection.createChannel();
-			
+
 			const TransformEmitter = transformCallback(readStream, {});
-			const pendingPromises = [];			
-						
+			const pendingPromises = [];
+
 			await new Promise((resolve, reject) => {
 				TransformEmitter
-				.on('end', async (count = 0) => {
-					logger.log('debug', `Transformer has handled ${pendingPromises.length / 2} / ${count} record promises to line, waiting them to be resolved`);
-					
-					try {
-						await Promise.all(pendingPromises);
-						logger.log('debug', `Transforming is done (${pendingPromises.length / 2} / ${count} Promises resolved)`);
-						
-						if (ABORT_ON_INVALID_RECORDS && hasFailed) {
-							logger.log('info', 'Not sending records to queue because some records failed and ABORT_ON_INVALID_RECORDS is true');
-							await ApiClient.setTransformationFailed({id: BLOB_ID, error: {message: 'Some records have failed'}});
-						} else {
-							logger.log('info', `Setting blob state ${BLOB_STATE.TRANSFORMED}¸¸`);
-							await ApiClient.updateState({id: BLOB_ID, state: BLOB_STATE.TRANSFORMED});
+					.on('end', async (count = 0) => {
+						logger.log('debug', `Transformer has handled ${pendingPromises.length / 2} / ${count} record promises to line, waiting them to be resolved`);
+
+						try {
+							await Promise.all(pendingPromises);
+							logger.log('debug', `Transforming is done (${pendingPromises.length / 2} / ${count} Promises resolved)`);
+
+							if (ABORT_ON_INVALID_RECORDS && hasFailed) {
+								logger.log('info', 'Not sending records to queue because some records failed and ABORT_ON_INVALID_RECORDS is true');
+								await ApiClient.setTransformationFailed({id: BLOB_ID, error: {message: 'Some records have failed'}});
+							} else {
+								logger.log('info', `Setting blob state ${BLOB_STATE.TRANSFORMED}¸¸`);
+								await ApiClient.updateState({id: BLOB_ID, state: BLOB_STATE.TRANSFORMED});
+							}
+						} catch (err) {
+							reject(err);
 						}
-					} catch (err) {
+
+						resolve(true);
+					})
+					.on('error', async err => {
+						logger.log('info', 'Transformation failed');
+						await ApiClient.setTransformationFailed({id: BLOB_ID, error: getError(err)});
 						reject(err);
-					}
-					
-					resolve(true);
-				})
-				.on('error', async err => {					
-					logger.log('info', 'Transformation failed');
-					await ApiClient.setTransformationFailed({id: BLOB_ID, error: getError(err)});
-					reject(err);
-				})
-				.on('record', async payload => {
-					pendingPromises.push(sendRecordToQueue());
-					pendingPromises.push(updateBlob());
-					
-					async function sendRecordToQueue() {
-						if (!payload.failed) {
-							if ((!ABORT_ON_INVALID_RECORDS || (ABORT_ON_INVALID_RECORDS && !hasFailed))) {
-								try {
-									channel.assertQueue(BLOB_ID, {durable: true});
-									const message = Buffer.from(JSON.stringify(payload.record));
-									await channel.sendToQueue(BLOB_ID, message, {persistent: true, messageId: uuid()});
-								} catch (err) {
-									throw new Error(`Error while sending record to queue: ${getError(err)}`);
+					})
+					.on('record', async payload => {
+						pendingPromises.push(sendRecordToQueue());
+						pendingPromises.push(updateBlob());
+
+						async function sendRecordToQueue() {
+							if (!payload.failed) {
+								if ((!ABORT_ON_INVALID_RECORDS || (ABORT_ON_INVALID_RECORDS && !hasFailed))) {
+									try {
+										channel.assertQueue(BLOB_ID, {durable: true});
+										const message = Buffer.from(JSON.stringify(payload.record));
+										await channel.sendToQueue(BLOB_ID, message, {persistent: true, messageId: uuid()});
+									} catch (err) {
+										throw new Error(`Error while sending record to queue: ${getError(err)}`);
+									}
 								}
 							}
 						}
-					}
-					
-					async function updateBlob() {
-						try {
-							if (payload.failed) {
-								hasFailed = true;
-								await ApiClient.transformedRecord({
-									id: BLOB_ID,
-									error: payload
-								});
-							} else {
-								await ApiClient.transformedRecord({
-									id: BLOB_ID
-								});
+
+						async function updateBlob() {
+							try {
+								if (payload.failed) {
+									hasFailed = true;
+									await ApiClient.transformedRecord({
+										id: BLOB_ID,
+										error: payload
+									});
+								} else {
+									await ApiClient.transformedRecord({
+										id: BLOB_ID
+									});
+								}
+							} catch (err) {
+								throw new Error(`Error while updating blob: ${getError(err)}`);
 							}
-						} catch (err) {
-							throw new Error(`Error while updating blob: ${getError(err)}`);
 						}
-					}
-				});
+					});
 			});
 		} catch (err) {
 			const error = getError(err);
@@ -145,14 +145,14 @@ export default async function (transformCallback) {
 			if (channel) {
 				await channel.close();
 			}
-			
+
 			if (connection) {
 				await connection.close();
 			}
 		}
-		
+
 		function getError(err) {
-			return JSON.stringify(err.stack || err.message || err);
+			return JSON.stringify(err.stack || err.message || err);
 		}
 	}
 }

@@ -39,74 +39,74 @@ const {createLogger} = Utils;
 
 export default async ({name, yargsOptions = [], callback}) => {
 	const logger = createLogger();
-	
+
 	const args = yargs
-	.scriptName(name)
-	.command('$0 <file>', '', yargs => {
-		yargs
-		.positional('file', {type: 'string', describe: 'File to transform'})
-		.option('r', {alias: 'recordsOnly', default: false, type: 'boolean', describe: 'Write only record data to output (Invalid records are excluded)'})
-		.option('d', {alias: 'outputDirectory', type: 'string', describe: 'Output directory where each record file is written (Applicable only with `recordsOnly`'});
-		yargsOptions.forEach(({option, conf}) => {
-			yargs.option(option, conf);
-		});
-	})
-	.parse();
-	
+		.scriptName(name)
+		.command('$0 <file>', '', yargs => {
+			yargs
+				.positional('file', {type: 'string', describe: 'File to transform'})
+				.option('r', {alias: 'recordsOnly', default: false, type: 'boolean', describe: 'Write only record data to output (Invalid records are excluded)'})
+				.option('d', {alias: 'outputDirectory', type: 'string', describe: 'Output directory where each record file is written (Applicable only with `recordsOnly`'});
+			yargsOptions.forEach(({option, conf}) => {
+				yargs.option(option, conf);
+			});
+		})
+		.parse();
+
 	if (!fs.existsSync(args.file)) {
 		logger.log('error', `File ${args.file} does not exist`);
 		process.exit(-1);
 	}
-	
+
 	await new Promise((resolve, reject) => {
 		let counter = 0;
-		
-		const spinner = ora(`Transforming${args.validate ? ' and validating' : ''}${args.fix ? ' and fixing' : ''} records`).start();		
+
+		const spinner = ora(`Transforming${args.validate ? ' and validating' : ''}${args.fix ? ' and fixing' : ''} records`).start();
 		const stream = fs.createReadStream(args.file);
 		const TransformEmitter = callback(stream, args);
 		const pendingPromises = [];
-		
+
 		TransformEmitter
-		.on('end', async () => {
-			Promise.all(pendingPromises);
-			spinner.succeed();
-			resolve();
-		})
-		.on('error', err => {
-			spinner.fail();
-			reject(err);
-		})
-		.on('record', async payload => {
-			pendingPromises.push(recordEvent(payload));
-			
-			async function recordEvent(payload) {
+			.on('end', async () => {
+				Promise.all(pendingPromises);
+				spinner.succeed();
+				resolve();
+			})
+			.on('error', err => {
+				spinner.fail();
+				reject(err);
+			})
+			.on('record', async payload => {
+				pendingPromises.push(recordEvent(payload));
+
+				async function recordEvent(payload) {
 				// Console.log('debug', 'Record failed: ' + payload.failed);
-				if (payload.failed) {
+					if (payload.failed) {
 					// Send record to be handled
-					if (!args.recordsOnly) {
+						if (!args.recordsOnly) {
+							handleOutput(payload);
+						}
+					} else if (args.recordsOnly) {
+						handleOutput(payload.record);
+					} else {
 						handleOutput(payload);
 					}
-				} else if (args.recordsOnly) {
-					handleOutput(payload.record);
-				} else {
-					handleOutput(payload);
 				}
-			}
-			
-			function handleOutput(payload) {
-				if (args.outputDirectory) {
-					if (!fs.existsSync(args.outputDirectory)) {
-						fs.mkdirSync(args.outputDirectory);
+
+				function handleOutput(payload) {
+					if (args.outputDirectory) {
+						if (!fs.existsSync(args.outputDirectory)) {
+							fs.mkdirSync(args.outputDirectory);
+						}
+
+						const file = path.join(args.outputDirectory, `${counter}.json`);
+						fs.writeFileSync(file, JSON.stringify(payload, undefined, 2));
+						counter++;
+					} else {
+						console.log(JSON.stringify(payload, undefined, 2));
+						counter++;
 					}
-					
-					const file = path.join(args.outputDirectory, `${counter}.json`);
-					fs.writeFileSync(file, JSON.stringify(payload, undefined, 2));
-					counter++;
-				} else {
-					console.log(JSON.stringify(payload, undefined, 2));
-					counter++;
 				}
-			}
-		});
+			});
 	});
 };
