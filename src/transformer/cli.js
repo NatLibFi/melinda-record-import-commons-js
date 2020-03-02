@@ -58,14 +58,13 @@ export default async ({name, yargsOptions = [], callback}) => {
 		process.exit(-1);
 	}
 
-	const spinner = ora(`Transforming${args.validate ? ' and validating' : ''}${args.fix ? ' and fixing' : ''} records`).start();
-
-	const stream = fs.createReadStream(args.file);
-	const TransformEmitter = callback(stream, args);
-	const pendingPromises = [];
-
 	await new Promise((resolve, reject) => {
 		let counter = 0;
+
+		const spinner = ora(`Transforming${args.validate ? ' and validating' : ''}${args.fix ? ' and fixing' : ''} records`).start();
+		const stream = fs.createReadStream(args.file);
+		const TransformEmitter = callback(stream, args);
+		const pendingPromises = [];
 
 		TransformEmitter
 			.on('end', async () => {
@@ -81,9 +80,9 @@ export default async ({name, yargsOptions = [], callback}) => {
 				pendingPromises.push(recordEvent(payload));
 
 				async function recordEvent(payload) {
-					// Console.log('debug', 'Record failed: ' + payload.failed);
+				// Console.log('debug', 'Record failed: ' + payload.failed);
 					if (payload.failed) {
-						// Send record to be handled
+					// Send record to be handled
 						if (!args.recordsOnly) {
 							handleOutput(payload);
 						}
