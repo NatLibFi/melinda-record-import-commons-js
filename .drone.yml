@@ -2,7 +2,7 @@ kind: pipeline
 name: default
 steps:
 - name: build
-  image: node:8
+  image: node:12
   commands:
   - npm install
   - npm test
@@ -14,6 +14,8 @@ steps:
       from_secret: npm_token
   when:
     event: tag
-trigger:
-  event: [push, tag]    
+---
+kind: secret
+name: npm_token
+data: QfPEw4iBPzPRFs9uasSgKVkeFpSiIWJ2bNDnOQYDBkQBXYpxmA==
   
