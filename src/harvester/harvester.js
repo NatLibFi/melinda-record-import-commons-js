@@ -35,7 +35,7 @@ import {Utils} from '@natlibfi/melinda-commons';
 const {createLogger} = Utils;
 
 export default async function (harvestCallback) {
-	const {API_URL, API_USERNAME, API_PASSWORD, API_CLIENT_USER_AGENT, PROFILE_ID} = await import('./config');
+	const {API_URL, API_USERNAME, API_PASSWORD, API_CLIENT_USER_AGENT, PROFILE_ID, BLOB_CONTENT_TYPE} = await import('./config');
 	const logger = createLogger();
 	const ApiClient = createApiClient({url: API_URL, username: API_USERNAME, password: API_PASSWORD, userAgent: API_CLIENT_USER_AGENT});
 
