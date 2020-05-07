@@ -60,11 +60,9 @@ export default async function (transformCallback) {
 		let channel;
 
 		logger.log('info', `Starting transformation for blob ${BLOB_ID}`);
-		
+
 		const ApiClient = createApiClient({url: API_URL, username: API_USERNAME, password: API_PASSWORD, userAgent: API_CLIENT_USER_AGENT});
 		const {readStream} = await ApiClient.getBlobContent({id: BLOB_ID});
-
-
 
 		try {
 			let hasFailed = false;

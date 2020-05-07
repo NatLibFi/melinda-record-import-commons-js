@@ -17,5 +17,5 @@ steps:
 ---
 kind: secret
 name: npm_token
-data: QfPEw4iBPzPRFs9uasSgKVkeFpSiIWJ2bNDnOQYDBkQBXYpxmA==
+data: I3k2YwirwX+5c3mU+DXGsE7qVsFJBJyeNP28Sv7HOFlKH+qiJqjZFwNg/QAl1J1RKioivcD4yLM6Cdp/tDm+6g==
   
