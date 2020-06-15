@@ -35,7 +35,7 @@ async function run() {
 		const port = process.argv[2] ? Number.parseInt(process.argv[2], 10) : 8080;
 		const response = await fetch(`http://localhost:${port}/healthz`);
 		process.exit(response.status === 200 ? 0 : 1);
-	} catch (err) {
+	} catch (_) {
 		process.exit(1);
 	}
 }

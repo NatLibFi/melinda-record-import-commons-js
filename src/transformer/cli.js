@@ -58,55 +58,59 @@ export default async ({name, yargsOptions = [], callback}) => {
 		process.exit(-1);
 	}
 
-	await new Promise((resolve, reject) => {
-		let counter = 0;
+	try {
+		await new Promise((resolve, reject) => {
+			let counter = 0;
 
-		const spinner = ora(`Transforming${args.validate ? ' and validating' : ''}${args.fix ? ' and fixing' : ''} records`).start();
-		const stream = fs.createReadStream(args.file);
-		const TransformEmitter = callback(stream, args);
-		const pendingPromises = [];
+			const spinner = ora(`Transforming${args.validate ? ' and validating' : ''}${args.fix ? ' and fixing' : ''} records`).start();
+			const stream = fs.createReadStream(args.file);
+			const TransformEmitter = callback(stream, args);
+			const pendingPromises = [];
 
-		TransformEmitter
-			.on('end', async () => {
-				Promise.all(pendingPromises);
-				spinner.succeed();
-				resolve();
-			})
-			.on('error', err => {
-				spinner.fail();
-				reject(err);
-			})
-			.on('record', async payload => {
-				pendingPromises.push(recordEvent(payload));
+			TransformEmitter
+				.on('end', async () => {
+					Promise.all(pendingPromises);
+					spinner.succeed();
+					resolve();
+				})
+				.on('error', err => {
+					spinner.fail();
+					reject(err);
+				})
+				.on('record', async payload => {
+					pendingPromises.push(recordEvent(payload));
 
-				async function recordEvent(payload) {
-				// Console.log('debug', 'Record failed: ' + payload.failed);
-					if (payload.failed) {
-					// Send record to be handled
-						if (!args.recordsOnly) {
+					async function recordEvent(payload) {
+						if (payload.failed) {
+						// Send record to be handled
+							if (!args.recordsOnly) {
+								handleOutput(payload);
+							}
+						} else if (args.recordsOnly) {
+							handleOutput(payload.record);
+						} else {
 							handleOutput(payload);
 						}
-					} else if (args.recordsOnly) {
-						handleOutput(payload.record);
-					} else {
-						handleOutput(payload);
 					}
-				}
 
-				function handleOutput(payload) {
-					if (args.outputDirectory) {
-						if (!fs.existsSync(args.outputDirectory)) {
-							fs.mkdirSync(args.outputDirectory);
+					function handleOutput(payload) {
+						if (args.outputDirectory) {
+							if (!fs.existsSync(args.outputDirectory)) {
+								fs.mkdirSync(args.outputDirectory);
+							}
+
+							const file = path.join(args.outputDirectory, `${counter}.json`);
+							fs.writeFileSync(file, JSON.stringify(payload, undefined, 2));
+							counter++;
+						} else {
+							console.log(JSON.stringify(payload, undefined, 2));
+							counter++;
 						}
-
-						const file = path.join(args.outputDirectory, `${counter}.json`);
-						fs.writeFileSync(file, JSON.stringify(payload, undefined, 2));
-						counter++;
-					} else {
-						console.log(JSON.stringify(payload, undefined, 2));
-						counter++;
 					}
-				}
-			});
-	});
+				});
+		});
+	} catch (err) {
+		logger.log('error', typeof err === 'object' && 'stack' in err ? err.stack : err);
+		process.exit(-1);
+	}
 };
