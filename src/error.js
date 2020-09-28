@@ -27,8 +27,8 @@
 */
 
 export class ApiError extends Error {
-	constructor(status, ...params) {
-		super(status, ...params);
-		this.status = status;
-	}
+  constructor(status, ...params) {
+    super(status, ...params);
+    this.status = status; // eslint-disable-line functional/no-this-expression
+  }
 }

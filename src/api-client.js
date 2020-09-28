@@ -30,328 +30,331 @@ import {EventEmitter} from 'events';
 import fetch from 'node-fetch';
 import HttpStatus from 'http-status';
 import {URL} from 'url';
-import {Utils} from '@natlibfi/melinda-commons';
+import {createLogger} from '@natlibfi/melinda-backend-commons';
+import {generateAuthorizationHeader} from '@natlibfi/melinda-commons';
 import {BLOB_UPDATE_OPERATIONS} from './constants';
 import {ApiError} from './error';
 
-const {generateAuthorizationHeader, createLogger} = Utils;
-
 export function createApiClient({url, username, password, userAgent = 'Record import API client / Javascript'}) {
-	let authHeader;
-	const logger = createLogger();
+  let authHeader; // eslint-disable-line functional/no-let
+  const logger = createLogger();
 
-	return {
-		getBlobs, createBlob, getBlobMetadata, deleteBlob,
-		getBlobContent, deleteBlobContent,
-		getProfile, modifyProfile, queryProfiles, deleteProfile,
-		setTransformationFailed, setRecordProcessed,
-		transformedRecord, setAborted, updateState
-	};
+  return {
+    getBlobs, createBlob, getBlobMetadata, deleteBlob,
+    getBlobContent, deleteBlobContent,
+    getProfile, modifyProfile, queryProfiles, deleteProfile,
+    setTransformationFailed, setRecordProcessed,
+    transformedRecord, setAborted, updateState
+  };
 
-	async function createBlob({blob, type, profile}) {
-		const response = await doRequest(`${url}/blobs`, {
-			method: 'POST',
-			body: blob,
-			headers: {
-				'User-Agent': userAgent,
-				'Content-Type': type,
-				'Import-Profile': profile
-			}
-		});
+  async function createBlob({blob, type, profile}) {
+    const response = await doRequest(`${url}/blobs`, {
+      method: 'POST',
+      body: blob,
+      headers: {
+        'User-Agent': userAgent,
+        'Content-Type': type,
+        'Import-Profile': profile
+      }
+    });
 
-		if (response.status === HttpStatus.CREATED) {
-			return parseBlobId();
-		}
+    if (response.status === HttpStatus.CREATED) {
+      return parseBlobId();
+    }
 
-		throw new ApiError(response.status);
+    throw new ApiError(response.status);
 
-		function parseBlobId() {
-			return /\/(.[^/]*)$/.exec(response.headers.get('location'))[1];
-		}
-	}
+    function parseBlobId() {
+      return (/\/(?<def>.[^/]*)$/u).exec(response.headers.get('location'))[1];
+    }
+  }
 
-	async function getBlobMetadata({id}) {
-		const response = await doRequest(`${url}/blobs/${id}`, {
-			headers: {
-				'User-Agent': userAgent,
-				Accept: 'application/json'
-			}
-		});
+  async function getBlobMetadata({id}) {
+    const response = await doRequest(`${url}/blobs/${id}`, {
+      headers: {
+        'User-Agent': userAgent,
+        Accept: 'application/json'
+      }
+    });
 
-		if (response.status === HttpStatus.OK) {
-			return response.json();
-		}
+    if (response.status === HttpStatus.OK) {
+      return response.json();
+    }
 
-		throw new ApiError(response.status);
-	}
+    throw new ApiError(response.status);
+  }
 
-	async function getBlobContent({id}) {
-		const response = await doRequest(`${url}/blobs/${id}/content`, {
-			headers: {
-				'User-Agent': userAgent
-			}
-		});
+  async function getBlobContent({id}) {
+    const response = await doRequest(`${url}/blobs/${id}/content`, {
+      headers: {
+        'User-Agent': userAgent
+      }
+    });
 
-		if (response.status === HttpStatus.OK) {
-			return {
-				contentType: response.headers.get('Content-Type'),
-				readStream: response.body
-			};
-		}
+    if (response.status === HttpStatus.OK) {
+      return {
+        contentType: response.headers.get('Content-Type'),
+        readStream: response.body
+      };
+    }
 
-		throw new ApiError(response.status);
-	}
+    throw new ApiError(response.status);
+  }
 
-	async function getProfile({id}) {
-		const response = await doRequest(`${url}/profiles/${id}`, {
-			headers: {
-				'User-Agent': userAgent,
-				Accept: 'application/json'
-			}
-		});
+  async function getProfile({id}) {
+    const response = await doRequest(`${url}/profiles/${id}`, {
+      headers: {
+        'User-Agent': userAgent,
+        Accept: 'application/json'
+      }
+    });
 
-		if (response.status === HttpStatus.OK) {
-			return response.json();
-		}
+    if (response.status === HttpStatus.OK) {
+      return response.json();
+    }
 
-		throw new ApiError(response.status);
-	}
+    throw new ApiError(response.status);
+  }
 
-	async function deleteProfile({id}) {
-		const response = await doRequest(`${url}/profiles/${id}`, {
-			method: 'DELETE',
-			headers: {
-				'User-Agent': userAgent
-			}
-		});
+  async function deleteProfile({id}) {
+    const response = await doRequest(`${url}/profiles/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'User-Agent': userAgent
+      }
+    });
 
-		if (response.status !== HttpStatus.NO_CONTENT) {
-			throw new ApiError(response.status);
-		}
-	}
+    if (response.status !== HttpStatus.NO_CONTENT) { // eslint-disable-line functional/no-conditional-statement
+      throw new ApiError(response.status);
+    }
+  }
 
-	async function queryProfiles() {
-		const response = await doRequest(`${url}/profiles`, {
-			headers: {
-				'User-Agent': userAgent,
-				Accept: 'application/json'
-			}
-		});
+  async function queryProfiles() {
+    const response = await doRequest(`${url}/profiles`, {
+      headers: {
+        'User-Agent': userAgent,
+        Accept: 'application/json'
+      }
+    });
 
-		if (response.status === HttpStatus.OK) {
-			return response.json();
-		}
+    if (response.status === HttpStatus.OK) {
+      return response.json();
+    }
 
-		throw new ApiError(response.status);
-	}
+    throw new ApiError(response.status);
+  }
 
-	async function modifyProfile({id, payload}) {
-		const response = await doRequest(`${url}/profiles/${id}`, {
-			method: 'PUT',
-			body: JSON.stringify(payload),
-			headers: {
-				'User-Agent': userAgent,
-				'Content-Type': 'application/json'
-			}
-		});
+  async function modifyProfile({id, payload}) {
+    const response = await doRequest(`${url}/profiles/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+      headers: {
+        'User-Agent': userAgent,
+        'Content-Type': 'application/json'
+      }
+    });
 
-		if (![HttpStatus.CREATED, HttpStatus.NO_CONTENT].includes(response.status)) {
-			throw new ApiError(response.status);
-		}
-	}
+    if (![HttpStatus.CREATED, HttpStatus.NO_CONTENT].includes(response.status)) { // eslint-disable-line functional/no-conditional-statement
+      throw new ApiError(response.status);
+    }
+  }
 
-	async function deleteBlob({id}) {
-		const response = await doRequest(`${url}/blobs/${id}`, {
-			method: 'DELETE',
-			headers: {
-				'User-Agent': userAgent
-			}
-		});
+  async function deleteBlob({id}) {
+    const response = await doRequest(`${url}/blobs/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'User-Agent': userAgent
+      }
+    });
 
-		if (response.status === HttpStatus.NO_CONTENT) {
-			return response.body;
-		}
+    if (response.status === HttpStatus.NO_CONTENT) {
+      return response.body;
+    }
 
-		throw new ApiError(response.status);
-	}
+    throw new ApiError(response.status);
+  }
 
-	async function deleteBlobContent({id}) {
-		const response = await doRequest(`${url}/blobs/${id}/content`, {
-			method: 'DELETE',
-			headers: {
-				'User-Agent': userAgent
-			}
-		});
+  async function deleteBlobContent({id}) {
+    const response = await doRequest(`${url}/blobs/${id}/content`, {
+      method: 'DELETE',
+      headers: {
+        'User-Agent': userAgent
+      }
+    });
 
-		if (response.status === HttpStatus.NO_CONTENT) {
-			return response.body;
-		}
+    if (response.status === HttpStatus.NO_CONTENT) {
+      return response.body;
+    }
 
-		throw new ApiError(response.status);
-	}
+    throw new ApiError(response.status);
+  }
 
-	async function transformedRecord({id, error = undefined}) {
-		await updateBlobMetadata({
-			id,
-			payload: {
-				op: BLOB_UPDATE_OPERATIONS.transformedRecord,
-				error
-			}
-		});
-	}
+  async function transformedRecord({id, error = undefined}) {
+    await updateBlobMetadata({
+      id,
+      payload: {
+        op: BLOB_UPDATE_OPERATIONS.transformedRecord,
+        error
+      }
+    });
+  }
 
-	async function setAborted({id}) {
-		await updateBlobMetadata({
-			id,
-			payload: {
-				op: BLOB_UPDATE_OPERATIONS.abort
-			}
-		});
-	}
+  async function setAborted({id}) {
+    await updateBlobMetadata({
+      id,
+      payload: {
+        op: BLOB_UPDATE_OPERATIONS.abort
+      }
+    });
+  }
 
-	async function setTransformationFailed({id, error}) {
-		await updateBlobMetadata({
-			id,
-			payload: {
-				op: BLOB_UPDATE_OPERATIONS.transformationFailed,
-				error
-			}
-		});
-	}
+  async function setTransformationFailed({id, error}) {
+    await updateBlobMetadata({
+      id,
+      payload: {
+        op: BLOB_UPDATE_OPERATIONS.transformationFailed,
+        error
+      }
+    });
+  }
 
-	async function setRecordProcessed({blobId, status, metadata}) {
-		await updateBlobMetadata({
-			id: blobId,
-			payload: {
-				status, metadata,
-				op: BLOB_UPDATE_OPERATIONS.recordProcessed
-			}
-		});
-	}
+  async function setRecordProcessed({blobId, status, metadata}) {
+    await updateBlobMetadata({
+      id: blobId,
+      payload: {
+        status, metadata,
+        op: BLOB_UPDATE_OPERATIONS.recordProcessed
+      }
+    });
+  }
 
-	async function updateState({id, state}) {
-		await updateBlobMetadata({
-			id,
-			payload: {
-				op: BLOB_UPDATE_OPERATIONS.updateState,
-				state
-			}
-		});
-	}
+  async function updateState({id, state}) {
+    await updateBlobMetadata({
+      id,
+      payload: {
+        op: BLOB_UPDATE_OPERATIONS.updateState,
+        state
+      }
+    });
+  }
 
-	function getBlobs(query = {}) {
-		const blobsUrl = createURL();
-		const emitter = new EventEmitter();
+  function getBlobs(query = {}) {
+    const blobsUrl = createURL();
+    const emitter = new EventEmitter();
 
-		pump();
+    pump();
 
-		return emitter;
+    return emitter;
 
-		function createURL() {
-			const blobsUrl = new URL(`${url}/blobs`);
+    function createURL() {
+      const blobsUrl = new URL(`${url}/blobs`);
 
-			Object.keys(query).forEach(k => {
-				if (Array.isArray(query[k])) {
-					query[k].forEach(value => {
-						blobsUrl.searchParams.append(`${k}[]`, value);
-					});
-				} else {
-					blobsUrl.searchParams.set(k, query[k]);
-				}
-			});
+      Object.keys(query).forEach(k => {
+        if (Array.isArray(query[k])) {
+          query[k].forEach(value => {
+            blobsUrl.searchParams.append(`${k}[]`, value);
+          });
+          return;
+        }
 
-			return blobsUrl;
-		}
+        blobsUrl.searchParams.set(k, query[k]);
+      });
 
-		async function pump(offset) {
-			const response = await doRequest(blobsUrl, getOptions());
+      return blobsUrl;
+    }
 
-			if (response.status === HttpStatus.OK) {
-				emitter.emit('blobs', await response.json());
+    async function pump(offset) {
+      const response = await doRequest(blobsUrl, getOptions());
 
-				if (response.headers.has('NextOffset')) {
-					pump(response.headers.get('NextOffset'));
-				} else {
-					emitter.emit('end');
-				}
-			} else {
-				emitter.emit('error', new ApiError(response.status));
-			}
+      if (response.status === HttpStatus.OK) {
+        emitter.emit('blobs', await response.json());
 
-			function getOptions() {
-				const options = {
-					headers: {
-						'User-Agent': userAgent,
-						Accept: 'application/json'
-					}
-				};
+        if (response.headers.has('NextOffset')) {
+          pump(response.headers.get('NextOffset'));
+          return;
+        }
 
-				if (offset) {
-					options.headers.QueryOffset = offset;
-				}
+        emitter.emit('end');
+        return;
+      }
 
-				return options;
-			}
-		}
-	}
+      emitter.emit('error', new ApiError(response.status));
 
-	async function updateBlobMetadata({id, payload}) {
-		logger.log('debug', `updateBlobMetadata: ${payload.op}`);
-		const response = await doRequest(`${url}/blobs/${id}`, {
-			method: 'POST',
-			body: JSON.stringify(payload),
-			headers: {
-				'User-Agent': userAgent,
-				'Content-Type': 'application/json'
-			}
-		});
+      function getOptions() {
+        const options = {
+          headers: {
+            'User-Agent': userAgent,
+            Accept: 'application/json'
+          }
+        };
 
-		if (response.status !== HttpStatus.NO_CONTENT) {
-			throw new ApiError(response.status);
-		}
-	}
+        if (offset) {
+          options.headers.QueryOffset = offset; // eslint-disable-line functional/immutable-data
+          return options;
+        }
 
-	// Requests a new token once
-	async function doRequest(reqUrl, reqOptions) {
-		const options = {headers: {}, ...reqOptions};
+        return options;
+      }
+    }
+  }
 
-		if (authHeader) {
-			options.headers.Authorization = authHeader;
+  async function updateBlobMetadata({id, payload}) {
+    logger.log('debug', `updateBlobMetadata: ${payload.op}`);
+    const response = await doRequest(`${url}/blobs/${id}`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+      headers: {
+        'User-Agent': userAgent,
+        'Content-Type': 'application/json'
+      }
+    });
 
-			const response = await fetch(reqUrl, options);
+    if (response.status !== HttpStatus.NO_CONTENT) { // eslint-disable-line functional/no-conditional-statement
+      throw new ApiError(response.status);
+    }
+  }
 
-			if (response.status === HttpStatus.UNAUTHORIZED) {
-				const token = await getAuthToken();
-				authHeader = `Bearer ${token}`; // eslint-disable-line require-atomic-updates
-				options.headers.Authorization = authHeader;
+  // Requests a new token once
+  async function doRequest(reqUrl, reqOptions) {
+    const options = {headers: {}, ...reqOptions};
 
-				return fetch(reqUrl, options);
-			}
+    if (authHeader) {
+      options.headers.Authorization = authHeader; // eslint-disable-line functional/immutable-data
 
-			return response;
-		}
+      const response = await fetch(reqUrl, options);
 
-		const token = await getAuthToken();
-		authHeader = `Bearer ${token}`; // eslint-disable-line require-atomic-updates
-		options.headers.Authorization = authHeader;
+      if (response.status === HttpStatus.UNAUTHORIZED) {
+        const token = await getAuthToken();
+        authHeader = `Bearer ${token}`; // eslint-disable-line require-atomic-updates
+        options.headers.Authorization = authHeader; // eslint-disable-line functional/immutable-data
 
-		return fetch(reqUrl, options);
+        return fetch(reqUrl, options);
+      }
 
-		async function getAuthToken() {
-			const encodedCreds = generateAuthorizationHeader(username, password);
-			const response = await fetch(`${url}/auth`, {
-				method: 'POST',
-				headers: {
-					'User-Agent': userAgent,
-					Authorization: encodedCreds
-				}
-			});
+      return response;
+    }
 
-			if (response.status === HttpStatus.NO_CONTENT) {
-				return response.headers.get('Token');
-			}
+    const token = await getAuthToken();
+    authHeader = `Bearer ${token}`; // eslint-disable-line require-atomic-updates
+    options.headers.Authorization = authHeader; // eslint-disable-line functional/immutable-data
 
-			throw new ApiError(response.status);
-		}
-	}
+    return fetch(reqUrl, options);
+
+    async function getAuthToken() {
+      const encodedCreds = generateAuthorizationHeader(username, password);
+      const response = await fetch(`${url}/auth`, {
+        method: 'POST',
+        headers: {
+          'User-Agent': userAgent,
+          Authorization: encodedCreds
+        }
+      });
+
+      if (response.status === HttpStatus.NO_CONTENT) {
+        return response.headers.get('Token');
+      }
+
+      throw new ApiError(response.status);
+    }
+  }
 }

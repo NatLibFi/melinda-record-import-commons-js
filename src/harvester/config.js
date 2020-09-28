@@ -26,9 +26,7 @@
 *
 */
 
-import {Utils} from '@natlibfi/melinda-commons';
-
-const {readEnvironmentVariable} = Utils;
+import {readEnvironmentVariable} from '@natlibfi/melinda-backend-commons';
 
 export const API_URL = readEnvironmentVariable('API_URL');
 export const API_USERNAME = readEnvironmentVariable('API_USERNAME');

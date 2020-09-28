@@ -31,11 +31,11 @@ const fetch = require('node-fetch');
 run();
 
 async function run() {
-	try {
-		const port = process.argv[2] ? Number.parseInt(process.argv[2], 10) : 8080;
-		const response = await fetch(`http://localhost:${port}/healthz`);
-		process.exit(response.status === 200 ? 0 : 1);
-	} catch (_) {
-		process.exit(1);
-	}
+  try {
+    const port = process.argv[2] ? Number.parseInt(process.argv[2], 10) : 8080;
+    const response = await fetch(`http://localhost:${port}/healthz`);
+    process.exit(response.status === 200 ? 0 : 1); // eslint-disable-line no-process-exit
+  } catch (_) {
+    process.exit(1); // eslint-disable-line no-process-exit
+  }
 }

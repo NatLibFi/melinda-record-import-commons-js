@@ -26,36 +26,33 @@
 *
 */
 
-/* eslint-disable import/default */
 
 import {registerSignalHandlers} from '../common';
 import {createApiClient} from '../api-client';
-import {Utils} from '@natlibfi/melinda-commons';
-
-const {createLogger} = Utils;
+import {createLogger} from '@natlibfi/melinda-backend-commons';
 
 export default async function (harvestCallback) {
-	const {API_URL, API_USERNAME, API_PASSWORD, API_CLIENT_USER_AGENT, PROFILE_ID, BLOB_CONTENT_TYPE} = await import('./config');
-	const logger = createLogger();
-	const ApiClient = createApiClient({url: API_URL, username: API_USERNAME, password: API_PASSWORD, userAgent: API_CLIENT_USER_AGENT});
+  const {API_URL, API_USERNAME, API_PASSWORD, API_CLIENT_USER_AGENT, PROFILE_ID, BLOB_CONTENT_TYPE} = await import('./config');
+  const logger = createLogger();
+  const ApiClient = createApiClient({url: API_URL, username: API_USERNAME, password: API_PASSWORD, userAgent: API_CLIENT_USER_AGENT});
 
-	registerSignalHandlers();
+  registerSignalHandlers();
 
-	try {
-		await harvestCallback({recordsCallback: createBlob});
-		process.exit();
-	} catch (err) {
-		logger.log('error', err instanceof Error ? err.stack : err);
-		process.exit(1);
-	}
+  try {
+    await harvestCallback({recordsCallback: createBlob});
+    process.exit(); // eslint-disable-line no-process-exit
+  } catch (err) {
+    logger.log('error', err instanceof Error ? err.stack : err);
+    process.exit(1); // eslint-disable-line no-process-exit
+  }
 
-	async function createBlob(payload) {
-		const id = await ApiClient.createBlob({
-			blob: payload,
-			type: BLOB_CONTENT_TYPE,
-			profile: PROFILE_ID
-		});
+  async function createBlob(payload) {
+    const id = await ApiClient.createBlob({
+      blob: payload,
+      type: BLOB_CONTENT_TYPE,
+      profile: PROFILE_ID
+    });
 
-		logger.log('info', `Created new blob ${id}`);
-	}
+    logger.log('info', `Created new blob ${id}`);
+  }
 }

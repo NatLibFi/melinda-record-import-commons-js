@@ -28,21 +28,37 @@
 
 import http from 'http';
 
-export function registerSignalHandlers({stopHealthCheckService = () => {}} = {}) {
-	process.on('SIGINT', () => {
-		stopHealthCheckService();
-		process.exit(1);
-	});
+export function registerSignalHandlers({stopHealthCheckService = () => {}} = {}) { // eslint-disable-line no-empty-function
+  process.on('SIGINT', () => {
+    stopHealthCheckService();
+    process.exit(1); // eslint-disable-line no-process-exit
+  });
 }
 
 export function startHealthCheckService(port) {
-	const server = http.createServer((req, res) => {
-		res.statusCode = req.url === '/healthz' ? 200 : 404;
-		res.end();
-	}).listen(port);
-	return async function () {
-		return new Promise(resolve => {
-			server.close(resolve);
-		});
-	};
+  const server = http.createServer((req, res) => {
+    res.statusCode = req.url === '/healthz' ? 200 : 404; // eslint-disable-line functional/immutable-data
+    res.end();
+  }).listen(port);
+  return function () {
+    return new Promise(resolve => {
+      server.close(resolve);
+    });
+  };
+}
+
+export async function closeResources({connection, channel}) {
+  if (channel) {
+    await channel.close();
+    await closeConnection();
+    return;
+  }
+
+  await closeConnection();
+
+  function closeConnection() {
+    if (connection) {
+      return connection.close();
+    }
+  }
 }

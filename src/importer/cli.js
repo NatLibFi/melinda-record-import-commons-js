@@ -26,60 +26,62 @@
 *
 */
 
-/* Not sure why this is needed only in this module... */
-/* eslint-disable import/default */
-
 import fs from 'fs';
 import path from 'path';
 import yargs from 'yargs';
 import ora from 'ora';
 
 export default async function ({name, callback}) {
-	const args = yargs
-		.scriptName(name)
-		.command('$0 <file>', '', yargs => {
-			yargs
-				.positional('file', {type: 'string', describe: 'File to import or directory containing files'});
-		})
-		.parse();
+  const args = yargs
+    .scriptName(name)
+    .command('$0 <file>', '', yargs => {
+      yargs
+        .positional('file', {type: 'string', describe: 'File to import or directory containing files'});
+    })
+    .parse();
 
-	if (!fs.existsSync(args.file)) {
-		console.error(`File ${args.file} does not exist`);
-		process.exit(-1);
-	}
+  if (!fs.existsSync(args.file)) {
+    console.error(`File ${args.file} does not exist`); // eslint-disable-line no-console
+    return process.exit(-1); // eslint-disable-line no-process-exit
+  }
 
-	console.log('Importing records');
+  console.log('Importing records'); // eslint-disable-line no-console
 
-	await processFiles(getFiles());
+  await processFiles(getFiles());
 
-	function getFiles() {
-		if (fs.lstatSync(args.file).isDirectory()) {
-			return fs.readdirSync(args.file).map(f => path.join(args.file, f));
-		}
+  function getFiles() {
+    if (fs.lstatSync(args.file).isDirectory()) {
+      return fs.readdirSync(args.file).map(f => path.join(args.file, f));
+    }
 
-		return [path.resolve(args.file)];
-	}
+    return [path.resolve(args.file)];
+  }
 
-	async function processFiles(files) {
-		const file = files.shift();
+  async function processFiles(files) {
+    const [file] = files;
 
-		if (file) {
-			const spinner = ora('Importing record').start();
-			const message = getMessage();
-			const result = await callback(message);
+    if (file) { // eslint-disable-line functional/no-conditional-statement
+      const spinner = ora('Importing record').start();
 
-			spinner.succeed(`Imported record: ${JSON.stringify(result)}`);
-			return processFiles(files);
-		}
+      try {
+        const message = getMessage();
+        const result = await callback(message); // eslint-disable-line callback-return
+        spinner.succeed(`Imported record: ${JSON.stringify(result)}`);
+        return processFiles(files.slice(1));
+      } catch (err) {
+        spinner.fail(err.stack);
+        return process.exit(1); // eslint-disable-line no-process-exit
+      }
+    }
 
-		function getMessage() {
-			const str = fs.readFileSync(file, 'utf8');
+    function getMessage() {
+      const str = fs.readFileSync(file, 'utf8');
 
-			return {
-				content: {
-					toString: () => str
-				}
-			};
-		}
-	}
+      return {
+        content: {
+          toString: () => str
+        }
+      };
+    }
+  }
 }

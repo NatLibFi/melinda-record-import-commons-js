@@ -26,91 +26,97 @@
 *
 */
 
-/* Not sure why this is needed only in this module... */
-/* eslint-disable import/default */
-
 import fs from 'fs';
 import yargs from 'yargs';
 import ora from 'ora';
 import path from 'path';
-import {Utils} from '@natlibfi/melinda-commons';
-
-const {createLogger} = Utils;
+import {createLogger} from '@natlibfi/melinda-backend-commons';
 
 export default async ({name, yargsOptions = [], callback}) => {
-	const logger = createLogger();
+  const logger = createLogger();
 
-	const args = yargs
-		.scriptName(name)
-		.command('$0 <file>', '', yargs => {
-			yargs
-				.positional('file', {type: 'string', describe: 'File to transform'})
-				.option('r', {alias: 'recordsOnly', default: false, type: 'boolean', describe: 'Write only record data to output (Invalid records are excluded)'})
-				.option('d', {alias: 'outputDirectory', type: 'string', describe: 'Output directory where each record file is written (Applicable only with `recordsOnly`'});
-			yargsOptions.forEach(({option, conf}) => {
-				yargs.option(option, conf);
-			});
-		})
-		.parse();
+  const args = yargs
+    .scriptName(name)
+    .command('$0 <file>', '', yargs => {
+      yargs
+        .positional('file', {type: 'string', describe: 'File to transform'})
+        .option('r', {alias: 'recordsOnly', default: false, type: 'boolean', describe: 'Write only record data to output (Invalid records are excluded)'})
+        .option('d', {alias: 'outputDirectory', type: 'string', describe: 'Output directory where each record file is written (Applicable only with `recordsOnly`'});
+      yargsOptions.forEach(({option, conf}) => {
+        yargs.option(option, conf);
+      });
+    })
+    .parse();
 
-	if (!fs.existsSync(args.file)) {
-		logger.log('error', `File ${args.file} does not exist`);
-		process.exit(-1);
-	}
+  if (!fs.existsSync(args.file)) {
+    logger.log('error', `File ${args.file} does not exist`);
+    return process.exit(-1); // eslint-disable-line no-process-exit
+  }
 
-	try {
-		await new Promise((resolve, reject) => {
-			let counter = 0;
+  try {
+    await new Promise((resolve, reject) => {
+      let counter = 0; // eslint-disable-line functional/no-let
 
-			const spinner = ora(`Transforming${args.validate ? ' and validating' : ''}${args.fix ? ' and fixing' : ''} records`).start();
-			const stream = fs.createReadStream(args.file);
-			const TransformEmitter = callback(stream, args);
-			const pendingPromises = [];
+      const spinner = ora(`Transforming${args.validate ? ' and validating' : ''}${args.fix ? ' and fixing' : ''} records`).start();
+      const stream = fs.createReadStream(args.file);
+      const TransformEmitter = callback(stream, args); // eslint-disable-line callback-return
+      const pendingPromises = [];
 
-			TransformEmitter
-				.on('end', async () => {
-					Promise.all(pendingPromises);
-					spinner.succeed();
-					resolve();
-				})
-				.on('error', err => {
-					spinner.fail();
-					reject(err);
-				})
-				.on('record', async payload => {
-					pendingPromises.push(recordEvent(payload));
+      TransformEmitter
+        .on('end', () => {
+          Promise.all(pendingPromises);
+          spinner.succeed();
+          resolve();
+        })
+        .on('error', err => {
+          spinner.fail();
+          reject(err);
+        })
+        .on('record', payload => {
+          pendingPromises.push(recordEvent(payload)); // eslint-disable-line functional/immutable-data
 
-					async function recordEvent(payload) {
-						if (payload.failed) {
-						// Send record to be handled
-							if (!args.recordsOnly) {
-								handleOutput(payload);
-							}
-						} else if (args.recordsOnly) {
-							handleOutput(payload.record);
-						} else {
-							handleOutput(payload);
-						}
-					}
+          function recordEvent(payload) {
+            if (payload.failed) {
+              // Send record to be handled
+              if (!args.recordsOnly) {
+                handleOutput(payload);
+                return;
+              }
 
-					function handleOutput(payload) {
-						if (args.outputDirectory) {
-							if (!fs.existsSync(args.outputDirectory)) {
-								fs.mkdirSync(args.outputDirectory);
-							}
+              return;
+            }
 
-							const file = path.join(args.outputDirectory, `${counter}.json`);
-							fs.writeFileSync(file, JSON.stringify(payload, undefined, 2));
-							counter++;
-						} else {
-							console.log(JSON.stringify(payload, undefined, 2));
-							counter++;
-						}
-					}
-				});
-		});
-	} catch (err) {
-		logger.log('error', typeof err === 'object' && 'stack' in err ? err.stack : err);
-		process.exit(-1);
-	}
+            if (args.recordsOnly) {
+              handleOutput(payload.record);
+              return;
+            }
+
+            handleOutput(payload);
+          }
+
+          function handleOutput(payload) {
+            if (args.outputDirectory) {
+              initOutputDirectory();
+
+              const file = path.join(args.outputDirectory, `${counter}.json`);
+              fs.writeFileSync(file, JSON.stringify(payload, undefined, 2));
+              counter += 1;
+              return;
+            }
+
+            console.log(JSON.stringify(payload, undefined, 2)); // eslint-disable-line no-console
+            counter += 1;
+
+            function initOutputDirectory() {
+              if (!fs.existsSync(args.outputDirectory)) {
+                return fs.mkdirSync(args.outputDirectory);
+              }
+            }
+          }
+        });
+    });
+  } catch (err) {
+    logger.log('error', typeof err === 'object' && 'stack' in err ? err.stack : err);
+    process.exit(-1); // eslint-disable-line no-process-exit
+  }
 };
