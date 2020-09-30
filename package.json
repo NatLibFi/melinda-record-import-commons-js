@@ -26,9 +26,10 @@
 		"prepare": "npm run build",
 		"lint": "eslint src",
 		"lint:dev": "eslint --fix src",
-		"test:base": "cross-env NODE_ENV=test nyc mocha --require @babel/register",
-		"test": "npm run lint && npm run test:base -- src/*.spec.js && npm run coverage",
-		"test:dev": "npm run lint:dev && npm run test:base -- src/*.spec.js && npm run coverage",
+		"test": "npm run lint",
+		"_test:base": "cross-env NODE_ENV=test nyc mocha --require @babel/register",
+		"_test": "npm run lint && npm run test:base -- src/*.spec.js && npm run coverage",
+		"_test:dev": "npm run lint:dev && npm run test:base -- src/*.spec.js && npm run coverage",
 		"coverage": "nyc check-coverage --per-file",
 		"build": "babel src --source-maps --copy-files --delete-dir-on-start --out-dir=dist",
 		"watch:test": "cross-env DEBUG=1 NODE_ENV=test nodemon -w src -w test-fixtures --exec 'npm run test:dev'"
