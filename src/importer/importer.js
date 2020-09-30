@@ -86,6 +86,7 @@ export default async function (importCallback) {
 
         try {
           const importResult = await importCallback(message);
+          logger.log('debug', `Ìmport result: ${JSON.stringify(importResult)}`);
           await ApiClient.setRecordProcessed({blobId: BLOB_ID, ...importResult});
           await channel.ack(message);
         } catch (err) {
