@@ -27,27 +27,27 @@
 */
 
 export const BLOB_STATE = {
-	PENDING_TRANSFORMATION: 'PENDING_TRANSFORMATION',
-	TRANSFORMATION_IN_PROGRESS: 'TRANSFORMATION_IN_PROGRESS',
-	TRANSFORMATION_FAILED: 'TRANSFORMATION_FAILED',
-	TRANSFORMED: 'TRANSFORMED',
-	PROCESSED: 'PROCESSED',
-	ABORTED: 'ABORTED'
+  PENDING_TRANSFORMATION: 'PENDING_TRANSFORMATION',
+  TRANSFORMATION_IN_PROGRESS: 'TRANSFORMATION_IN_PROGRESS',
+  TRANSFORMATION_FAILED: 'TRANSFORMATION_FAILED',
+  TRANSFORMED: 'TRANSFORMED',
+  PROCESSED: 'PROCESSED',
+  ABORTED: 'ABORTED'
 };
 
 export const BLOB_UPDATE_OPERATIONS = {
-	abort: 'abort',
-	transformedRecord: 'transformedRecord',
-	transformationFailed: 'transformationFailed',
-	recordProcessed: 'recordProcessed',
-	updateState: 'updateState'
+  abort: 'abort',
+  transformedRecord: 'transformedRecord',
+  transformationFailed: 'transformationFailed',
+  recordProcessed: 'recordProcessed',
+  updateState: 'updateState'
 };
 
 export const RECORD_IMPORT_STATE = {
-	CREATED: 'CREATED',
-	UPDATED: 'UPDATED',
-	INVALID: 'INVALID',
-	DUPLICATE: 'DUPLICATE',
-	ERROR: 'ERROR',
-	SKIPPED: 'SKIPPED'
+  CREATED: 'CREATED',
+  UPDATED: 'UPDATED',
+  INVALID: 'INVALID',
+  DUPLICATE: 'DUPLICATE',
+  ERROR: 'ERROR',
+  SKIPPED: 'SKIPPED'
 };

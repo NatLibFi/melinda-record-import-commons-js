@@ -32,30 +32,36 @@ import yargs from 'yargs';
 import {sync as rmdir} from 'rimraf';
 
 export default async function ({name, callback}) {
-	const args = yargs
-		.scriptName(name)
-		.command('$0 <outputDirectory>', '', yargs => {
-			yargs
-				.positional('outputDirectory', {type: 'string', describe: 'Directory to write files to'})
-				.option('y', {alias: 'overwriteDirectory', default: false, type: 'boolean', describe: 'Recreate the output directory if it exists'});
-		})
-		.parse();
+  const args = yargs
+    .scriptName(name)
+    .command('$0 <outputDirectory>', '', yargs => {
+      yargs
+        .positional('outputDirectory', {type: 'string', describe: 'Directory to write files to'})
+        .option('y', {alias: 'overwriteDirectory', default: false, type: 'boolean', describe: 'Recreate the output directory if it exists'});
+    })
+    .parse();
 
-	if (fs.existsSync(args.outputDirectory)) {
-		if (args.overwriteDirectory) {
-			rmdir(args.outputDirectory);
-		} else {
-			console.error(`Directory ${args.outputDirectory} already exists!`);
-			process.exit(-1);
-		}
-	}
+  if (fs.existsSync(args.outputDirectory)) {
+    if (args.overwriteDirectory) {
+      rmdir(args.outputDirectory);
+      await startHarvest();
+      return;
+    }
 
-	fs.mkdirSync(args.outputDirectory);
+    console.error(`Directory ${args.outputDirectory} already exists!`); // eslint-disable-line no-console
+    process.exit(-1); // eslint-disable-line no-process-exit
+  }
 
-	let count = 0;
+  startHarvest();
 
-	await callback(data => {
-		fs.writeFileSync(path.join(args.outputDirectory, String(count)), data);
-		count++;
-	});
+  async function startHarvest() {
+    fs.mkdirSync(args.outputDirectory);
+
+    let count = 0; // eslint-disable-line functional/no-let
+
+    await callback(data => { // eslint-disable-line callback-return
+      fs.writeFileSync(path.join(args.outputDirectory, String(count)), data);
+      count += 1;
+    });
+  }
 }
