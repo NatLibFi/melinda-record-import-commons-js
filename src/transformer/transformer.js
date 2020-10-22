@@ -100,7 +100,7 @@ export default async function (transformCallback) {
             pendingPromises.push(sendRecordToQueue()); // eslint-disable-line functional/immutable-data
             pendingPromises.push(updateBlob()); // eslint-disable-line functional/immutable-data
 
-            async function sendRecordToQueue() {
+            function sendRecordToQueue() {
               if (!payload.failed) {
                 if (ABORT_ON_INVALID_RECORDS && !hasFailed || !ABORT_ON_INVALID_RECORDS) { // eslint-disable-line functional/no-conditional-statement, no-mixed-operators
                   try {
