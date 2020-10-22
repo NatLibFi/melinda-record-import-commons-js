@@ -63,7 +63,7 @@ export default async function (transformCallback) {
       let hasFailed = false; // eslint-disable-line functional/no-let
 
       connection = await amqplib.connect(AMQP_URL);
-      channel = await connection.createChannel();
+      channel = await connection.createConfirmChannel();
 
       const TransformEmitter = transformCallback(readStream, {});
       const pendingPromises = [];
@@ -106,7 +106,13 @@ export default async function (transformCallback) {
                   try {
                     channel.assertQueue(BLOB_ID, {durable: true});
                     const message = Buffer.from(JSON.stringify(payload.record));
-                    await channel.sendToQueue(BLOB_ID, message, {persistent: true, messageId: uuid()});
+                    await channel.sendToQueue(BLOB_ID, message, {persistent: true, messageId: uuid()}, (err, ok) => {
+                      if (err !== null) {
+                        throw new Error(`Error on record sending confirmation: ${getError(err)}`);
+                      }
+
+                      logger.log('debug', `Record send to queue ${ok}`);
+                    });
                   } catch (err) {
                     throw new Error(`Error while sending record to queue: ${getError(err)}`);
                   }
