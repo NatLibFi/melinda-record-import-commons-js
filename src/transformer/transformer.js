@@ -107,7 +107,7 @@ export default async function (transformCallback) {
                     channel.assertQueue(BLOB_ID, {durable: true});
                     const message = Buffer.from(JSON.stringify(payload.record));
                     await channel.sendToQueue(BLOB_ID, message, {persistent: true, messageId: uuid()}, (err, ok) => {
-                      if (err !== null) {
+                      if (err !== null) { // eslint-disable-line functional/no-conditional-statement
                         throw new Error(`Error on record sending confirmation: ${getError(err)}`);
                       }
 
