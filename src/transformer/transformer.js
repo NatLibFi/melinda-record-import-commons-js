@@ -106,12 +106,16 @@ export default async function (transformCallback) {
                   try {
                     channel.assertQueue(BLOB_ID, {durable: true});
                     const message = Buffer.from(JSON.stringify(payload.record));
-                    await channel.sendToQueue(BLOB_ID, message, {persistent: true, messageId: uuid()}, (err, ok) => {
-                      if (err !== null) { // eslint-disable-line functional/no-conditional-statement
-                        throw new Error(`Error on record sending confirmation: ${getError(err)}`);
-                      }
+                    return new Promise((resolve, reject) => {
+                      channel.sendToQueue(BLOB_ID, message, {persistent: true, messageId: uuid()}, (err, ok) => {
+                        if (err !== null) { // eslint-disable-line functional/no-conditional-statement
+                          reject(err);
+                          return;
+                        }
 
-                      logger.log('debug', `Record send to queue ${ok}`);
+                        logger.log('debug', `Record send to queue ${ok}`);
+                        resolve();
+                      });
                     });
                   } catch (err) {
                     throw new Error(`Error while sending record to queue: ${getError(err)}`);
