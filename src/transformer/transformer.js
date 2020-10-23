@@ -97,52 +97,57 @@ export default async function (transformCallback) {
             reject(err);
           })
           .on('record', payload => {
-            pendingPromises.push(sendRecordToQueue()); // eslint-disable-line functional/immutable-data
-            pendingPromises.push(updateBlob()); // eslint-disable-line functional/immutable-data
+            pendingPromises.push(startProcessing()); // eslint-disable-line functional/immutable-data
 
-            function sendRecordToQueue() {
-              if (!payload.failed) {
-                if (ABORT_ON_INVALID_RECORDS && !hasFailed || !ABORT_ON_INVALID_RECORDS) { // eslint-disable-line functional/no-conditional-statement, no-mixed-operators
-                  try {
-                    channel.assertQueue(BLOB_ID, {durable: true});
-                    const message = Buffer.from(JSON.stringify(payload.record));
-                    return new Promise((resolve, reject) => {
-                      channel.sendToQueue(BLOB_ID, message, {persistent: true, messageId: uuid()}, (err, ok) => {
-                        if (err !== null) { // eslint-disable-line functional/no-conditional-statement
-                          reject(err);
-                          return;
-                        }
+            async function startProcessing() {
+              await sendRecordToQueue();
+              return updateBlob();
 
-                        logger.log('debug', `Record send to queue ${ok}`);
-                        resolve();
+
+              async function sendRecordToQueue() {
+                if (!payload.failed) {
+                  if (ABORT_ON_INVALID_RECORDS && !hasFailed || !ABORT_ON_INVALID_RECORDS) { // eslint-disable-line functional/no-conditional-statement, no-mixed-operators
+                    try {
+                      channel.assertQueue(BLOB_ID, {durable: true});
+                      const message = Buffer.from(JSON.stringify(payload.record));
+                      await new Promise((resolve, reject) => {
+                        channel.sendToQueue(BLOB_ID, message, {persistent: true, messageId: uuid()}, (err, ok) => {
+                          if (err !== null) { // eslint-disable-line functional/no-conditional-statement
+                            reject(err);
+                            return;
+                          }
+
+                          logger.log('debug', `Record send to queue ${ok}`);
+                          resolve();
+                        });
                       });
-                    });
-                  } catch (err) {
-                    throw new Error(`Error while sending record to queue: ${getError(err)}`);
+                    } catch (err) {
+                      throw new Error(`Error while sending record to queue: ${getError(err)}`);
+                    }
                   }
                 }
               }
-            }
 
-            async function updateBlob() {
-              try {
-                if (payload.failed) {
-                  hasFailed = true;
+              async function updateBlob() {
+                try {
+                  if (payload.failed) {
+                    hasFailed = true;
+                    await ApiClient.transformedRecord({
+                      id: BLOB_ID,
+                      error: payload
+                    });
+
+                    return;
+                  }
+
                   await ApiClient.transformedRecord({
-                    id: BLOB_ID,
-                    error: payload
+                    id: BLOB_ID
                   });
 
                   return;
+                } catch (err) {
+                  throw new Error(`Error while updating blob: ${getError(err)}`);
                 }
-
-                await ApiClient.transformedRecord({
-                  id: BLOB_ID
-                });
-
-                return;
-              } catch (err) {
-                throw new Error(`Error while updating blob: ${getError(err)}`);
               }
             }
           });
