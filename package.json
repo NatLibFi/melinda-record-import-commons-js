@@ -14,7 +14,7 @@
 		"url": "git@github.com:natlibfi/melinda-record-import-commons-js.git"
 	},
 	"license": "AGPL-3.0+",
-	"version": "9.0.1-alpha.3",
+	"version": "9.0.1",
 	"main": "./dist/index.js",
 	"engines": {
 		"node": ">=12"
@@ -36,20 +36,20 @@
 	},
 	"dependencies": {
 		"@natlibfi/melinda-backend-commons": "^2.0.2",
-		"@natlibfi/melinda-commons": "^11.0.1",
-		"amqplib": "^0.6.0",
+		"@natlibfi/melinda-commons": "^11.1.1",
+		"amqplib": ">=0.6.0 <1.0.0",
 		"http-status": "^1.4.2",
-		"moment": "^2.26.0",
-		"node-fetch": "^2.3.0",
-		"ora": "^3.0.0",
-		"rimraf": "^2.7.1",
-		"uuid": "^3.4.0",
-		"yargs": "^13.3.2"
+		"moment": "^2.29.1",
+		"node-fetch": "^2.6.1",
+		"ora": "^5.1.0",
+		"rimraf": "^3.0.2",
+		"uuid": "^8.3.1",
+		"yargs": "^16.1.0"
 	},
 	"devDependencies": {
 		"@babel/cli": "^7.12.1",
 		"@babel/core": "^7.12.3",
-		"@babel/node": "^7.11.1",
+		"@babel/node": "^7.12.1",
 		"@babel/preset-env": "^7.12.1",
 		"@babel/register": "^7.12.1",
 		"@natlibfi/eslint-config-melinda-backend": "^1.0.6",
@@ -61,7 +61,7 @@
 		"cross-env": "^7.0.2",
 		"eslint": "^7.11.0",
 		"mocha": "^8.2.0",
-		"nodemon": "^2.0.3",
+		"nodemon": "^2.0.6",
 		"nyc": "^15.1.0"
 	},
 	"eslintConfig": {
