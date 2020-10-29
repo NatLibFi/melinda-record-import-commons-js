@@ -27,7 +27,7 @@
 */
 
 import amqplib from 'amqplib';
-import uuid from 'uuid/v4';
+import {v4 as uuid} from 'uuid';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {registerSignalHandlers, startHealthCheckService, closeResources} from '../common';
 import {createApiClient} from '../api-client';
