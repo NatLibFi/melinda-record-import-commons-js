@@ -111,13 +111,13 @@ export default async function (transformCallback) {
                       channel.assertQueue(BLOB_ID, {durable: true});
                       const message = Buffer.from(JSON.stringify(payload.record));
                       await new Promise((resolve, reject) => {
-                        channel.sendToQueue(BLOB_ID, message, {persistent: true, messageId: uuid()}, (err, ok) => {
+                        channel.sendToQueue(BLOB_ID, message, {persistent: true, messageId: uuid()}, (err) => {
                           if (err !== null) { // eslint-disable-line functional/no-conditional-statement
                             reject(err);
                             return;
                           }
 
-                          logger.log('debug', `Record send to queue ${ok}`);
+                          logger.log('debug', `Record send to queue`);
                           resolve();
                         });
                       });
