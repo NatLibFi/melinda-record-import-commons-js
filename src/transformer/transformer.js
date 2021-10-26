@@ -58,12 +58,13 @@ export default async function (transformCallback) {
 
     const ApiClient = createApiClient({url: API_URL, username: API_USERNAME, password: API_PASSWORD, userAgent: API_CLIENT_USER_AGENT});
     const {readStream} = await ApiClient.getBlobContent({id: BLOB_ID});
-
+    
     try {
       let hasFailed = false; // eslint-disable-line functional/no-let
-
+      
       connection = await amqplib.connect(AMQP_URL);
       channel = await connection.createConfirmChannel();
+      channel.assertQueue(BLOB_ID, {durable: true});
 
       const TransformEmitter = transformCallback(readStream, {});
       const pendingPromises = [];
@@ -71,11 +72,11 @@ export default async function (transformCallback) {
       await new Promise((resolve, reject) => {
         TransformEmitter
           .on('end', async (count = 0) => {
-            logger.log('debug', `Transformer has handled ${pendingPromises.length / 2} / ${count} record promises to line, waiting them to be resolved`);
+            logger.log('debug', `Transformer has handled ${pendingPromises.length} / ${count} record promises to line, waiting them to be resolved`);
 
             try {
               await Promise.all(pendingPromises);
-              logger.log('debug', `Transforming is done (${pendingPromises.length / 2} / ${count} Promises resolved)`);
+              logger.log('debug', `Transforming is done (${pendingPromises.length} / ${count} Promises resolved)`);
 
               if (ABORT_ON_INVALID_RECORDS && hasFailed) {
                 logger.log('info', 'Not sending records to queue because some records failed and ABORT_ON_INVALID_RECORDS is true');
@@ -101,20 +102,18 @@ export default async function (transformCallback) {
 
             async function startProcessing() {
               await sendRecordToQueue();
-              return updateBlob();
-
+              await updateBlob();
+              return;
 
               async function sendRecordToQueue() {
                 if (!payload.failed) {
                   if (ABORT_ON_INVALID_RECORDS && !hasFailed || !ABORT_ON_INVALID_RECORDS) { // eslint-disable-line functional/no-conditional-statement, no-mixed-operators
                     try {
-                      channel.assertQueue(BLOB_ID, {durable: true});
                       const message = Buffer.from(JSON.stringify(payload.record));
                       await new Promise((resolve, reject) => {
                         channel.sendToQueue(BLOB_ID, message, {persistent: true, messageId: uuid()}, (err) => {
                           if (err !== null) { // eslint-disable-line functional/no-conditional-statement
                             reject(err);
-                            return;
                           }
 
                           logger.log('debug', `Record send to queue`);
