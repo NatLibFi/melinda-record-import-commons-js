@@ -58,10 +58,10 @@ export default async function (transformCallback) {
 
     const ApiClient = createApiClient({url: API_URL, username: API_USERNAME, password: API_PASSWORD, userAgent: API_CLIENT_USER_AGENT});
     const {readStream} = await ApiClient.getBlobContent({id: BLOB_ID});
-    
+
     try {
       let hasFailed = false; // eslint-disable-line functional/no-let
-      
+
       connection = await amqplib.connect(AMQP_URL);
       channel = await connection.createConfirmChannel();
       channel.assertQueue(BLOB_ID, {durable: true});
