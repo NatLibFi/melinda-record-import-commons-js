@@ -29,7 +29,6 @@
 import fs from 'fs';
 import path from 'path';
 import yargs from 'yargs';
-import ora from 'ora';
 
 export default async function ({name, callback}) {
   const args = yargs
@@ -61,15 +60,15 @@ export default async function ({name, callback}) {
     const [file] = files;
 
     if (file) { // eslint-disable-line functional/no-conditional-statement
-      const spinner = ora('Importing record').start();
+      console.log('Importing record');
 
       try {
         const message = getMessage();
         const result = await callback(message); // eslint-disable-line callback-return
-        spinner.succeed(`Imported record: ${JSON.stringify(result)}`);
+        console.log(`Imported record: ${JSON.stringify(result)}`);
         return processFiles(files.slice(1));
       } catch (err) {
-        spinner.fail(err.stack);
+        console.error(err.stack);
         return process.exit(1); // eslint-disable-line no-process-exit
       }
     }

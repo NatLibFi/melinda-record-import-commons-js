@@ -28,7 +28,6 @@
 
 import fs from 'fs';
 import yargs from 'yargs';
-import ora from 'ora';
 import path from 'path';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 
@@ -57,7 +56,7 @@ export default async ({name, yargsOptions = [], callback}) => {
     await new Promise((resolve, reject) => {
       let counter = 0; // eslint-disable-line functional/no-let
 
-      const spinner = ora(`Transforming${args.validate ? ' and validating' : ''}${args.fix ? ' and fixing' : ''} records`).start();
+      console.log(`Transforming${args.validate ? ' and validating' : ''}${args.fix ? ' and fixing' : ''} records`);
       const stream = fs.createReadStream(args.file);
       const TransformEmitter = callback(stream, args); // eslint-disable-line callback-return
       const pendingPromises = [];
@@ -65,11 +64,11 @@ export default async ({name, yargsOptions = [], callback}) => {
       TransformEmitter
         .on('end', () => {
           Promise.all(pendingPromises);
-          spinner.succeed();
+          console.log('Done');
           resolve();
         })
         .on('error', err => {
-          spinner.fail();
+          console.error('Error');
           reject(err);
         })
         .on('record', payload => {
