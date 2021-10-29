@@ -14,7 +14,7 @@
 		"url": "git@github.com:natlibfi/melinda-record-import-commons-js.git"
 	},
 	"license": "AGPL-3.0+",
-	"version": "9.1.2",
+	"version": "10.0.0-alpha.2",
 	"main": "./dist/index.js",
 	"engines": {
 		"node": ">=14"
@@ -35,13 +35,12 @@
 		"watch:test": "cross-env DEBUG=1 NODE_ENV=test nodemon -w src -w test-fixtures --exec 'npm run test:dev'"
 	},
 	"dependencies": {
-		"@natlibfi/melinda-backend-commons": "^2.0.4",
-		"@natlibfi/melinda-commons": "^11.1.8",
+		"@natlibfi/melinda-backend-commons": "^2.0.5",
+		"@natlibfi/melinda-commons": "^12.0.0",
 		"amqplib": ">=0.8.0 <1.0.0",
 		"http-status": "^1.5.0",
 		"moment": "^2.29.1",
 		"node-fetch": "^2.6.5",
-		"ora": "^6.0.1",
 		"rimraf": "^3.0.2",
 		"uuid": "^8.3.2",
 		"yargs": "^17.2.1"

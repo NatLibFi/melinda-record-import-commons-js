@@ -42,7 +42,7 @@ export default async function (harvestCallback) {
     await harvestCallback({recordsCallback: createBlob});
     process.exit(); // eslint-disable-line no-process-exit
   } catch (err) {
-    logger.log('error', err instanceof Error ? err.stack : err);
+    logger.error(err instanceof Error ? err.stack : err);
     process.exit(1); // eslint-disable-line no-process-exit
   }
 
@@ -53,6 +53,6 @@ export default async function (harvestCallback) {
       profile: PROFILE_ID
     });
 
-    logger.log('info', `Created new blob ${id}`);
+    logger.info(`Created new blob ${id}`);
   }
 }

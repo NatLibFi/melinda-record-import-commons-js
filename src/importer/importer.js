@@ -48,7 +48,7 @@ export default async function (importCallback) {
     process.exit(); // eslint-disable-line no-process-exit
   } catch (err) {
     stopHealthCheckService();
-    logger.log('error', err instanceof Error ? err.stack : err);
+    logger.error(err instanceof Error ? err.stack : err);
     process.exit(1); // eslint-disable-line no-process-exit
   }
 
@@ -61,11 +61,11 @@ export default async function (importCallback) {
 
     const ApiClient = createApiClient({url: API_URL, username: API_USERNAME, password: API_PASSWORD, userAgent: API_CLIENT_USER_AGENT});
 
-    logger.log('info', `Starting consuming records of blob ${BLOB_ID}`);
+    logger.info(`Starting consuming records of blob ${BLOB_ID}`);
 
     try {
       await consume();
-      logger.log('info', 'Processed all messages.');
+      logger.info('Processed all messages.');
     } finally {
       await closeResources({connection, channel});
     }
@@ -74,19 +74,19 @@ export default async function (importCallback) {
       const message = await channel.get(BLOB_ID);
 
       if (message) {
-        logger.log('debug', 'Record received');
+        logger.debug('Record received');
 
         const metadata = await ApiClient.getBlobMetadata({id: BLOB_ID});
 
         if (metadata.state === RECORD_IMPORT_STATE.ABORTED) {
-          logger.log('info', 'Blob state is set to ABORTED. Ditching message');
+          logger.info('Blob state is set to ABORTED. Ditching message');
           await channel.nack(message, false, false);
           return consume();
         }
 
         try {
           const importResult = await importCallback(message);
-          logger.log('debug', `Ìmport result: ${JSON.stringify(importResult)}`);
+          logger.debug(`Ìmport result: ${JSON.stringify(importResult)}`);
           await ApiClient.setRecordProcessed({blobId: BLOB_ID, ...importResult});
           await channel.ack(message);
         } catch (err) {
@@ -94,7 +94,7 @@ export default async function (importCallback) {
           throw err;
         }
 
-        logger.log('debug', 'Set record as processed');
+        logger.debug('Set record as processed');
         return consume();
       }
     }

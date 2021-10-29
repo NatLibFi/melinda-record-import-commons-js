@@ -29,9 +29,10 @@
 import fs from 'fs';
 import path from 'path';
 import yargs from 'yargs';
-import ora from 'ora';
+import {createLogger} from '@natlibfi/melinda-backend-commons';
 
 export default async function ({name, callback}) {
+  const logger = createLogger();
   const args = yargs
     .scriptName(name)
     .command('$0 <file>', '', yargs => {
@@ -41,11 +42,11 @@ export default async function ({name, callback}) {
     .parse();
 
   if (!fs.existsSync(args.file)) {
-    console.error(`File ${args.file} does not exist`); // eslint-disable-line no-console
+    logger.error(`File ${args.file} does not exist`);
     return process.exit(-1); // eslint-disable-line no-process-exit
   }
 
-  console.log('Importing records'); // eslint-disable-line no-console
+  logger.info('Importing records');
 
   await processFiles(getFiles());
 
@@ -61,15 +62,15 @@ export default async function ({name, callback}) {
     const [file] = files;
 
     if (file) { // eslint-disable-line functional/no-conditional-statement
-      const spinner = ora('Importing record').start();
+      logger.info('Importing record');
 
       try {
         const message = getMessage();
         const result = await callback(message); // eslint-disable-line callback-return
-        spinner.succeed(`Imported record: ${JSON.stringify(result)}`);
+        logger.info(`Imported record: ${JSON.stringify(result)}`);
         return processFiles(files.slice(1));
       } catch (err) {
-        spinner.fail(err.stack);
+        logger.error(err.stack);
         return process.exit(1); // eslint-disable-line no-process-exit
       }
     }

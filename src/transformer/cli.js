@@ -28,7 +28,6 @@
 
 import fs from 'fs';
 import yargs from 'yargs';
-import ora from 'ora';
 import path from 'path';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 
@@ -49,7 +48,7 @@ export default async ({name, yargsOptions = [], callback}) => {
     .parse();
 
   if (!fs.existsSync(args.file)) {
-    logger.log('error', `File ${args.file} does not exist`);
+    logger.error(`File ${args.file} does not exist`);
     return process.exit(-1); // eslint-disable-line no-process-exit
   }
 
@@ -57,7 +56,7 @@ export default async ({name, yargsOptions = [], callback}) => {
     await new Promise((resolve, reject) => {
       let counter = 0; // eslint-disable-line functional/no-let
 
-      const spinner = ora(`Transforming${args.validate ? ' and validating' : ''}${args.fix ? ' and fixing' : ''} records`).start();
+      logger.info(`Transforming${args.validate ? ' and validating' : ''}${args.fix ? ' and fixing' : ''} records`);
       const stream = fs.createReadStream(args.file);
       const TransformEmitter = callback(stream, args); // eslint-disable-line callback-return
       const pendingPromises = [];
@@ -65,11 +64,11 @@ export default async ({name, yargsOptions = [], callback}) => {
       TransformEmitter
         .on('end', () => {
           Promise.all(pendingPromises);
-          spinner.succeed();
+          logger.info('Done');
           resolve();
         })
         .on('error', err => {
-          spinner.fail();
+          logger.info('Error');
           reject(err);
         })
         .on('record', payload => {
@@ -116,7 +115,7 @@ export default async ({name, yargsOptions = [], callback}) => {
         });
     });
   } catch (err) {
-    logger.log('error', typeof err === 'object' && 'stack' in err ? err.stack : err);
+    logger.error(typeof err === 'object' && 'stack' in err ? err.stack : err);
     process.exit(-1); // eslint-disable-line no-process-exit
   }
 };
