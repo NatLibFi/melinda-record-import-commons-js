@@ -299,7 +299,7 @@ export function createApiClient({url, username, password, userAgent = 'Record im
   }
 
   async function updateBlobMetadata({id, payload}) {
-    logger.log('debug', `updateBlobMetadata: ${payload.op}`);
+    logger.debug(`updateBlobMetadata: ${payload.op}`);
     const response = await doRequest(`${url}/blobs/${id}`, {
       method: 'POST',
       body: JSON.stringify(payload),

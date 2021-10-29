@@ -103,7 +103,7 @@ export default async ({name, yargsOptions = [], callback}) => {
               return;
             }
 
-            logger.log(JSON.stringify(payload, undefined, 2));
+            console.log(JSON.stringify(payload, undefined, 2)); // eslint-disable-line no-console
             counter += 1;
 
             function initOutputDirectory() {
@@ -115,7 +115,7 @@ export default async ({name, yargsOptions = [], callback}) => {
         });
     });
   } catch (err) {
-    logger.log('error', typeof err === 'object' && 'stack' in err ? err.stack : err);
+    logger.error(typeof err === 'object' && 'stack' in err ? err.stack : err);
     process.exit(-1); // eslint-disable-line no-process-exit
   }
 };

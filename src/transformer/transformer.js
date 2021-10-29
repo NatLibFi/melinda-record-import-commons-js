@@ -46,7 +46,7 @@ export default async function (transformCallback) {
     process.exit(); // eslint-disable-line no-process-exit
   } catch (err) {
     stopHealthCheckService();
-    logger.log('error', err instanceof Error ? err.stack : err);
+    logger.error(err instanceof Error ? err.stack : err);
     process.exit(1); // eslint-disable-line no-process-exit
   }
 
@@ -54,7 +54,7 @@ export default async function (transformCallback) {
     let connection; // eslint-disable-line functional/no-let
     let channel; // eslint-disable-line functional/no-let
 
-    logger.log('info', `Starting transformation for blob ${BLOB_ID}`);
+    logger.info(`Starting transformation for blob ${BLOB_ID}`);
 
     const ApiClient = createApiClient({url: API_URL, username: API_USERNAME, password: API_PASSWORD, userAgent: API_CLIENT_USER_AGENT});
     const {readStream} = await ApiClient.getBlobContent({id: BLOB_ID});
@@ -72,19 +72,19 @@ export default async function (transformCallback) {
       await new Promise((resolve, reject) => {
         TransformEmitter
           .on('end', async (count = 0) => {
-            logger.log('debug', `Transformer has handled ${pendingPromises.length} / ${count} record promises to line, waiting them to be resolved`);
+            logger.debug(`Transformer has handled ${pendingPromises.length} / ${count} record promises to line, waiting them to be resolved`);
 
             try {
               await Promise.all(pendingPromises);
-              logger.log('debug', `Transforming is done (${pendingPromises.length} / ${count} Promises resolved)`);
+              logger.debug(`Transforming is done (${pendingPromises.length} / ${count} Promises resolved)`);
 
               if (ABORT_ON_INVALID_RECORDS && hasFailed) {
-                logger.log('info', 'Not sending records to queue because some records failed and ABORT_ON_INVALID_RECORDS is true');
+                logger.info('Not sending records to queue because some records failed and ABORT_ON_INVALID_RECORDS is true');
                 await ApiClient.setTransformationFailed({id: BLOB_ID, error: {message: 'Some records have failed'}});
                 return;
               }
 
-              logger.log('info', `Setting blob state ${BLOB_STATE.TRANSFORMED}¸¸`);
+              logger.info(`Setting blob state ${BLOB_STATE.TRANSFORMED}¸¸`);
               await ApiClient.updateState({id: BLOB_ID, state: BLOB_STATE.TRANSFORMED});
             } catch (err) {
               reject(err);
@@ -93,7 +93,7 @@ export default async function (transformCallback) {
             resolve(true);
           })
           .on('error', async err => {
-            logger.log('info', 'Transformation failed');
+            logger.info('Transformation failed');
             await ApiClient.setTransformationFailed({id: BLOB_ID, error: getError(err)});
             reject(err);
           })
@@ -116,7 +116,7 @@ export default async function (transformCallback) {
                             reject(err);
                           }
 
-                          logger.log('debug', `Record send to queue`);
+                          logger.debug(`Record send to queue`);
                           resolve();
                         });
                       });
@@ -153,7 +153,7 @@ export default async function (transformCallback) {
       });
     } catch (err) {
       const error = getError(err);
-      logger.log('error', `Failed transforming blob: ${error}`);
+      logger.error(`Failed transforming blob: ${error}`);
       await ApiClient.setTransformationFailed({id: BLOB_ID, error});
     } finally {
       await closeResources();

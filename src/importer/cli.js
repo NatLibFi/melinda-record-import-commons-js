@@ -62,7 +62,7 @@ export default async function ({name, callback}) {
     const [file] = files;
 
     if (file) { // eslint-disable-line functional/no-conditional-statement
-      logger.log('Importing record');
+      logger.info('Importing record');
 
       try {
         const message = getMessage();
