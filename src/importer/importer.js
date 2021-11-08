@@ -61,7 +61,8 @@ export default async function (importCallback) {
 
     const ApiClient = createApiClient({url: API_URL, username: API_USERNAME, password: API_PASSWORD, userAgent: API_CLIENT_USER_AGENT});
 
-    logger.info(`Starting consuming records of blob ${BLOB_ID}`);
+    const {messageCount} = await channel.assertQueue(BLOB_ID);
+    logger.info(`Starting consuming records of blob ${BLOB_ID}, ${messageCount} records in queue.`);
 
     try {
       await consume();
