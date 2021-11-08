@@ -40,7 +40,7 @@
 		"amqplib": ">=0.8.0 <1.0.0",
 		"http-status": "^1.5.0",
 		"moment": "^2.29.1",
-		"node-fetch": "^3.0.0",
+		"node-fetch": "^2.6.6",
 		"rimraf": "^3.0.2",
 		"uuid": "^8.3.2",
 		"yargs": "^17.2.1"
