@@ -66,7 +66,8 @@ export default async function (importCallback) {
 
     try {
       await consume();
-      logger.info('Processed all messages.');
+      return logger.info('Processed all messages.');
+
     } finally {
       await closeResources({connection, channel});
     }

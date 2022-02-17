@@ -42,7 +42,8 @@ export const BLOB_UPDATE_OPERATIONS = {
   transformedRecord: 'transformedRecord',
   transformationFailed: 'transformationFailed',
   recordProcessed: 'recordProcessed',
-  updateState: 'updateState'
+  updateState: 'updateState',
+  addCorrelationId: "addCorrelationId"
 };
 
 export const RECORD_IMPORT_STATE = {
