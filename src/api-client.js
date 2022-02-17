@@ -43,7 +43,7 @@ export function createApiClient({url, username, password, userAgent = 'Record im
     getBlobs, createBlob, getBlobMetadata, deleteBlob,
     getBlobContent, deleteBlobContent,
     getProfile, modifyProfile, queryProfiles, deleteProfile,
-    setTransformationFailed, setRecordProcessed,
+    setTransformationFailed, setCorrelationId, setRecordProcessed,
     transformedRecord, setAborted, updateState
   };
 
@@ -224,6 +224,16 @@ export function createApiClient({url, username, password, userAgent = 'Record im
       payload: {
         status, metadata,
         op: BLOB_UPDATE_OPERATIONS.recordProcessed
+      }
+    });
+  }
+
+  async function setCorrelationId({blobId, correlationId}) {
+    await updateBlobMetadata({
+      id: blobId,
+      payload: {
+        correlationId,
+        op: BLOB_UPDATE_OPERATIONS.addCorrelationId
       }
     });
   }
