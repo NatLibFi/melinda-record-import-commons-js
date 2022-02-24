@@ -27,7 +27,6 @@
 */
 
 import * as Transformer from './transformer';
-import * as Importer from './importer';
 import * as Harvester from './harvester';
 
 export * from './common';
@@ -35,4 +34,4 @@ export * from './constants';
 export * from './api-client';
 export * from './error';
 
-export {Transformer, Importer, Harvester};
+export {Transformer, Harvester};
