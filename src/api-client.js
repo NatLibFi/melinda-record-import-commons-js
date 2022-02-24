@@ -30,25 +30,26 @@ import {EventEmitter} from 'events';
 import fetch from 'node-fetch';
 import HttpStatus from 'http-status';
 import {URL} from 'url';
-import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {generateAuthorizationHeader} from '@natlibfi/melinda-commons';
 import {BLOB_UPDATE_OPERATIONS} from './constants';
 import {ApiError} from './error';
+import createDebugLogger from 'debug';
 
-export function createApiClient({url, username, password, userAgent = 'Record import API client / Javascript'}) {
+export function createApiClient({recordImportApiUrl, recordImportApiUsername, recordImportApiPassword, userAgent = 'Record import API client / Javascript'}) {
   let authHeader; // eslint-disable-line functional/no-let
-  const logger = createLogger();
+  const debug = createDebugLogger('@natlibfi/melinda-import-commons:api-client');
 
   return {
     getBlobs, createBlob, getBlobMetadata, deleteBlob,
     getBlobContent, deleteBlobContent,
     getProfile, modifyProfile, queryProfiles, deleteProfile,
     setTransformationFailed, setCorrelationId, setRecordProcessed,
-    transformedRecord, setAborted, updateState
+    setRecordQueued, transformedRecord, setAborted, updateState
   };
 
   async function createBlob({blob, type, profile}) {
-    const response = await doRequest(`${url}/blobs`, {
+    debug('createBlob');
+    const response = await doRequest(`${recordImportApiUrl}/blobs`, {
       method: 'POST',
       body: blob,
       headers: {
@@ -70,7 +71,8 @@ export function createApiClient({url, username, password, userAgent = 'Record im
   }
 
   async function getBlobMetadata({id}) {
-    const response = await doRequest(`${url}/blobs/${id}`, {
+    debug('getBlobMetadata');
+    const response = await doRequest(`${recordImportApiUrl}/blobs/${id}`, {
       headers: {
         'User-Agent': userAgent,
         Accept: 'application/json'
@@ -85,7 +87,8 @@ export function createApiClient({url, username, password, userAgent = 'Record im
   }
 
   async function getBlobContent({id}) {
-    const response = await doRequest(`${url}/blobs/${id}/content`, {
+    debug('getBlobContent');
+    const response = await doRequest(`${recordImportApiUrl}/blobs/${id}/content`, {
       headers: {
         'User-Agent': userAgent
       }
@@ -102,7 +105,8 @@ export function createApiClient({url, username, password, userAgent = 'Record im
   }
 
   async function getProfile({id}) {
-    const response = await doRequest(`${url}/profiles/${id}`, {
+    debug('getProfile');
+    const response = await doRequest(`${recordImportApiUrl}/profiles/${id}`, {
       headers: {
         'User-Agent': userAgent,
         Accept: 'application/json'
@@ -117,7 +121,8 @@ export function createApiClient({url, username, password, userAgent = 'Record im
   }
 
   async function deleteProfile({id}) {
-    const response = await doRequest(`${url}/profiles/${id}`, {
+    debug('deleteProfile');
+    const response = await doRequest(`${recordImportApiUrl}/profiles/${id}`, {
       method: 'DELETE',
       headers: {
         'User-Agent': userAgent
@@ -130,7 +135,8 @@ export function createApiClient({url, username, password, userAgent = 'Record im
   }
 
   async function queryProfiles() {
-    const response = await doRequest(`${url}/profiles`, {
+    debug('queryProfiles');
+    const response = await doRequest(`${recordImportApiUrl}/profiles`, {
       headers: {
         'User-Agent': userAgent,
         Accept: 'application/json'
@@ -145,7 +151,8 @@ export function createApiClient({url, username, password, userAgent = 'Record im
   }
 
   async function modifyProfile({id, payload}) {
-    const response = await doRequest(`${url}/profiles/${id}`, {
+    debug('modifyProfile');
+    const response = await doRequest(`${recordImportApiUrl}/profiles/${id}`, {
       method: 'PUT',
       body: JSON.stringify(payload),
       headers: {
@@ -160,7 +167,8 @@ export function createApiClient({url, username, password, userAgent = 'Record im
   }
 
   async function deleteBlob({id}) {
-    const response = await doRequest(`${url}/blobs/${id}`, {
+    debug('deleteBlob');
+    const response = await doRequest(`${recordImportApiUrl}/blobs/${id}`, {
       method: 'DELETE',
       headers: {
         'User-Agent': userAgent
@@ -175,7 +183,8 @@ export function createApiClient({url, username, password, userAgent = 'Record im
   }
 
   async function deleteBlobContent({id}) {
-    const response = await doRequest(`${url}/blobs/${id}/content`, {
+    debug('deleteBlobContent');
+    const response = await doRequest(`${recordImportApiUrl}/blobs/${id}/content`, {
       method: 'DELETE',
       headers: {
         'User-Agent': userAgent
@@ -190,6 +199,7 @@ export function createApiClient({url, username, password, userAgent = 'Record im
   }
 
   async function transformedRecord({id, error = undefined}) {
+    debug('transformedRecord');
     await updateBlobMetadata({
       id,
       payload: {
@@ -200,6 +210,7 @@ export function createApiClient({url, username, password, userAgent = 'Record im
   }
 
   async function setAborted({id}) {
+    debug('setAborted');
     await updateBlobMetadata({
       id,
       payload: {
@@ -209,6 +220,7 @@ export function createApiClient({url, username, password, userAgent = 'Record im
   }
 
   async function setTransformationFailed({id, error}) {
+    debug('setTransformationFailed');
     await updateBlobMetadata({
       id,
       payload: {
@@ -218,9 +230,10 @@ export function createApiClient({url, username, password, userAgent = 'Record im
     });
   }
 
-  async function setRecordProcessed({blobId, status, metadata}) {
+  async function setRecordProcessed({id, status, metadata}) {
+    debug('setRecordProcessed');
     await updateBlobMetadata({
-      id: blobId,
+      id,
       payload: {
         status, metadata,
         op: BLOB_UPDATE_OPERATIONS.recordProcessed
@@ -228,9 +241,21 @@ export function createApiClient({url, username, password, userAgent = 'Record im
     });
   }
 
-  async function setCorrelationId({blobId, correlationId}) {
+  async function setRecordQueued({id, title, standardIdentifiers}) {
+    debug('setRecordQueued');
     await updateBlobMetadata({
-      id: blobId,
+      id,
+      payload: {
+        title, standardIdentifiers,
+        op: BLOB_UPDATE_OPERATIONS.recordQueued
+      }
+    });
+  }
+
+  async function setCorrelationId({id, correlationId}) {
+    debug('updateBlobMetadata');
+    await updateBlobMetadata({
+      id,
       payload: {
         correlationId,
         op: BLOB_UPDATE_OPERATIONS.addCorrelationId
@@ -239,6 +264,7 @@ export function createApiClient({url, username, password, userAgent = 'Record im
   }
 
   async function updateState({id, state}) {
+    debug('updateState');
     await updateBlobMetadata({
       id,
       payload: {
@@ -249,7 +275,9 @@ export function createApiClient({url, username, password, userAgent = 'Record im
   }
 
   function getBlobs(query = {}) {
+    debug('getBlobs');
     const blobsUrl = createURL();
+    debug(`Blob url: ${blobsUrl}`);
     const emitter = new EventEmitter();
 
     pump();
@@ -257,7 +285,7 @@ export function createApiClient({url, username, password, userAgent = 'Record im
     return emitter;
 
     function createURL() {
-      const blobsUrl = new URL(`${url}/blobs`);
+      const blobsUrl = new URL(`${recordImportApiUrl}/blobs`);
 
       Object.keys(query).forEach(k => {
         if (Array.isArray(query[k])) {
@@ -275,6 +303,7 @@ export function createApiClient({url, username, password, userAgent = 'Record im
 
     async function pump(offset) {
       const response = await doRequest(blobsUrl, getOptions());
+      debug(`Response status: ${response.status}`);
 
       if (response.status === HttpStatus.OK) {
         emitter.emit('blobs', await response.json());
@@ -309,8 +338,8 @@ export function createApiClient({url, username, password, userAgent = 'Record im
   }
 
   async function updateBlobMetadata({id, payload}) {
-    logger.debug(`updateBlobMetadata: ${payload.op}`);
-    const response = await doRequest(`${url}/blobs/${id}`, {
+    debug(`updateBlobMetadata: ${payload.op}`);
+    const response = await doRequest(`${recordImportApiUrl}/blobs/${id}`, {
       method: 'POST',
       body: JSON.stringify(payload),
       headers: {
@@ -326,12 +355,14 @@ export function createApiClient({url, username, password, userAgent = 'Record im
 
   // Requests a new token once
   async function doRequest(reqUrl, reqOptions) {
+    debug('doRequest');
     const options = {headers: {}, ...reqOptions};
 
     if (authHeader) {
       options.headers.Authorization = authHeader; // eslint-disable-line functional/immutable-data
 
       const response = await fetch(reqUrl, options);
+      debug(`Response status: ${response.status}`);
 
       if (response.status === HttpStatus.UNAUTHORIZED) {
         const token = await getAuthToken();
@@ -351,14 +382,16 @@ export function createApiClient({url, username, password, userAgent = 'Record im
     return fetch(reqUrl, options);
 
     async function getAuthToken() {
-      const encodedCreds = generateAuthorizationHeader(username, password);
-      const response = await fetch(`${url}/auth`, {
+      debug('getAuthToken');
+      const encodedCreds = generateAuthorizationHeader(recordImportApiUsername, recordImportApiPassword);
+      const response = await fetch(`${recordImportApiUrl}/auth`, {
         method: 'POST',
         headers: {
           'User-Agent': userAgent,
           Authorization: encodedCreds
         }
       });
+      debug(`Response status: ${response.status}`);
 
       if (response.status === HttpStatus.NO_CONTENT) {
         return response.headers.get('Token');

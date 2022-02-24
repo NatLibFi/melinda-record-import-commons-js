@@ -39,18 +39,20 @@ export const BLOB_STATE = {
 
 export const BLOB_UPDATE_OPERATIONS = {
   abort: 'abort',
-  transformedRecord: 'transformedRecord',
-  transformationFailed: 'transformationFailed',
+  addCorrelationId: 'addCorrelationId',
   recordProcessed: 'recordProcessed',
-  updateState: 'updateState',
-  addCorrelationId: 'addCorrelationId'
+  recordQueued: 'recordQueued',
+  transformationFailed: 'transformationFailed',
+  transformedRecord: 'transformedRecord',
+  updateState: 'updateState'
 };
 
 export const RECORD_IMPORT_STATE = {
   CREATED: 'CREATED',
-  UPDATED: 'UPDATED',
-  INVALID: 'INVALID',
   DUPLICATE: 'DUPLICATE',
   ERROR: 'ERROR',
-  SKIPPED: 'SKIPPED'
+  INVALID: 'INVALID',
+  QUEUED: 'QUEUED',
+  SKIPPED: 'SKIPPED',
+  UPDATED: 'UPDATED'
 };
