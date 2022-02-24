@@ -37,7 +37,6 @@
 	"dependencies": {
 		"@natlibfi/melinda-backend-commons": "^2.0.5",
 		"@natlibfi/melinda-commons": "^12.0.3",
-		"@natlibfi/melinda-rest-api-client": "^2.1.0-alpha.4",
 		"amqplib": ">=0.8.0 <1.0.0",
 		"debug": "^4.3.3",
 		"http-status": "^1.5.0",
