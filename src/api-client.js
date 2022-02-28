@@ -394,7 +394,13 @@ export function createApiClient({recordImportApiUrl, recordImportApiUsername, re
       debug(`Response status: ${response.status}`);
 
       if (response.status === HttpStatus.NO_CONTENT) {
-        return response.headers.get('Token');
+        const token = response.headers.get('Token');
+        if (token === '0-0-0') {
+          debug('Got dev token 0-0-0');
+          return token;
+        }
+
+        return token;
       }
 
       throw new ApiError(response.status);

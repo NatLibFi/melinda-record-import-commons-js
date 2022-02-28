@@ -21,7 +21,27 @@ export function isOfflinePeriod(importOfflinePeriod) {
   }
 }
 
-export function processBlobs({client, query, processCallback, messageCallback, updateState = false, filter = () => true}) {
+export async function getNextBlobId(riApiClient, {profileId, state}) {
+  logger.log('debug', `Checking blobs for ${profileId} in ${state}`);
+  let result = ''; // eslint-disable-line functional/no-let
+
+  try {
+    result = await processBlobs({
+      client: riApiClient,
+      query: {state},
+      processCallback,
+      messageCallback: count => `${count} blobs in ${state} for ${profileId}`,
+      filter: (blob) => blob.profileId === profileId
+    });
+
+    // Returns false or blob id
+    return result;
+  } catch (err) {
+    logger.error(err);
+  }
+}
+
+function processBlobs({client, query, processCallback, messageCallback, updateState = false, filter = () => true}) {
   return new Promise((resolve, reject) => {
     const wantedBlobs = [];
 
@@ -43,4 +63,33 @@ export function processBlobs({client, query, processCallback, messageCallback, u
         resolve(result);
       });
   });
+
+  function processCallback(blobs) {
+    const [blob] = blobs;
+
+    if (blob === undefined || isOfflinePeriod(config.importOfflinePeriod)) {
+      logger.debug('No blobs or offline period');
+      return false;
+    }
+
+    const {id} = blob;
+
+    return id;
+  }
+}
+
+export async function closeAmqpResources({connection, channel}) {
+  if (channel) {
+    await channel.close();
+    await closeConnection();
+    return;
+  }
+
+  await closeConnection();
+
+  function closeConnection() {
+    if (connection) {
+      return connection.close();
+    }
+  }
 }
