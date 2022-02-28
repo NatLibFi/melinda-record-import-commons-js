@@ -28,8 +28,8 @@ export function isOfflinePeriod(importOfflinePeriod) {
   }
 }
 
-export async function getNextBlobId(riApiClient, {profileId, state, importOfflinePeriod}) {
-  debug(`Checking blobs for ${profileId} in ${state}`);
+export async function getNextBlobId(riApiClient, {profileIds, state, importOfflinePeriod}) {
+  debug(`Checking blobs for ${profileIds} in ${state}`);
   let result = ''; // eslint-disable-line functional/no-let
 
   try {
@@ -37,8 +37,8 @@ export async function getNextBlobId(riApiClient, {profileId, state, importOfflin
       client: riApiClient,
       query: {state},
       processCallback,
-      messageCallback: count => `${count} blobs in ${state} for ${profileId}`,
-      filter: (blob) => blob.profileId === profileId
+      messageCallback: count => `${count} blobs in ${state} for ${profileIds}`,
+      filter: (blob) =>  profileIds.includes(blob.profileId)
     });
 
     // Returns false or blob id
