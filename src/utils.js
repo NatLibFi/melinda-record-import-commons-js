@@ -38,7 +38,7 @@ export async function getNextBlobId(riApiClient, {profileIds, state, importOffli
       query: {state},
       processCallback,
       messageCallback: count => `${count} blobs in ${state} for ${profileIds}`,
-      filter: (blob) => profileIds.includes(blob.profileId)
+      filter: (blob) => profileIds.includes(blob.profile)
     });
 
     // Returns false or blob id
@@ -79,9 +79,9 @@ export async function getNextBlobId(riApiClient, {profileIds, state, importOffli
       return false;
     }
 
-    const {id} = blob;
+    const {id, correlationId} = blob;
 
-    return id;
+    return {blobId: id, correlationId};
   }
 }
 
