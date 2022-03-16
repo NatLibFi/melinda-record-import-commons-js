@@ -243,6 +243,8 @@ export function createApiClient({recordImportApiUrl, recordImportApiUsername, re
 
   async function setRecordQueued({id, title, standardIdentifiers}) {
     debug('setRecordQueued');
+    debug(`${title}`);
+    debug(`${standardIdentifiers}`);
     await updateBlobMetadata({
       id,
       payload: {
@@ -253,7 +255,7 @@ export function createApiClient({recordImportApiUrl, recordImportApiUsername, re
   }
 
   async function setCorrelationId({id, correlationId}) {
-    debug('updateBlobMetadata');
+    debug('setCorrelationId');
     await updateBlobMetadata({
       id,
       payload: {
@@ -303,7 +305,7 @@ export function createApiClient({recordImportApiUrl, recordImportApiUsername, re
 
     async function pump(offset) {
       const response = await doRequest(blobsUrl, getOptions());
-      debug(`Response status: ${response.status}`);
+      debug(`getBlobs response status: ${response.status}`);
 
       if (response.status === HttpStatus.OK) {
         emitter.emit('blobs', await response.json());
@@ -362,7 +364,7 @@ export function createApiClient({recordImportApiUrl, recordImportApiUsername, re
       options.headers.Authorization = authHeader; // eslint-disable-line functional/immutable-data
 
       const response = await fetch(reqUrl, options);
-      debug(`Response status: ${response.status}`);
+      debug(`doRequest response status: ${response.status}`);
 
       if (response.status === HttpStatus.UNAUTHORIZED) {
         const token = await getAuthToken();
@@ -391,7 +393,7 @@ export function createApiClient({recordImportApiUrl, recordImportApiUsername, re
           Authorization: encodedCreds
         }
       });
-      debug(`Response status: ${response.status}`);
+      debug(`getAuthToken response status: ${response.status}`);
 
       if (response.status === HttpStatus.NO_CONTENT) {
         const token = response.headers.get('Token');

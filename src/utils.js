@@ -79,9 +79,9 @@ export async function getNextBlobId(riApiClient, {profileIds, state, importOffli
       return false;
     }
 
-    const {id, correlationId} = blob;
+    const {id, correlationId, profile} = blob;
 
-    return {blobId: id, correlationId};
+    return {blobId: id, correlationId, profile};
   }
 }
 
