@@ -65,6 +65,11 @@ export default async function (importCallback) {
     logger.info(`Starting consuming records of blob ${BLOB_ID}, ${messageCount} records in queue.`);
 
     try {
+      if (messageCount === 0) {
+        await ApiClient.setAborted({id: BLOB_ID});
+        return;
+      }
+
       await consume();
       logger.info('Processed all messages.');
     } finally {
