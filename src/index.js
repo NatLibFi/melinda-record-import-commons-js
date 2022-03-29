@@ -31,7 +31,6 @@ import * as Harvester from './harvester';
 export * from './common';
 export * from './constants';
 export * from './api-client';
-export * from './error';
 export * from './utils';
 
 export {Harvester};

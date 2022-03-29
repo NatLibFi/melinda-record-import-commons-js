@@ -30,9 +30,8 @@ import {EventEmitter} from 'events';
 import fetch from 'node-fetch';
 import HttpStatus from 'http-status';
 import {URL} from 'url';
-import {generateAuthorizationHeader} from '@natlibfi/melinda-commons';
+import {generateAuthorizationHeader, Error as ApiError} from '@natlibfi/melinda-commons';
 import {BLOB_UPDATE_OPERATIONS} from './constants';
-import {ApiError} from './error';
 import createDebugLogger from 'debug';
 
 export function createApiClient({recordImportApiUrl, recordImportApiUsername, recordImportApiPassword, userAgent = 'Record import API client / Javascript'}) {
