@@ -27,11 +27,12 @@
 */
 
 import * as Harvester from './harvester';
-import * as transformerBlobLogic from './transformer';
+import transformerBlobLogic from './transformer/index';
+import transformerCliLogic from './transformer/cli';
 
 export * from './common';
 export * from './constants';
 export * from './api-client';
 export * from './utils';
 
-export {Harvester, transformerBlobLogic};
+export {Harvester, transformerBlobLogic, transformerCliLogic};
