@@ -65,14 +65,14 @@ export default function(riApiClient, transformHandler, amqplib, config) {
             reject(err);
           })
           .on('record', payload => {
-            pendingPromises.push(startProcessing()); // eslint-disable-line functional/immutable-data
+            pendingPromises.push(startProcessing(payload)); // eslint-disable-line functional/immutable-data
 
-            async function startProcessing() {
-              await sendRecordToQueue();
-              await updateBlob();
+            async function startProcessing(payload) {
+              await sendRecordToQueue(payload);
+              await updateBlob(payload);
               return;
 
-              async function sendRecordToQueue() {
+              async function sendRecordToQueue(payload) {
                 if (!payload.failed) {
                   if (abortOnInvalidRecords && !hasFailed || !abortOnInvalidRecords) { // eslint-disable-line functional/no-conditional-statement, no-mixed-operators
                     try {
@@ -94,7 +94,7 @@ export default function(riApiClient, transformHandler, amqplib, config) {
                 }
               }
 
-              function updateBlob() {
+              function updateBlob(payload) {
                 try {
                   if (payload.failed) {
                     debugRecordHandling('Adding failed record to blob');
@@ -118,7 +118,7 @@ export default function(riApiClient, transformHandler, amqplib, config) {
       });
     } catch (err) {
       const error = getError(err);
-      error(`Failed transforming blob: ${error}`);
+      debugHandling(`Failed transforming blob: ${error}`);
       await riApiClient.setTransformationFailed({id: blobId, error});
     } finally {
       await closeAmqpResources({connection, channel});
