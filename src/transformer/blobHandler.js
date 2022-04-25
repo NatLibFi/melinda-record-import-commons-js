@@ -17,9 +17,8 @@ export default function(riApiClient, transformHandler, amqplib, config) {
 
     debugHandling(`Starting transformation for blob ${blobId}`);
 
-    const {readStream} = await riApiClient.getBlobContent({id: blobId});
-
     try {
+      const {readStream} = await riApiClient.getBlobContent({id: blobId});
       let hasFailed = false; // eslint-disable-line functional/no-let
 
       connection = await amqplib.connect(amqpUrl);
