@@ -1,5 +1,5 @@
 import {v4 as uuid} from 'uuid';
-import {BLOB_STATE} from '../common';
+import {BLOB_STATE} from '../constants';
 import {closeAmqpResources} from '../utils';
 import createDebugLogger from 'debug';
 
