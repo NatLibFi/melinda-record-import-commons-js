@@ -13,7 +13,7 @@
 		"type": "git",
 		"url": "git@github.com:natlibfi/melinda-record-import-commons-js.git"
 	},
-	"license": "AGPL-3.0+",
+	"license": "MIT",
 	"version": "10.1.0-alpha.19",
 	"main": "./dist/index.js",
 	"engines": {
