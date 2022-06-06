@@ -48,7 +48,7 @@ export default async function (harvestCallback) {
 
   async function createBlob(payload) {
     const id = await ApiClient.createBlob({
-      blob: payload,
+      blob: JSON.stringify(payload),
       type: BLOB_CONTENT_TYPE,
       profile: PROFILE_ID
     });
