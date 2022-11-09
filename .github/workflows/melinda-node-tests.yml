@@ -43,6 +43,16 @@ jobs:
       with:
         args: '.'
 
+  license-scan:
+    name: License compliance check
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: mikaelvesavuori/license-compliance-action@v1.0.2
+        with:
+          exclude_pattern: /^@natlibfi/
+
   publish:
     runs-on: ubuntu-latest
     needs: [build-node-versions, njsscan]
