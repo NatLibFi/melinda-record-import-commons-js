@@ -8,7 +8,7 @@ import createDebugLogger from 'debug';
 
 export function createApiClient({recordImportApiUrl, recordImportApiUsername, recordImportApiPassword, userAgent = 'Record import API client / Javascript'}) {
   let authHeader; // eslint-disable-line functional/no-let
-  const debug = createDebugLogger('@natlibfi/melinda-import-commons:api-client');
+  const debug = createDebugLogger('@natlibfi/melinda-record-import-commons:api-client');
 
   return {
     getBlobs, createBlob, getBlobMetadata, deleteBlob,
