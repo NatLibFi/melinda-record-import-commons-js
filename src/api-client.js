@@ -25,7 +25,7 @@ export function createApiClient({recordImportApiUrl, recordImportApiUsername, re
       body: blob,
       headers: {
         'User-Agent': userAgent,
-        'Content-Type': type,
+        'content-type': type,
         'Import-Profile': profile
       }
     });
@@ -67,7 +67,7 @@ export function createApiClient({recordImportApiUrl, recordImportApiUsername, re
 
     if (response.status === HttpStatus.OK) {
       return {
-        contentType: response.headers.get('Content-Type'),
+        contentType: response.headers.get('content-type'),
         readStream: response.body
       };
     }
@@ -128,7 +128,7 @@ export function createApiClient({recordImportApiUrl, recordImportApiUsername, re
       body: JSON.stringify(payload),
       headers: {
         'User-Agent': userAgent,
-        'Content-Type': 'application/json'
+        'content-type': 'application/json'
       }
     });
 
@@ -317,7 +317,7 @@ export function createApiClient({recordImportApiUrl, recordImportApiUsername, re
       body: JSON.stringify(payload),
       headers: {
         'User-Agent': userAgent,
-        'Content-Type': 'application/json'
+        'content-type': 'application/json'
       }
     });
 
