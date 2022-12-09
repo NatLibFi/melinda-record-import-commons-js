@@ -274,8 +274,8 @@ export function createApiClient({recordImportApiUrl, recordImportApiUsername, re
       return blobsUrl;
     }
 
-    async function pump(offset) {
-      const response = await doRequest(blobsUrl, getOptions());
+    async function pump(offset = false) {
+      const response = await doRequest(blobsUrl, getOptions(offset));
       debug(`getBlobs response status: ${response.status}`);
 
       if (response.status === HttpStatus.OK) {
@@ -292,7 +292,7 @@ export function createApiClient({recordImportApiUrl, recordImportApiUsername, re
 
       emitter.emit('error', new ApiError(response.status));
 
-      function getOptions() {
+      function getOptions(offset) {
         const options = {
           headers: {
             'User-Agent': userAgent,
@@ -351,6 +351,7 @@ export function createApiClient({recordImportApiUrl, recordImportApiUsername, re
     const token = await getAuthToken();
     authHeader = `Bearer ${token}`; // eslint-disable-line require-atomic-updates
     options.headers.Authorization = authHeader; // eslint-disable-line functional/immutable-data
+    debug('Auth header updated!');
 
     return fetch(reqUrl, options);
 
