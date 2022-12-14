@@ -41,18 +41,18 @@ export default async function (riApiClient, transformHandler, amqplib, config) {
 
     async function checkBlobInState(state) {
       try {
-        const {blobId, profile} = await getNextBlobId(riApiClient, {profileIds, state});
-        debugCheckBlobInState(`Got blob id: ${blobId}`);
-        if (blobId) {
-          debugCheckBlobInState(`Handling ${state} blob ${blobId}, for profile: ${profile}`);
+        const {id, profile} = await getNextBlobId(riApiClient, {profileIds, state});
+        debugCheckBlobInState(`Got blob id: ${id}`);
+        if (id) {
+          debugCheckBlobInState(`Handling ${state} blob ${id}, for profile: ${profile}`);
 
           if (state === BLOB_STATE.TRANSFORMATION_IN_PROGRESS) {
-            await blobHandler(blobId);
+            await blobHandler(id);
             return true;
           }
 
           if (state === BLOB_STATE.PENDING_TRANSFORMATION) {
-            await riApiClient.updateState({id: blobId, state: BLOB_STATE.TRANSFORMATION_IN_PROGRESS});
+            await riApiClient.updateState({id, state: BLOB_STATE.TRANSFORMATION_IN_PROGRESS});
             return true;
           }
         }

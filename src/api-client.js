@@ -8,7 +8,7 @@ import createDebugLogger from 'debug';
 
 export function createApiClient({recordImportApiUrl, recordImportApiUsername, recordImportApiPassword, userAgent = 'Record import API client / Javascript'}) {
   let authHeader; // eslint-disable-line functional/no-let
-  const debug = createDebugLogger('@natlibfi/melinda-import-commons:api-client');
+  const debug = createDebugLogger('@natlibfi/melinda-record-import-commons:api-client');
 
   return {
     getBlobs, createBlob, getBlobMetadata, deleteBlob,
@@ -25,7 +25,7 @@ export function createApiClient({recordImportApiUrl, recordImportApiUsername, re
       body: blob,
       headers: {
         'User-Agent': userAgent,
-        'Content-Type': type,
+        'content-type': type,
         'Import-Profile': profile
       }
     });
@@ -67,7 +67,7 @@ export function createApiClient({recordImportApiUrl, recordImportApiUsername, re
 
     if (response.status === HttpStatus.OK) {
       return {
-        contentType: response.headers.get('Content-Type'),
+        contentType: response.headers.get('content-type'),
         readStream: response.body
       };
     }
@@ -128,7 +128,7 @@ export function createApiClient({recordImportApiUrl, recordImportApiUsername, re
       body: JSON.stringify(payload),
       headers: {
         'User-Agent': userAgent,
-        'Content-Type': 'application/json'
+        'content-type': 'application/json'
       }
     });
 
@@ -274,8 +274,8 @@ export function createApiClient({recordImportApiUrl, recordImportApiUsername, re
       return blobsUrl;
     }
 
-    async function pump(offset) {
-      const response = await doRequest(blobsUrl, getOptions());
+    async function pump(offset = false) {
+      const response = await doRequest(blobsUrl, getOptions(offset));
       debug(`getBlobs response status: ${response.status}`);
 
       if (response.status === HttpStatus.OK) {
@@ -292,7 +292,7 @@ export function createApiClient({recordImportApiUrl, recordImportApiUsername, re
 
       emitter.emit('error', new ApiError(response.status));
 
-      function getOptions() {
+      function getOptions(offset) {
         const options = {
           headers: {
             'User-Agent': userAgent,
@@ -317,7 +317,7 @@ export function createApiClient({recordImportApiUrl, recordImportApiUsername, re
       body: JSON.stringify(payload),
       headers: {
         'User-Agent': userAgent,
-        'Content-Type': 'application/json'
+        'content-type': 'application/json'
       }
     });
 
@@ -351,6 +351,7 @@ export function createApiClient({recordImportApiUrl, recordImportApiUsername, re
     const token = await getAuthToken();
     authHeader = `Bearer ${token}`; // eslint-disable-line require-atomic-updates
     options.headers.Authorization = authHeader; // eslint-disable-line functional/immutable-data
+    debug('Auth header updated!');
 
     return fetch(reqUrl, options);
 
