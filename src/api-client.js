@@ -329,6 +329,8 @@ export function createApiClient({recordImportApiUrl, recordImportApiUsername, re
   // Requests a new token once
   async function doRequest(reqUrl, reqOptions) {
     debug('doRequest');
+    debug(`Request url: ${reqUrl}`);
+    debug(`Request options: ${reqOptions}`);
     const options = {headers: {}, ...reqOptions};
 
     if (authHeader) {
