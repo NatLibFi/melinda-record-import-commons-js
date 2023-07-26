@@ -73,12 +73,12 @@ export default function(riApiClient, transformHandler, amqplib, config) {
 
               async function sendRecordToQueue(payload) {
                 if (!payload.failed) {
-                  if (abortOnInvalidRecords && !hasFailed || !abortOnInvalidRecords) { // eslint-disable-line functional/no-conditional-statement, no-mixed-operators
+                  if (abortOnInvalidRecords && !hasFailed || !abortOnInvalidRecords) { // eslint-disable-line functional/no-conditional-statements, no-mixed-operators
                     try {
                       const message = Buffer.from(JSON.stringify(payload.record));
                       await new Promise((resolve, reject) => {
                         channel.sendToQueue(blobId, message, {persistent: true, messageId: uuid()}, (err) => {
-                          if (err !== null) { // eslint-disable-line functional/no-conditional-statement
+                          if (err !== null) { // eslint-disable-line functional/no-conditional-statements
                             reject(err);
                           }
 
