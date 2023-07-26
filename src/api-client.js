@@ -100,7 +100,7 @@ export function createApiClient({recordImportApiUrl, recordImportApiUsername, re
       }
     });
 
-    if (response.status !== HttpStatus.NO_CONTENT) { // eslint-disable-line functional/no-conditional-statement
+    if (response.status !== HttpStatus.NO_CONTENT) { // eslint-disable-line functional/no-conditional-statements
       throw new ApiError(response.status);
     }
   }
@@ -132,7 +132,7 @@ export function createApiClient({recordImportApiUrl, recordImportApiUsername, re
       }
     });
 
-    if (![HttpStatus.CREATED, HttpStatus.NO_CONTENT].includes(response.status)) { // eslint-disable-line functional/no-conditional-statement
+    if (![HttpStatus.CREATED, HttpStatus.NO_CONTENT].includes(response.status)) { // eslint-disable-line functional/no-conditional-statements
       throw new ApiError(response.status);
     }
   }
@@ -321,7 +321,7 @@ export function createApiClient({recordImportApiUrl, recordImportApiUsername, re
       }
     });
 
-    if (response.status !== HttpStatus.NO_CONTENT) { // eslint-disable-line functional/no-conditional-statement
+    if (response.status !== HttpStatus.NO_CONTENT) { // eslint-disable-line functional/no-conditional-statements
       throw new ApiError(response.status);
     }
   }
