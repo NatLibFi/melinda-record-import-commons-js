@@ -36,7 +36,7 @@ export default function(riApiClient, transformHandler, amqplib, config) {
             if (count === 0 && pendingPromises.length === 0) {
               debugHandling(`Setting blob state ${BLOB_STATE.DONE}...`);
               await riApiClient.updateState({id: blobId, state: BLOB_STATE.DONE});
-              return;
+              return resolve(true);
             }
 
             try {
@@ -46,7 +46,7 @@ export default function(riApiClient, transformHandler, amqplib, config) {
               if (abortOnInvalidRecords && hasFailed) {
                 debugHandling('Not sending records to queue because some records failed and abortOnInvalidRecords is true');
                 await riApiClient.setTransformationFailed({id: blobId, error: {message: 'Some records have failed'}});
-                return;
+                return resolve(true);
               }
 
 

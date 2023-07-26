@@ -329,6 +329,8 @@ export function createApiClient({recordImportApiUrl, recordImportApiUsername, re
   // Requests a new token once
   async function doRequest(reqUrl, reqOptions) {
     debug('doRequest');
+    debug(`Request url: ${reqUrl}`);
+    debug(`Request options: ${JSON.stringify(reqOptions)}`);
     const options = {headers: {}, ...reqOptions};
 
     if (authHeader) {
@@ -353,7 +355,7 @@ export function createApiClient({recordImportApiUrl, recordImportApiUsername, re
     options.headers.Authorization = authHeader; // eslint-disable-line functional/immutable-data
     debug('Auth header updated!');
 
-    return fetch(reqUrl, options);
+    return doRequest(reqUrl, options);
 
     async function getAuthToken() {
       debug('getAuthToken');
