@@ -60,7 +60,7 @@ export async function getNextBlobId(riApiClient, {profileIds, state, importOffli
           filteredBlobs.forEach(blob => wantedBlobs.push(blob)); // eslint-disable-line functional/immutable-data
         })
         .on('end', () => {
-          if (messageCallback) { // eslint-disable-line functional/no-conditional-statement
+          if (messageCallback) { // eslint-disable-line functional/no-conditional-statements
             debug(messageCallback(wantedBlobs.length));
           }
           const result = processCallback(wantedBlobs, updateState);
