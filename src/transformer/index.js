@@ -42,7 +42,6 @@ export default async function (riApiClient, transformHandler, amqplib, config) {
     async function checkBlobInState(state) {
       try {
         const {id, profile} = await getNextBlobId(riApiClient, {profileIds, state});
-        debugCheckBlobInState(`Got blob id: ${id}`);
         if (id) {
           debugCheckBlobInState(`Handling ${state} blob ${id}, for profile: ${profile}`);
 
@@ -56,7 +55,6 @@ export default async function (riApiClient, transformHandler, amqplib, config) {
             return true;
           }
         }
-
         return false;
       } catch (error) {
         debugCheckBlobInState(error);
