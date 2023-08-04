@@ -330,7 +330,6 @@ export function createApiClient({recordImportApiUrl, recordImportApiUsername, re
   async function doRequest(reqUrl, reqOptions) {
     debug('doRequest');
     debug(`Request url: ${reqUrl}`);
-    debug(`Request options: ${JSON.stringify(reqOptions)}`);
     const options = {headers: {}, ...reqOptions};
 
     if (authHeader) {
