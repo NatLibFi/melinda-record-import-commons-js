@@ -4,6 +4,6 @@ Shared modules for microservices of Melinda record batch import system
 
 ## License and copyright
 
-Copyright (C) 2018-2022 **University Of Helsinki (The National Library Of Finland)**
+Copyright (C) 2018-2023 **University Of Helsinki (The National Library Of Finland)**
 
 This project's source code is licensed under the terms of **MIT** or any later version.
