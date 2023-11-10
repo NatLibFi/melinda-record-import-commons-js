@@ -1,7 +1,7 @@
 import moment from 'moment';
 import createDebugLogger from 'debug';
 
-const debug = createDebugLogger('@natlibfi/melinda-record-import-commons:utils');
+const debug = createDebugLogger('@natlibfi/melinda-record-import-commons:utils:dev');
 
 export function isOfflinePeriod(importOfflinePeriod) {
   if (importOfflinePeriod === undefined) {
