@@ -1,6 +1,6 @@
-import {getNextBlobId} from '../utils';
+import {getNextBlobId, logWait} from '../utils';
 import {BLOB_STATE} from '../constants';
-import {promisify, logWait} from 'util';
+import {promisify} from 'util';
 import createDebugLogger from 'debug';
 import createBlobHandler from './blobHandler';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
