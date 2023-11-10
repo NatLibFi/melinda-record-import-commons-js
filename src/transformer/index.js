@@ -64,15 +64,10 @@ export default async function (riApiClient, transformHandler, amqplib, config) {
     }
 
     function logWait(waitTime) {
-      // 900000 ms = 15 min
-      if (waitTime % 900000 === 0) {
-        return verbose(`Total wait: ${prettyPrint(waitTime)}`);
-      }
       // 60000ms = 1min
       if (waitTime % 60000 === 0) {
         return debug(`Total wait: ${prettyPrint(waitTime)}`);
       }
-      return silly(`Total wait: ${prettyPrint(waitTime)}`);
     }
   }
 }
