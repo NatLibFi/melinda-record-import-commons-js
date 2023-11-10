@@ -1,7 +1,20 @@
 import moment from 'moment';
 import createDebugLogger from 'debug';
+import prettyPrint from 'pretty-print-ms';
 
 const debug = createDebugLogger('@natlibfi/melinda-record-import-commons:utils');
+
+export function logWait(logger, waitTime) {
+  // 900000 ms = 15 min
+  if (waitTime % 900000 === 0) {
+    return logger.verbose(`Total wait: ${prettyPrint(waitTime)}`);
+  }
+  // 60000ms = 1min
+  if (waitTime % 60000 === 0) {
+    return logger.debug(`Total wait: ${prettyPrint(waitTime)}`);
+  }
+  return logger.silly(`Total wait: ${prettyPrint(waitTime)}`);
+}
 
 export function isOfflinePeriod(importOfflinePeriod) {
   if (importOfflinePeriod === undefined) {

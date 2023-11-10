@@ -1,11 +1,13 @@
 import {getNextBlobId} from '../utils';
 import {BLOB_STATE} from '../constants';
-import {promisify} from 'util';
+import {promisify, logWait} from 'util';
 import createDebugLogger from 'debug';
 import createBlobHandler from './blobHandler';
+import {createLogger} from '@natlibfi/melinda-backend-commons';
 
 export default async function (riApiClient, transformHandler, amqplib, config) {
   const setTimeoutPromise = promisify(setTimeout);
+  const logger = createLogger();
   const debug = createDebugLogger('@natlibfi/melinda-record-import-commons');
   const debugLogic = debug.extend('logic');
   const debugCheckBlobInState = debug.extend('checkBlobInState');
@@ -14,12 +16,13 @@ export default async function (riApiClient, transformHandler, amqplib, config) {
 
   await logic();
 
-  async function logic(wait = false) {
-
+  async function logic(wait = false, waitSinceLastOp = 0) {
     if (wait) {
       debugLogic(`Await ${polltime / 1000} sec`);
       await setTimeoutPromise(polltime);
-      return logic();
+      const nowWaited = parseInt(polltime, 10) + parseInt(waitSinceLastOp, 10);
+      logWait(logger, nowWaited);
+      return logic(false, nowWaited);
     }
 
     const {profileIds} = config;
@@ -37,7 +40,7 @@ export default async function (riApiClient, transformHandler, amqplib, config) {
     }
 
     debugLogic(`No blobs found`);
-    return logic(true);
+    return logic(true, waitSinceLastOp);
 
     async function checkBlobInState(state) {
       try {
