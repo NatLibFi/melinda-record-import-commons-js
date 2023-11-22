@@ -1,7 +1,7 @@
 import moment from 'moment';
 import createDebugLogger from 'debug';
 
-const debug = createDebugLogger('@natlibfi/melinda-record-import-commons:utils');
+const debug = createDebugLogger('@natlibfi/melinda-record-import-commons:utils:dev');
 
 export function isOfflinePeriod(importOfflinePeriod) {
   if (importOfflinePeriod === undefined) {
@@ -50,7 +50,7 @@ export async function getNextBlobId(riApiClient, {profileIds, state, importOffli
     return new Promise((resolve, reject) => {
       const wantedBlobs = [];
 
-      const debug = createDebugLogger('@natlibfi/melinda-record-import-commons:processBlobs');
+      const debug = createDebugLogger('@natlibfi/melinda-record-import-commons:processBlobs:dev');
       const emitter = client.getBlobs(query);
 
       emitter

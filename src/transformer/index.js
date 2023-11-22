@@ -3,23 +3,25 @@ import {BLOB_STATE} from '../constants';
 import {promisify} from 'util';
 import createDebugLogger from 'debug';
 import createBlobHandler from './blobHandler';
+import prettyPrint from 'pretty-print-ms';
 
 export default async function (riApiClient, transformHandler, amqplib, config) {
   const setTimeoutPromise = promisify(setTimeout);
   const debug = createDebugLogger('@natlibfi/melinda-record-import-commons');
-  const debugLogic = debug.extend('logic');
-  const debugCheckBlobInState = debug.extend('checkBlobInState');
+  const debugLogic = debug.extend('logic:dev');
+  const debugCheckBlobInState = debug.extend('checkBlobInState:dev');
   const blobHandler = createBlobHandler(riApiClient, transformHandler, amqplib, config);
   const polltime = config.polltime ? parseInt(config.polltime, 10) : 3000;
 
   await logic();
 
-  async function logic(wait = false) {
-
+  async function logic(wait = false, waitSinceLastOp = 0) {
     if (wait) {
       debugLogic(`Await ${polltime / 1000} sec`);
       await setTimeoutPromise(polltime);
-      return logic();
+      const nowWaited = parseInt(polltime, 10) + parseInt(waitSinceLastOp, 10);
+      logWait(nowWaited);
+      return logic(false, nowWaited);
     }
 
     const {profileIds} = config;
@@ -37,7 +39,7 @@ export default async function (riApiClient, transformHandler, amqplib, config) {
     }
 
     debugLogic(`No blobs found`);
-    return logic(true);
+    return logic(true, waitSinceLastOp);
 
     async function checkBlobInState(state) {
       try {
@@ -58,6 +60,13 @@ export default async function (riApiClient, transformHandler, amqplib, config) {
         return false;
       } catch (error) {
         debugCheckBlobInState(error);
+      }
+    }
+
+    function logWait(waitTime) {
+      // 60000ms = 1min
+      if (waitTime % 60000 === 0) {
+        return debug(`Total wait: ${prettyPrint(waitTime)}`);
       }
     }
   }
