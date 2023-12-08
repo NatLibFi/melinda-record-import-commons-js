@@ -22,7 +22,7 @@ updates:
     versioning-strategy: lockfile-only
     target-branch: "test"
     pull-request-branch-name:
-      separator: "."
+      separator: "-"
     groups:
       production-dependencies:
         dependency-type: "production"
