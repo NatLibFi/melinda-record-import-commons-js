@@ -25,21 +25,21 @@ export default function (keycloakConfig) {
 
   function getGrantTest({username, password}) {
     if (username === 'foo' && password === 'bar') {
-      return {access_token: '0-0-0'}; // eslint-disable-line camelcase
+      return {access_token: {token: '0-0-0'}}; // eslint-disable-line camelcase
     }
 
     throw new Error('Wrong Test username / password');
   }
 
   /* istanbul ignore next */
-  function verifyGrant(grant) {
+  async function verifyGrant(grant) {
     debug('Verifying grant');
-    keycloak.grantManager.validateGrant(grant);
+    await keycloak.grantManager.validateGrant(grant);
     return true;
   }
 
   function verifyGrantTest(grant) {
-    if (grant.access_token === '0-0-0') {
+    if (grant.access_token.token === '0-0-0') {
       return true;
     }
 
