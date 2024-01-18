@@ -333,7 +333,6 @@ export function createApiClient({keycloakConfig, recordImportApiUrl, recordImpor
     debug('doRequest');
     debug(`Request url: ${reqUrl}`);
     const options = {headers: {}, ...reqOptions};
-    debug(`grant: ${grant}`);
 
     if (grant && authOperator.verifyGrant(grant)) {
       const authHeader = `Bearer ${grant.access_token}`;

@@ -1,7 +1,11 @@
 import Keycloak from 'keycloak-connect';
+import createDebugLogger from 'debug';
 
 export default function (keycloakConfig) {
+  const debug = createDebugLogger('@natlibfi/melinda-record-import-commons:auth:dev');
+
   if (keycloakConfig.test === true) {
+    debug('Initiating test auth');
     return {getGrant: getGrantTest, verifyGrant: verifyGrantTest};
   }
   /* istanbul ignore next */
@@ -13,7 +17,9 @@ export default function (keycloakConfig) {
 
   /* istanbul ignore next */
   async function getGrant({username, password}) {
+    debug('Getting grant');
     const grant = await keycloak.grantManager.obtainDirectly(username, password);
+    debug(`Grant: ${JSON.stringify(grant)}`);
     return grant;
   }
 
@@ -27,6 +33,7 @@ export default function (keycloakConfig) {
 
   /* istanbul ignore next */
   function verifyGrant(grant) {
+    debug('Verifying grant');
     keycloak.grantManager.validateGrant(grant);
     return true;
   }
