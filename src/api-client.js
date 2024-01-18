@@ -350,6 +350,7 @@ export function createApiClient({keycloakConfig, recordImportApiUrl, recordImpor
       return response;
     }
 
+    // eslint-disable-next-line require-atomic-updates
     grant = await authOperator.getGrant({username: recordImportApiUsername, password: recordImportApiPassword});
     debug('Auth Grant updated!');
 
