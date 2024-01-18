@@ -350,7 +350,7 @@ export function createApiClient({keycloakConfig, recordImportApiUrl, recordImpor
       return response;
     }
 
-    grant = authOperator.getGrant({username: recordImportApiUsername, password: recordImportApiPassword});
+    grant = await authOperator.getGrant({username: recordImportApiUsername, password: recordImportApiPassword});
     debug('Auth Grant updated!');
 
     return doRequest(reqUrl, reqOptions);
