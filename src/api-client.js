@@ -2,13 +2,15 @@ import {EventEmitter} from 'events';
 import fetch from 'node-fetch';
 import HttpStatus from 'http-status';
 import {URL} from 'url';
-import {generateAuthorizationHeader, Error as ApiError} from '@natlibfi/melinda-commons';
+import {Error as ApiError} from '@natlibfi/melinda-commons';
 import {BLOB_UPDATE_OPERATIONS} from './constants';
 import createDebugLogger from 'debug';
+import createAuthOperator from './auth';
 
-export function createApiClient({recordImportApiUrl, recordImportApiUsername, recordImportApiPassword, userAgent = 'Record import API client / Javascript'}) {
-  let authHeader; // eslint-disable-line functional/no-let
+export function createApiClient({keycloakConfig, recordImportApiUrl, recordImportApiUsername, recordImportApiPassword, userAgent = 'Record import API client / Javascript'}) {
   const debug = createDebugLogger('@natlibfi/melinda-record-import-commons:api-client:dev');
+  const authOperator = createAuthOperator(keycloakConfig);
+  let grant; // eslint-disable-line functional/no-let
 
   return {
     getBlobs, createBlob, getBlobMetadata, deleteBlob,
@@ -331,54 +333,27 @@ export function createApiClient({recordImportApiUrl, recordImportApiUsername, re
     debug('doRequest');
     debug(`Request url: ${reqUrl}`);
     const options = {headers: {}, ...reqOptions};
+    debug(`grant: ${grant}`);
 
-    if (authHeader) {
+    if (grant && authOperator.verifyGrant(grant)) {
+      const authHeader = `Bearer ${grant.access_token}`;
+      debug(`Auth header: ${authHeader}`);
+
       options.headers.Authorization = authHeader; // eslint-disable-line functional/immutable-data
 
       const response = await fetch(reqUrl, options);
       debug(`doRequest response status: ${response.status}`);
 
       if (response.status === HttpStatus.UNAUTHORIZED) {
-        const token = await getAuthToken();
-        authHeader = `Bearer ${token}`; // eslint-disable-line require-atomic-updates
-        options.headers.Authorization = authHeader; // eslint-disable-line functional/immutable-data
-
-        return fetch(reqUrl, options);
+        throw new Error('Authorization error');
       }
 
       return response;
     }
 
-    const token = await getAuthToken();
-    authHeader = `Bearer ${token}`; // eslint-disable-line require-atomic-updates
-    options.headers.Authorization = authHeader; // eslint-disable-line functional/immutable-data
-    debug('Auth header updated!');
+    grant = authOperator.getGrant({username: recordImportApiUsername, password: recordImportApiPassword});
+    debug('Auth Grant updated!');
 
-    return doRequest(reqUrl, options);
-
-    async function getAuthToken() {
-      debug('getAuthToken');
-      const encodedCreds = generateAuthorizationHeader(recordImportApiUsername, recordImportApiPassword);
-      const response = await fetch(`${recordImportApiUrl}/auth`, {
-        method: 'POST',
-        headers: {
-          'User-Agent': userAgent,
-          Authorization: encodedCreds
-        }
-      });
-      debug(`getAuthToken response status: ${response.status}`);
-
-      if (response.status === HttpStatus.NO_CONTENT) {
-        const token = response.headers.get('Token');
-        if (token === '0-0-0') {
-          debug('Got dev token 0-0-0');
-          return token;
-        }
-
-        return token;
-      }
-
-      throw new ApiError(response.status);
-    }
+    return doRequest(reqUrl, reqOptions);
   }
 }
