@@ -19,7 +19,6 @@ export default function (keycloakConfig) {
   async function getGrant({username, password}) {
     debug('Getting grant');
     const grant = await keycloak.grantManager.obtainDirectly(username, password);
-    debug(`Grant: ${JSON.stringify(grant)}`);
     return grant;
   }
 

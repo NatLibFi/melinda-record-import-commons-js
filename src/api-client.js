@@ -337,7 +337,7 @@ export function createApiClient({keycloakConfig, recordImportApiUrl, recordImpor
     if (grant) {
       await authOperator.verifyGrant(grant);
       const authHeader = `Bearer ${grant.access_token.token}`;
-      debug(`Auth header: ${authHeader}`);
+      debug(`Auth header ${authHeader.length > 7 ? 'set' : 'not set'}`);
 
       options.headers.Authorization = authHeader; // eslint-disable-line functional/immutable-data
 
