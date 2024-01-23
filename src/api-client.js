@@ -192,7 +192,7 @@ export function createApiClient({keycloakConfig, recordImportApiUrl, recordImpor
   }
 
   async function setAborted({id}) {
-    debug('setAborted');
+    debug('blob setAborted');
     await updateBlobMetadata({
       id,
       payload: {
