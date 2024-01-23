@@ -36,7 +36,8 @@ export function createApiClient({keycloakConfig, recordImportApiUrl, recordImpor
       return parseBlobId();
     }
 
-    throw new ApiError(response.status);
+    const errorMessage = response.text ? response.text : undefined;
+    throw new ApiError(response.status, errorMessage);
 
     function parseBlobId() {
       return (/\/(?<def>.[^/]*)$/u).exec(response.headers.get('location'))[1];
@@ -56,7 +57,8 @@ export function createApiClient({keycloakConfig, recordImportApiUrl, recordImpor
       return response.json();
     }
 
-    throw new ApiError(response.status);
+    const errorMessage = response.text ? response.text : undefined;
+    throw new ApiError(response.status, errorMessage);
   }
 
   async function getBlobContent({id}) {
@@ -74,7 +76,8 @@ export function createApiClient({keycloakConfig, recordImportApiUrl, recordImpor
       };
     }
 
-    throw new ApiError(response.status);
+    const errorMessage = response.text ? response.text : undefined;
+    throw new ApiError(response.status, errorMessage);
   }
 
   async function getProfile({id}) {
@@ -90,7 +93,8 @@ export function createApiClient({keycloakConfig, recordImportApiUrl, recordImpor
       return response.json();
     }
 
-    throw new ApiError(response.status);
+    const errorMessage = response.text ? response.text : undefined;
+    throw new ApiError(response.status, errorMessage);
   }
 
   async function deleteProfile({id}) {
@@ -103,7 +107,8 @@ export function createApiClient({keycloakConfig, recordImportApiUrl, recordImpor
     });
 
     if (response.status !== HttpStatus.NO_CONTENT) { // eslint-disable-line functional/no-conditional-statements
-      throw new ApiError(response.status);
+      const errorMessage = response.text ? response.text : undefined;
+      throw new ApiError(response.status, errorMessage);
     }
   }
 
@@ -120,7 +125,8 @@ export function createApiClient({keycloakConfig, recordImportApiUrl, recordImpor
       return response.json();
     }
 
-    throw new ApiError(response.status);
+    const errorMessage = response.text ? response.text : undefined;
+    throw new ApiError(response.status, errorMessage);
   }
 
   async function modifyProfile({id, payload}) {
@@ -135,7 +141,8 @@ export function createApiClient({keycloakConfig, recordImportApiUrl, recordImpor
     });
 
     if (![HttpStatus.CREATED, HttpStatus.NO_CONTENT].includes(response.status)) { // eslint-disable-line functional/no-conditional-statements
-      throw new ApiError(response.status);
+      const errorMessage = response.text ? response.text : undefined;
+      throw new ApiError(response.status, errorMessage);
     }
   }
 
@@ -152,7 +159,8 @@ export function createApiClient({keycloakConfig, recordImportApiUrl, recordImpor
       return response.body;
     }
 
-    throw new ApiError(response.status);
+    const errorMessage = response.text ? response.text : undefined;
+    throw new ApiError(response.status, errorMessage);
   }
 
   async function deleteBlobContent({id}) {
@@ -168,7 +176,8 @@ export function createApiClient({keycloakConfig, recordImportApiUrl, recordImpor
       return response.body;
     }
 
-    throw new ApiError(response.status);
+    const errorMessage = response.text ? response.text : undefined;
+    throw new ApiError(response.status, errorMessage);
   }
 
   async function transformedRecord({id, error = undefined}) {
@@ -324,7 +333,8 @@ export function createApiClient({keycloakConfig, recordImportApiUrl, recordImpor
     });
 
     if (response.status !== HttpStatus.NO_CONTENT) { // eslint-disable-line functional/no-conditional-statements
-      throw new ApiError(response.status);
+      const errorMessage = response.text ? response.text : undefined;
+      throw new ApiError(response.status, errorMessage);
     }
   }
 
@@ -345,7 +355,8 @@ export function createApiClient({keycloakConfig, recordImportApiUrl, recordImpor
       debug(`doRequest response status: ${response.status}`);
 
       if (response.status === HttpStatus.UNAUTHORIZED) {
-        throw new Error('Authorization error');
+        const errorMessage = response.text ? response.text : undefined;
+        throw new ApiError(response.status, errorMessage);
       }
 
       return response;
