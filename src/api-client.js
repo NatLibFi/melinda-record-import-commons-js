@@ -36,7 +36,7 @@ export function createApiClient({keycloakConfig, recordImportApiUrl, recordImpor
       return parseBlobId();
     }
 
-    const errorMessage =  await response.text();
+    const errorMessage = await response.text();
     throw new ApiError(response.status, errorMessage);
 
     function parseBlobId() {
@@ -57,7 +57,7 @@ export function createApiClient({keycloakConfig, recordImportApiUrl, recordImpor
       return response.json();
     }
 
-    const errorMessage =  await response.text();
+    const errorMessage = await response.text();
     throw new ApiError(response.status, errorMessage);
   }
 
@@ -76,7 +76,7 @@ export function createApiClient({keycloakConfig, recordImportApiUrl, recordImpor
       };
     }
 
-    const errorMessage =  await response.text();
+    const errorMessage = await response.text();
     throw new ApiError(response.status, errorMessage);
   }
 
@@ -93,7 +93,7 @@ export function createApiClient({keycloakConfig, recordImportApiUrl, recordImpor
       return response.json();
     }
 
-    const errorMessage =  await response.text();
+    const errorMessage = await response.text();
     throw new ApiError(response.status, errorMessage);
   }
 
@@ -107,7 +107,7 @@ export function createApiClient({keycloakConfig, recordImportApiUrl, recordImpor
     });
 
     if (response.status !== HttpStatus.NO_CONTENT) { // eslint-disable-line functional/no-conditional-statements
-      const errorMessage =  await response.text();
+      const errorMessage = await response.text();
       throw new ApiError(response.status, errorMessage);
     }
   }
@@ -125,7 +125,7 @@ export function createApiClient({keycloakConfig, recordImportApiUrl, recordImpor
       return response.json();
     }
 
-    const errorMessage =  await response.text();
+    const errorMessage = await response.text();
     throw new ApiError(response.status, errorMessage);
   }
 
@@ -141,7 +141,7 @@ export function createApiClient({keycloakConfig, recordImportApiUrl, recordImpor
     });
 
     if (![HttpStatus.CREATED, HttpStatus.NO_CONTENT].includes(response.status)) { // eslint-disable-line functional/no-conditional-statements
-      const errorMessage =  await response.text();
+      const errorMessage = await response.text();
       throw new ApiError(response.status, errorMessage);
     }
   }
@@ -159,7 +159,7 @@ export function createApiClient({keycloakConfig, recordImportApiUrl, recordImpor
       return response.body;
     }
 
-    const errorMessage =  await response.text();
+    const errorMessage = await response.text();
     throw new ApiError(response.status, errorMessage);
   }
 
@@ -176,7 +176,7 @@ export function createApiClient({keycloakConfig, recordImportApiUrl, recordImpor
       return response.body;
     }
 
-    const errorMessage =  await response.text();
+    const errorMessage = await response.text();
     throw new ApiError(response.status, errorMessage);
   }
 
@@ -333,7 +333,7 @@ export function createApiClient({keycloakConfig, recordImportApiUrl, recordImpor
     });
 
     if (response.status !== HttpStatus.NO_CONTENT) { // eslint-disable-line functional/no-conditional-statements
-      const errorMessage =  await response.text();
+      const errorMessage = await response.text();
       throw new ApiError(response.status, errorMessage);
     }
   }
@@ -355,7 +355,7 @@ export function createApiClient({keycloakConfig, recordImportApiUrl, recordImpor
       debug(`doRequest response status: ${response.status}`);
 
       if (response.status === HttpStatus.UNAUTHORIZED) {
-        const errorMessage =  await response.text();
+        const errorMessage = await response.text();
         throw new ApiError(response.status, errorMessage);
       }
 
