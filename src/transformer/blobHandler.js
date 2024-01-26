@@ -62,8 +62,6 @@ export default function (riApiClient, transformHandler, amqplib, config) {
 
       await handleRecordResultsPump(pendingRecords);
 
-
-
       async function handleRecordResultsPump(recordResults) {
         if (abortOnInvalidRecords && hasFailed) {
           debugHandling('Not sending records to queue because some records failed and abortOnInvalidRecords is true');
@@ -72,6 +70,7 @@ export default function (riApiClient, transformHandler, amqplib, config) {
         }
 
         const [recordResult, ...rest] = recordResults;
+
         if (recordResult === undefined) {
           debugHandling(`Transforming is done (All Promises resolved)`);
           debugHandling(`Setting blob state ${BLOB_STATE.TRANSFORMED}...`);
@@ -96,11 +95,11 @@ export default function (riApiClient, transformHandler, amqplib, config) {
               await new Promise((resolve, reject) => {
                 channel.sendToQueue(blobId, message, {persistent: true, messageId: uuid()}, (err) => {
                   if (err !== null) { // eslint-disable-line functional/no-conditional-statements
-                    throw err;
+                    reject(err);
                   }
 
                   debugHandling(`Record send to queue`);
-                  return;
+                  resolve();
                 });
               });
             } catch (err) {
