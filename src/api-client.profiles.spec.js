@@ -17,8 +17,6 @@ const config = {
   }
 };/**/
 
-
-
 generateTests({
   callback,
   path: [__dirname, '..', 'test-fixtures', 'api-client', 'profiles'],
