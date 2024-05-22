@@ -1,6 +1,22 @@
+/* eslint-disable camelcase */
 import {Issuer} from 'openid-client';
+import {promisify} from 'util';
+
+const setTimeoutPromise = promisify(setTimeout);
+
 
 export async function createServiceAuthoperator(keycloakOptions) {
+  if (keycloakOptions.test === true) {
+    await setTimeoutPromise(1);
+    return {
+      getServiceAuthToken: async () => {
+        await setTimeoutPromise(2);
+        return '123456789SecretTestToken!';
+      }
+    };
+  }
+
+
   let serviceTokenSet; // eslint-disable-line functional/no-let
 
   const keycloakIssuer = await getIssuer(keycloakOptions.issuerBaseURL);
@@ -12,13 +28,14 @@ export async function createServiceAuthoperator(keycloakOptions) {
 
   return {getServiceAuthToken};
 
-  async function getIssuer(uri) {
+  function getIssuer(uri) {
     return Issuer.discover(uri);
   }
 
   async function getServiceAuthToken() {
     if (!serviceTokenSet || serviceTokensRequireRefresh()) {
       await refreshServiceTokenSet();
+      return serviceTokenSet.access_token;
     }
 
     return serviceTokenSet.access_token;

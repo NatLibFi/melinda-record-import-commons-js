@@ -9,12 +9,14 @@ import {Error as ApiError} from '@natlibfi/melinda-commons';
 
 const debug = createDebugLogger('@natlibfi/melinda-record-import-commons/api-client:test');
 const config = {
-  keycloakConfig: {test: true},
-  recordImportApiUrl: 'http://foo.bar',
-  recordImportApiUsername: 'foo',
-  recordImportApiPassword: 'bar',
-  userAgent: 'test'
-};
+  keycloakOptions: {test: true},
+  recordImportApiOptions: {
+    recordImportApiUrl: 'http://foo.bar',
+    userAgent: 'test',
+    allowSelfSignedApiCert: true
+  }
+};/**/
+
 
 
 generateTests({
@@ -29,8 +31,9 @@ generateTests({
 });
 
 // Blob handling
-/*async*/ function callback({getFixture, method, expectedError = false, expectedErrorStatus = '000'}) {
-  const client = createApiClient(config);
+async function callback({getFixture, method, expectedError = false, expectedErrorStatus = '000'}) {
+  const {recordImportApiOptions, keycloakOptions} = config;
+  const client = await createApiClient(recordImportApiOptions, keycloakOptions);
   const input = getFixture('input.json');
   const output = getFixture('output.json');
 
