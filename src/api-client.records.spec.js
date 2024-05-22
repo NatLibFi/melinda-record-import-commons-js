@@ -46,11 +46,6 @@ generateTests({
       return;
     }
 
-    if (method === 'setRecordQueued') {
-
-      return;
-    }
-
     if (method === 'transformedRecord') {
 
       return;

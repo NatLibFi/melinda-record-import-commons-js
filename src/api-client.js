@@ -1,25 +1,29 @@
 import {EventEmitter} from 'events';
 import fetch from 'node-fetch';
-import HttpStatus from 'http-status';
 import {URL} from 'url';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
-import {BLOB_UPDATE_OPERATIONS} from './constants';
+import {BLOB_UPDATE_OPERATIONS} from './constants.js';
 import createDebugLogger from 'debug';
-import createAuthOperator from './auth';
+import https from 'https';
+import {createServiceAuthoperator} from './oidc.js';
+import httpStatus from 'http-status';
 
-export function createApiClient({keycloakConfig, recordImportApiUrl, recordImportApiUsername, recordImportApiPassword, userAgent = 'Record import API client / Javascript'}) {
+export async function createApiClient({recordImportApiUrl, userAgent = 'Record import API client / Javascript', allowSelfSignedApiCert}, keycloakOptions) {
   const debug = createDebugLogger('@natlibfi/melinda-record-import-commons:api-client:dev');
-  const authOperator = createAuthOperator(keycloakConfig);
-  let grant; // eslint-disable-line functional/no-let
+  if (!keycloakOptions) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Keycloak options missing on record import api client creation');
+  }
 
+  const serviceTokenOperator = await createServiceAuthoperator(keycloakOptions);
   return {
     getBlobs, createBlob, getBlobMetadata, deleteBlob,
     getBlobContent, deleteBlobContent,
     getProfile, modifyProfile, queryProfiles, deleteProfile,
     setTransformationFailed, setCorrelationId, setRecordProcessed,
-    setRecordQueued, transformedRecord, setAborted, updateState
+    transformedRecord, setAborted, updateState
   };
 
+  // MARK: createBLob
   async function createBlob({blob, type, profile}) {
     debug('createBlob');
     const response = await doRequest(`${recordImportApiUrl}/blobs`, {
@@ -32,7 +36,7 @@ export function createApiClient({keycloakConfig, recordImportApiUrl, recordImpor
       }
     });
 
-    if (response.status === HttpStatus.CREATED) {
+    if (response.status === httpStatus.CREATED) {
       return parseBlobId();
     }
 
@@ -44,6 +48,7 @@ export function createApiClient({keycloakConfig, recordImportApiUrl, recordImpor
     }
   }
 
+  // MARK: getBlobMetadata
   async function getBlobMetadata({id}) {
     debug('getBlobMetadata');
     const response = await doRequest(`${recordImportApiUrl}/blobs/${id}`, {
@@ -53,7 +58,7 @@ export function createApiClient({keycloakConfig, recordImportApiUrl, recordImpor
       }
     });
 
-    if (response.status === HttpStatus.OK) {
+    if (response.status === httpStatus.OK) {
       return response.json();
     }
 
@@ -61,6 +66,7 @@ export function createApiClient({keycloakConfig, recordImportApiUrl, recordImpor
     throw new ApiError(response.status, errorMessage);
   }
 
+  // MARK: getBlobContent
   async function getBlobContent({id}) {
     debug('getBlobContent');
     const response = await doRequest(`${recordImportApiUrl}/blobs/${id}/content`, {
@@ -69,7 +75,7 @@ export function createApiClient({keycloakConfig, recordImportApiUrl, recordImpor
       }
     });
 
-    if (response.status === HttpStatus.OK) {
+    if (response.status === httpStatus.OK) {
       return {
         contentType: response.headers.get('content-type'),
         readStream: response.body
@@ -80,6 +86,7 @@ export function createApiClient({keycloakConfig, recordImportApiUrl, recordImpor
     throw new ApiError(response.status, errorMessage);
   }
 
+  // MARK: getProfile
   async function getProfile({id}) {
     debug('getProfile');
     const response = await doRequest(`${recordImportApiUrl}/profiles/${id}`, {
@@ -89,7 +96,7 @@ export function createApiClient({keycloakConfig, recordImportApiUrl, recordImpor
       }
     });
 
-    if (response.status === HttpStatus.OK) {
+    if (response.status === httpStatus.OK) {
       return response.json();
     }
 
@@ -97,6 +104,7 @@ export function createApiClient({keycloakConfig, recordImportApiUrl, recordImpor
     throw new ApiError(response.status, errorMessage);
   }
 
+  // MARK: deleteProfile
   async function deleteProfile({id}) {
     debug('deleteProfile');
     const response = await doRequest(`${recordImportApiUrl}/profiles/${id}`, {
@@ -106,12 +114,13 @@ export function createApiClient({keycloakConfig, recordImportApiUrl, recordImpor
       }
     });
 
-    if (response.status !== HttpStatus.NO_CONTENT) { // eslint-disable-line functional/no-conditional-statements
+    if (response.status !== httpStatus.NO_CONTENT) { // eslint-disable-line functional/no-conditional-statements
       const errorMessage = await response.text();
       throw new ApiError(response.status, errorMessage);
     }
   }
 
+  // MARK: queryProfiles
   async function queryProfiles() {
     debug('queryProfiles');
     const response = await doRequest(`${recordImportApiUrl}/profiles`, {
@@ -121,7 +130,7 @@ export function createApiClient({keycloakConfig, recordImportApiUrl, recordImpor
       }
     });
 
-    if (response.status === HttpStatus.OK) {
+    if (response.status === httpStatus.OK) {
       return response.json();
     }
 
@@ -129,6 +138,7 @@ export function createApiClient({keycloakConfig, recordImportApiUrl, recordImpor
     throw new ApiError(response.status, errorMessage);
   }
 
+  // MARK: modifyProfile
   async function modifyProfile({id, payload}) {
     debug('modifyProfile');
     const response = await doRequest(`${recordImportApiUrl}/profiles/${id}`, {
@@ -140,12 +150,13 @@ export function createApiClient({keycloakConfig, recordImportApiUrl, recordImpor
       }
     });
 
-    if (![HttpStatus.CREATED, HttpStatus.NO_CONTENT].includes(response.status)) { // eslint-disable-line functional/no-conditional-statements
+    if (![httpStatus.CREATED, httpStatus.NO_CONTENT].includes(response.status)) { // eslint-disable-line functional/no-conditional-statements
       const errorMessage = await response.text();
       throw new ApiError(response.status, errorMessage);
     }
   }
 
+  // MARK: deleteBlob
   async function deleteBlob({id}) {
     debug('deleteBlob');
     const response = await doRequest(`${recordImportApiUrl}/blobs/${id}`, {
@@ -155,7 +166,8 @@ export function createApiClient({keycloakConfig, recordImportApiUrl, recordImpor
       }
     });
 
-    if (response.status === HttpStatus.NO_CONTENT) {
+    console.log(response.status);
+    if (response.status === httpStatus.NO_CONTENT) {
       return response.body;
     }
 
@@ -163,6 +175,7 @@ export function createApiClient({keycloakConfig, recordImportApiUrl, recordImpor
     throw new ApiError(response.status, errorMessage);
   }
 
+  // MARK: deleteBlobContent
   async function deleteBlobContent({id}) {
     debug('deleteBlobContent');
     const response = await doRequest(`${recordImportApiUrl}/blobs/${id}/content`, {
@@ -172,7 +185,7 @@ export function createApiClient({keycloakConfig, recordImportApiUrl, recordImpor
       }
     });
 
-    if (response.status === HttpStatus.NO_CONTENT) {
+    if (response.status === httpStatus.NO_CONTENT) {
       return response.body;
     }
 
@@ -180,6 +193,7 @@ export function createApiClient({keycloakConfig, recordImportApiUrl, recordImpor
     throw new ApiError(response.status, errorMessage);
   }
 
+  // MARK: transformedRecord
   async function transformedRecord({id, error = undefined}) {
     debug('transformedRecord');
     await updateBlobMetadata({
@@ -191,6 +205,7 @@ export function createApiClient({keycloakConfig, recordImportApiUrl, recordImpor
     });
   }
 
+  // MARK: setAborted
   async function setAborted({id}) {
     debug('blob setAborted');
     await updateBlobMetadata({
@@ -201,6 +216,7 @@ export function createApiClient({keycloakConfig, recordImportApiUrl, recordImpor
     });
   }
 
+  // MARK: setTransformationFailed
   async function setTransformationFailed({id, error}) {
     debug('setTransformationFailed');
     await updateBlobMetadata({
@@ -212,6 +228,7 @@ export function createApiClient({keycloakConfig, recordImportApiUrl, recordImpor
     });
   }
 
+  // MARK: setRecordProcessed
   async function setRecordProcessed({id, status, metadata}) {
     debug('setRecordProcessed');
     await updateBlobMetadata({
@@ -223,19 +240,7 @@ export function createApiClient({keycloakConfig, recordImportApiUrl, recordImpor
     });
   }
 
-  async function setRecordQueued({id, title, standardIdentifiers}) {
-    debug('setRecordQueued');
-    debug(`${title}`);
-    debug(`${standardIdentifiers}`);
-    await updateBlobMetadata({
-      id,
-      payload: {
-        title, standardIdentifiers,
-        op: BLOB_UPDATE_OPERATIONS.recordQueued
-      }
-    });
-  }
-
+  // MARK: setCorrelationId
   async function setCorrelationId({id, correlationId}) {
     debug('setCorrelationId');
     await updateBlobMetadata({
@@ -247,6 +252,7 @@ export function createApiClient({keycloakConfig, recordImportApiUrl, recordImpor
     });
   }
 
+  // MARK: updateState
   async function updateState({id, state}) {
     debug('updateState');
     await updateBlobMetadata({
@@ -258,6 +264,7 @@ export function createApiClient({keycloakConfig, recordImportApiUrl, recordImpor
     });
   }
 
+  // MARK: getBlobs
   function getBlobs(query = {}) {
     debug('getBlobs');
     const blobsUrl = createURL();
@@ -286,22 +293,26 @@ export function createApiClient({keycloakConfig, recordImportApiUrl, recordImpor
     }
 
     async function pump(offset = false) {
-      const response = await doRequest(blobsUrl, getOptions(offset));
-      debug(`getBlobs response status: ${response.status}`);
+      try {
+        const response = await doRequest(blobsUrl, getOptions(offset));
+        debug(`getBlobs response status: ${response.status}`);
 
-      if (response.status === HttpStatus.OK) {
-        emitter.emit('blobs', await response.json());
+        if (response.status === httpStatus.OK) {
+          emitter.emit('blobs', await response.json());
 
-        if (response.headers.has('NextOffset')) {
-          pump(response.headers.get('NextOffset'));
+          if (response.headers.has('NextOffset')) {
+            pump(response.headers.get('NextOffset'));
+            return;
+          }
+
+          emitter.emit('end');
           return;
         }
 
-        emitter.emit('end');
-        return;
+        emitter.emit('error', new ApiError(response.status));
+      } catch (error) {
+        emitter.emit('error', error);
       }
-
-      emitter.emit('error', new ApiError(response.status));
 
       function getOptions(offset) {
         const options = {
@@ -321,10 +332,11 @@ export function createApiClient({keycloakConfig, recordImportApiUrl, recordImpor
     }
   }
 
+  // MARK: updateBlobMetadata
   async function updateBlobMetadata({id, payload}) {
     debug(`updateBlobMetadata: ${payload.op}`);
     const response = await doRequest(`${recordImportApiUrl}/blobs/${id}`, {
-      method: 'POST',
+      method: 'PUT',
       body: JSON.stringify(payload),
       headers: {
         'User-Agent': userAgent,
@@ -332,40 +344,38 @@ export function createApiClient({keycloakConfig, recordImportApiUrl, recordImpor
       }
     });
 
-    if (response.status !== HttpStatus.NO_CONTENT) { // eslint-disable-line functional/no-conditional-statements
+    if (response.status !== httpStatus.NO_CONTENT) { // eslint-disable-line functional/no-conditional-statements
       const errorMessage = await response.text();
       throw new ApiError(response.status, errorMessage);
     }
   }
 
   // Requests a new token once
+  // MARK: doRequest
   async function doRequest(reqUrl, reqOptions) {
     debug('doRequest');
     debug(`Request url: ${reqUrl}`);
-    const options = {headers: {}, ...reqOptions};
 
-    if (grant) {
-      await authOperator.verifyGrant(grant);
-      const authHeader = `Bearer ${grant.access_token.token}`;
-      debug(`Auth header ${authHeader.length > 7 ? 'set' : 'not set'}`);
-
-      options.headers.Authorization = authHeader; // eslint-disable-line functional/immutable-data
+    try {
+      const options = {headers: {}, ...reqOptions};
+      options.headers.Accept = 'html'; // eslint-disable-line functional/immutable-data
+      options.headers.Authorization = await serviceTokenOperator.getServiceAuthToken();
+      options.agent = new https.Agent({
+        rejectUnauthorized: !allowSelfSignedApiCert,
+      });
 
       const response = await fetch(reqUrl, options);
       debug(`doRequest response status: ${response.status}`);
 
-      if (response.status === HttpStatus.UNAUTHORIZED) {
+      if (response.status === httpStatus.UNAUTHORIZED) {
         const errorMessage = await response.text();
         throw new ApiError(response.status, errorMessage);
       }
 
       return response;
+    } catch (error) {
+      debug(error);
+      return {status: 500, message: 'Error on auth'};
     }
-
-    // eslint-disable-next-line require-atomic-updates
-    grant = await authOperator.getGrant({username: recordImportApiUsername, password: recordImportApiPassword});
-    debug('Auth Grant updated!');
-
-    return doRequest(reqUrl, reqOptions);
   }
 }

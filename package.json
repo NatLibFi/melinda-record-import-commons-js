@@ -41,6 +41,7 @@
 		"keycloak-connect": "^23.0.4",
 		"moment": "^2.29.4",
 		"node-fetch": "^2.7.0",
+		"openid-client": "^5.6.4",
 		"pretty-print-ms": "^1.0.5",
 		"rimraf": "^3.0.2",
 		"uuid": "^9.0.0",
