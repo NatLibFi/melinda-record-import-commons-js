@@ -359,7 +359,7 @@ export async function createApiClient({recordImportApiUrl, userAgent = 'Record i
       const options = {headers: {}, ...reqOptions};
       options.headers.Accept = 'html'; // eslint-disable-line functional/immutable-data
       options.headers.Authorization = await serviceTokenOperator.getServiceAuthToken(); // eslint-disable-line functional/immutable-data
-      options.agent = reqUrl.indexOf('https') >= 0 ? new https.Agent({rejectUnauthorized: !allowSelfSignedApiCert}) : undefined; // eslint-disable-line functional/immutable-data
+      options.agent = `${reqUrl}`.indexOf('https') >= 0 ? new https.Agent({rejectUnauthorized: !allowSelfSignedApiCert}) : undefined; // eslint-disable-line functional/immutable-data
 
       const response = await fetch(reqUrl, options);
       debug(`doRequest response status: ${response.status}`);
