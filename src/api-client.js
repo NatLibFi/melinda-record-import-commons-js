@@ -344,7 +344,8 @@ export async function createApiClient({recordImportApiUrl, userAgent = 'Record i
     });
 
     if (response.status !== httpStatus.NO_CONTENT) { // eslint-disable-line functional/no-conditional-statements
-      const errorMessage = await response.text();
+      debug(`Update blob got unexpected response status: ${response.status}`);
+      const errorMessage = await response?.text() || 'No error message';
       throw new ApiError(response.status, errorMessage);
     }
   }
