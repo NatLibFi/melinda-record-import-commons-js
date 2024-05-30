@@ -11,11 +11,11 @@ import {BLOB_STATE, BLOB_UPDATE_OPERATIONS} from './constants';
 import httpStatus from 'http-status';
 
 
-export default async function (MONGO_URI, collection) {
+export default async function (mongoUrl) {
   const logger = createLogger();
 
   // Connect to mongo (MONGO)
-  const client = await MongoClient.connect(MONGO_URI, {useNewUrlParser: true, useUnifiedTopology: true});
+  const client = await MongoClient.connect(mongoUrl, {useNewUrlParser: true, useUnifiedTopology: true});
   const db = client.db('db');
 
   return {readBlob, updateBlob};
@@ -79,7 +79,7 @@ export default async function (MONGO_URI, collection) {
             throw new ApiError(httpStatus.CONFLICT);
           }
 
-          const {modifiedCount} = await db.collection(collection).updateOne({clean}, doc);
+          const {modifiedCount} = await db.collection('blobmetadatas').updateOne({clean}, doc);
 
           if (modifiedCount === 0) { // eslint-disable-line functional/no-conditional-statements
             throw new ApiError(httpStatus.CONFLICT);
