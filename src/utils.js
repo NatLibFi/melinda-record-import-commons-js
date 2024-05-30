@@ -3,6 +3,23 @@ import createDebugLogger from 'debug';
 
 const debug = createDebugLogger('@natlibfi/melinda-record-import-commons:utils:dev');
 
+export function hasPermission(userGroups, permittedGroups = []) {
+  if (userGroups.includes('kvp')) {
+    return true;
+  }
+
+  if (hasGroup(permittedGroups) === true) {
+    return true;
+  }
+
+  console.log('Permitted groups does not match'); // eslint-disable-line
+  return false;
+
+  function hasGroup(permitted) {
+    return userGroups.some(g => permitted.includes(g));
+  }
+}
+
 export function isOfflinePeriod(importOfflinePeriod) {
   if (importOfflinePeriod === undefined) {
     return false;

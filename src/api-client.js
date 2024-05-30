@@ -9,7 +9,7 @@ import {createServiceAuthoperator} from './oidc.js';
 import httpStatus from 'http-status';
 
 export async function createApiClient({recordImportApiUrl, userAgent = 'Record import API client / Javascript', allowSelfSignedApiCert}, keycloakOptions) {
-  const debug = createDebugLogger('@natlibfi/melinda-record-import-commons:api-client:dev');
+  const debug = createDebugLogger('@natlibfi/melinda-record-import-commons:api-client');
   if (!keycloakOptions) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Keycloak options missing on record import api client creation');
   }
@@ -142,7 +142,7 @@ export async function createApiClient({recordImportApiUrl, userAgent = 'Record i
   async function modifyProfile({id, payload}) {
     debug('modifyProfile');
     const response = await doRequest(`${recordImportApiUrl}/profiles/${id}`, {
-      method: 'PUT',
+      method: 'POST',
       body: JSON.stringify(payload),
       headers: {
         'User-Agent': userAgent,
@@ -334,24 +334,31 @@ export async function createApiClient({recordImportApiUrl, userAgent = 'Record i
   // MARK: updateBlobMetadata
   async function updateBlobMetadata({id, payload}) {
     debug(`updateBlobMetadata: ${payload.op}`);
-    const response = await doRequest(`${recordImportApiUrl}/blobs/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(payload),
-      headers: {
-        'User-Agent': userAgent,
-        'content-type': 'application/json'
+    try {
+      const Authorization = await serviceTokenOperator.getServiceAuthToken();
+      debug(`updateBlobMetadata, AUTH: ${Authorization}`);
+
+      const response = await doRequest(`${recordImportApiUrl}/blobs/${id}`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+        headers: {
+          'User-Agent': userAgent,
+          'content-type': 'application/json',
+          Authorization
+        }
+      });
+
+      if (response.status === httpStatus.UNPROCESSABLE_ENTITY) {
+        debug(`Update blob got: ${response.status}`);
+        throw new ApiError(response.status, '');
       }
-    });
 
-    if (response.status !== httpStatus.UNPROCESSABLE_ENTITY) {
-      debug(`Update blob got: ${response.status}`);
-      throw new ApiError(response.status, '');
-    }
-
-    if (response.status !== httpStatus.NO_CONTENT) { // eslint-disable-line functional/no-conditional-statements
-      debug(`Update blob got unexpected response status: ${response.status}`);
-      const errorMessage = await response.text() || 'No error message';
-      throw new ApiError(response.status, errorMessage);
+      if (response.status !== httpStatus.NO_CONTENT) { // eslint-disable-line functional/no-conditional-statements
+        debug(`Update blob got unexpected response status: ${response.status}`);
+        throw new ApiError(response.status);
+      }
+    } catch (error) {
+      console.log(error); // eslint-disable-line
     }
   }
 
