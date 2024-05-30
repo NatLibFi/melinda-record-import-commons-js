@@ -3,7 +3,7 @@ import {BLOB_STATE} from '../constants';
 import {closeAmqpResources} from '../utils';
 import createDebugLogger from 'debug';
 
-export default function(riApiClient, transformHandler, amqplib, config) {
+export default function (riApiClient, transformHandler, amqplib, config) {
   const debug = createDebugLogger('@natlibfi/melinda-record-import-commons');
   const debugHandling = debug.extend('blobHandling');
   const debugRecordHandling = debug.extend('recordHandling');

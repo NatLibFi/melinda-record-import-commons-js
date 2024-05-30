@@ -8,7 +8,7 @@ import https from 'https';
 import {createServiceAuthoperator} from './oidc.js';
 import httpStatus from 'http-status';
 
-export async function createApiClient({recordImportApiUrl, userAgent = 'Record import API client / Javascript', allowSelfSignedApiCert}, keycloakOptions) {
+export async function createApiClient({recordImportApiUrl, userAgent = 'Record import API client / Javascript', allowSelfSignedApiCert}, keycloakOptions, mongoOperator = false) {
   const debug = createDebugLogger('@natlibfi/melinda-record-import-commons:api-client');
   if (!keycloakOptions) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Keycloak options missing on record import api client creation');
@@ -51,6 +51,17 @@ export async function createApiClient({recordImportApiUrl, userAgent = 'Record i
   // MARK: getBlobMetadata
   async function getBlobMetadata({id}) {
     debug('getBlobMetadata');
+
+    // eslint-disable-next-line functional/no-conditional-statements
+    if (mongoOperator) {
+      try {
+        const blob = await mongoOperator.readBlob({id});
+        return blob;
+      } catch (error) {
+        return false;
+      }
+    }
+
     const response = await doRequest(`${recordImportApiUrl}/blobs/${id}`, {
       headers: {
         'User-Agent': userAgent,
@@ -195,6 +206,17 @@ export async function createApiClient({recordImportApiUrl, userAgent = 'Record i
   // MARK: transformedRecord
   async function transformedRecord({id, error = undefined}) {
     debug('transformedRecord');
+    if (mongoOperator) {
+      await mongoOperator.updateBlob({
+        id,
+        payload: {
+          op: BLOB_UPDATE_OPERATIONS.transformedRecord,
+          error
+        }
+      });
+      return;
+    }
+
     await updateBlobMetadata({
       id,
       payload: {
@@ -207,6 +229,16 @@ export async function createApiClient({recordImportApiUrl, userAgent = 'Record i
   // MARK: setAborted
   async function setAborted({id}) {
     debug('blob setAborted');
+    if (mongoOperator) {
+      await mongoOperator.updateBlob({
+        id,
+        payload: {
+          op: BLOB_UPDATE_OPERATIONS.abort
+        }
+      });
+      return;
+    }
+
     await updateBlobMetadata({
       id,
       payload: {
@@ -230,6 +262,17 @@ export async function createApiClient({recordImportApiUrl, userAgent = 'Record i
   // MARK: setRecordProcessed
   async function setRecordProcessed({id, status, metadata}) {
     debug('setRecordProcessed');
+    if (mongoOperator) {
+      await mongoOperator.updateBlob({
+        id,
+        payload: {
+          status, metadata,
+          op: BLOB_UPDATE_OPERATIONS.recordProcessed
+        }
+      });
+      return;
+    }
+
     await updateBlobMetadata({
       id,
       payload: {
@@ -242,6 +285,17 @@ export async function createApiClient({recordImportApiUrl, userAgent = 'Record i
   // MARK: setCorrelationId
   async function setCorrelationId({id, correlationId}) {
     debug('setCorrelationId');
+    if (mongoOperator) {
+      await mongoOperator.updateBlob({
+        id,
+        payload: {
+          correlationId,
+          op: BLOB_UPDATE_OPERATIONS.addCorrelationId
+        }
+      });
+      return;
+    }
+
     await updateBlobMetadata({
       id,
       payload: {

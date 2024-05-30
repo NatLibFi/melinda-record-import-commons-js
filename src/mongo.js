@@ -6,7 +6,6 @@ import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
 import moment from 'moment';
 import sanitize from 'mongo-sanitize';
-import {hasPermission} from './utils';
 import {BLOB_STATE, BLOB_UPDATE_OPERATIONS} from './constants';
 import httpStatus from 'http-status';
 
@@ -21,19 +20,13 @@ export default async function (mongoUrl) {
   return {readBlob, updateBlob};
 
   // MARK: Read Blob
-  async function readBlob({id, user}) {
+  async function readBlob({id}) {
     const clean = sanitize(id);
     logger.debug(`Read blob: ${clean}`);
     const doc = await db.collection('blobmetadatas').findOne({id: clean});
 
     if (doc) {
-      const blob = formatBlobDocument(doc);
-      const profile = await getProfile(blob.profile);
-      if (hasPermission(user.roles.groups, profile.groups)) {
-        return blob;
-      }
-
-      throw new ApiError(httpStatus.FORBIDDEN, 'Blob read permission error');
+      return formatBlobDocument(doc);
     }
 
     throw new ApiError(httpStatus.NOT_FOUND, 'Blob not found');
@@ -57,46 +50,41 @@ export default async function (mongoUrl) {
   }
 
   // MARK: Update Blob
-  async function updateBlob({id, payload, user}) {
+  async function updateBlob({id, payload}) {
     const clean = sanitize(id);
     logger.debug(`Update blob: ${clean}`);
     const blob = await db.collection('blobmetadatas').findOne({id: clean});
 
     if (blob) {
-      const bgroups = await getProfile(blob.profile);
-      if (hasPermission(user.roles.groups, bgroups.groups)) {
-        const {op} = payload;
-        if (op) {
-          const doc = await getUpdateDoc(op);
+      const {op} = payload;
+      if (op) {
+        const doc = await getUpdateDoc(op);
 
-          const updateIfNotInStates = [BLOB_STATE.TRANSFORMATION_FAILED, BLOB_STATE.ABORTED, BLOB_STATE.PROCESSED];
-          if (updateIfNotInStates.includes(blob.state)) {
-            throw new ApiError(httpStatus.CONFLICT);
-          }
-
-          const {numberOfRecords, failedRecords, importResults} = blob.processingInfo;
-          if (op === BLOB_UPDATE_OPERATIONS.recordProcessed && numberOfRecords <= failedRecords.length + importResults.length) { // eslint-disable-line functional/no-conditional-statements
-            throw new ApiError(httpStatus.CONFLICT);
-          }
-
-          const {modifiedCount} = await db.collection('blobmetadatas').updateOne({clean}, doc);
-
-          if (modifiedCount === 0) { // eslint-disable-line functional/no-conditional-statements
-            throw new ApiError(httpStatus.CONFLICT);
-          }
-
-          /*if (melindaApiOptions.melindaApiUrl && doc.correlationId) {
-            await melindaApiClient.setBulkStatus(doc.correlationId, QUEUE_ITEM_STATE.ABORT);
-            return;
-          }*/
-
-          return;
+        const updateIfNotInStates = [BLOB_STATE.TRANSFORMATION_FAILED, BLOB_STATE.ABORTED, BLOB_STATE.PROCESSED];
+        if (updateIfNotInStates.includes(blob.state)) {
+          throw new ApiError(httpStatus.CONFLICT);
         }
 
-        throw new ApiError(httpStatus.UNPROCESSABLE_ENTITY, 'Blob update operation error');
+        const {numberOfRecords, failedRecords, importResults} = blob.processingInfo;
+        if (op === BLOB_UPDATE_OPERATIONS.recordProcessed && numberOfRecords <= failedRecords.length + importResults.length) { // eslint-disable-line functional/no-conditional-statements
+          throw new ApiError(httpStatus.CONFLICT);
+        }
+
+        const {modifiedCount} = await db.collection('blobmetadatas').updateOne({clean}, doc);
+
+        if (modifiedCount === 0) { // eslint-disable-line functional/no-conditional-statements
+          throw new ApiError(httpStatus.CONFLICT);
+        }
+
+        /*if (melindaApiOptions.melindaApiUrl && doc.correlationId) {
+          await melindaApiClient.setBulkStatus(doc.correlationId, QUEUE_ITEM_STATE.ABORT);
+          return;
+        }*/
+
+        return;
       }
 
-      throw new ApiError(httpStatus.FORBIDDEN, 'Blob update/abort permission error');
+      throw new ApiError(httpStatus.UNPROCESSABLE_ENTITY, 'Blob update operation error');
     }
 
     throw new ApiError(httpStatus.NOT_FOUND, 'Blob not found');
@@ -201,15 +189,5 @@ export default async function (mongoUrl) {
       logger.error(`Blob update case '${op}' was not found`);
       throw new ApiError(httpStatus.UNPROCESSABLE_ENTITY, 'Blob update operation error');
     }
-  }
-
-  // MARK: Get profile
-  async function getProfile(id) {
-    const profile = await db.collection('profiles').findOne({id});
-    if (profile) {
-      return profile;
-    }
-
-    return false;
   }
 }
