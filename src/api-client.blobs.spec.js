@@ -49,6 +49,7 @@ async function callback({getFixture, method, expectedError = false, expectedErro
           .on('blobs', blobs => {
             // Use console.log coz logger starts print with date and type
             // eslint-disable-next-line no-console
+            // console.log(blobs);
             blobsArray.push(blobs); //eslint-disable-line functional/immutable-data
           });
       });

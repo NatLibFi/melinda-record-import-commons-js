@@ -17,7 +17,7 @@ export default async function (mongoUrl) {
   const client = await MongoClient.connect(mongoUrl, {useNewUrlParser: true, useUnifiedTopology: true});
   const db = client.db('db');
 
-  return {readBlob, updateBlob};
+  return {readBlob, updateBlob, closeClient};
 
   // MARK: Read Blob
   async function readBlob({id}) {
@@ -189,5 +189,9 @@ export default async function (mongoUrl) {
       logger.error(`Blob update case '${op}' was not found`);
       throw new ApiError(httpStatus.UNPROCESSABLE_ENTITY, 'Blob update operation error');
     }
+  }
+
+  async function closeClient() {
+    client.close();
   }
 }

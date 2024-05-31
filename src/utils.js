@@ -1,7 +1,8 @@
 import moment from 'moment';
 import createDebugLogger from 'debug';
 
-const debug = createDebugLogger('@natlibfi/melinda-record-import-commons:utils:dev');
+const debug = createDebugLogger('@natlibfi/melinda-record-import-commons:utils');
+const debugDev = createDebugLogger('@natlibfi/melinda-record-import-commons:utils:dev');
 
 export function isOfflinePeriod(importOfflinePeriod) {
   if (importOfflinePeriod === undefined) {
@@ -28,7 +29,7 @@ export function isOfflinePeriod(importOfflinePeriod) {
 }
 
 export async function getNextBlobId(riApiClient, {profileIds, state, importOfflinePeriod}) {
-  debug(`Checking blobs for ${profileIds} in ${state}`);
+  debugDev(`Checking blobs for ${profileIds} in ${state}`);
   let result = ''; // eslint-disable-line functional/no-let
 
   try {
@@ -54,17 +55,19 @@ export async function getNextBlobId(riApiClient, {profileIds, state, importOffli
       const emitter = client.getBlobs(query);
 
       emitter
-        .on('error', reject)
+        .on('error', error => {
+          debug(error);
+          reject(error);
+        })
         .on('blobs', blobs => {
           const filteredBlobs = blobs.filter(filter);
           filteredBlobs.forEach(blob => wantedBlobs.push(blob)); // eslint-disable-line functional/immutable-data
         })
         .on('end', () => {
           if (messageCallback) { // eslint-disable-line functional/no-conditional-statements
-            debug(messageCallback(wantedBlobs.length));
+            debugDev(messageCallback(wantedBlobs.length));
           }
           const result = processCallback(wantedBlobs, updateState);
-
           resolve(result);
         });
     });
@@ -74,7 +77,7 @@ export async function getNextBlobId(riApiClient, {profileIds, state, importOffli
     const [blob] = blobs;
 
     if (blob === undefined || isOfflinePeriod(importOfflinePeriod)) {
-      debug('No blobs or offline period');
+      debugDev('No blobs or offline period');
       return false;
     }
 

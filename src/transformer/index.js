@@ -59,7 +59,7 @@ export default async function (riApiClient, transformHandler, amqplib, config) {
         }
         return false;
       } catch (error) {
-        debugCheckBlobInState(error);
+        debug(error);
       }
     }
 

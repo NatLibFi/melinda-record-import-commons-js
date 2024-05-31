@@ -351,7 +351,8 @@ export async function createApiClient({recordImportApiUrl, userAgent = 'Record i
         debug(`getBlobs response status: ${response.status}`);
 
         if (response.status === httpStatus.OK) {
-          emitter.emit('blobs', await response.json());
+          const blobs = await response.json();
+          emitter.emit('blobs', blobs);
 
           if (response.headers.has('NextOffset')) {
             pump(response.headers.get('NextOffset'));
