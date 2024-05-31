@@ -192,6 +192,6 @@ export default async function (mongoUrl) {
   }
 
   async function closeClient() {
-    client.close();
+    await client.close();
   }
 }
