@@ -50,7 +50,7 @@ export default async function (mongoUrl) {
   }
 
   // MARK: Update Blob
-  async function updateBlob({id, payload}) {
+  async function updateBlob({id, payload}, melindaApiClient = false) {
     const clean = sanitize(id);
     logger.debug(`Update blob: ${clean}`);
     const blob = await db.collection('blobmetadatas').findOne({id: clean});
@@ -70,16 +70,11 @@ export default async function (mongoUrl) {
           throw new ApiError(httpStatus.CONFLICT);
         }
 
-        const {modifiedCount} = await db.collection('blobmetadatas').updateOne({clean}, doc);
+        const {modifiedCount} = await db.collection('blobmetadatas').updateOne({id: clean}, doc);
 
         if (modifiedCount === 0) { // eslint-disable-line functional/no-conditional-statements
           throw new ApiError(httpStatus.CONFLICT);
         }
-
-        /*if (melindaApiOptions.melindaApiUrl && doc.correlationId) {
-          await melindaApiClient.setBulkStatus(doc.correlationId, QUEUE_ITEM_STATE.ABORT);
-          return;
-        }*/
 
         return;
       }

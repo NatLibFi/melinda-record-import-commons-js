@@ -206,45 +206,36 @@ export async function createApiClient({recordImportApiUrl, userAgent = 'Record i
   // MARK: transformedRecord
   async function transformedRecord({id, error = undefined}) {
     debug('transformedRecord');
-    if (mongoOperator) {
-      await mongoOperator.updateBlob({
-        id,
-        payload: {
-          op: BLOB_UPDATE_OPERATIONS.transformedRecord,
-          error
-        }
-      });
-      return;
-    }
-
-    await updateBlobMetadata({
+    const conf = {
       id,
       payload: {
         op: BLOB_UPDATE_OPERATIONS.transformedRecord,
         error
       }
-    });
+    };
+    if (mongoOperator) {
+      await mongoOperator.updateBlob(conf);
+      return;
+    }
+
+    await updateBlobMetadata(conf);
   }
 
   // MARK: setAborted
   async function setAborted({id}) {
     debug('blob setAborted');
-    if (mongoOperator) {
-      await mongoOperator.updateBlob({
-        id,
-        payload: {
-          op: BLOB_UPDATE_OPERATIONS.abort
-        }
-      });
-      return;
-    }
-
-    await updateBlobMetadata({
+    const conf = {
       id,
       payload: {
         op: BLOB_UPDATE_OPERATIONS.abort
       }
-    });
+    };
+    if (mongoOperator) {
+      await mongoOperator.updateBlob(conf);
+      return;
+    }
+
+    await updateBlobMetadata(conf);
   }
 
   // MARK: setTransformationFailed
@@ -262,47 +253,37 @@ export async function createApiClient({recordImportApiUrl, userAgent = 'Record i
   // MARK: setRecordProcessed
   async function setRecordProcessed({id, status, metadata}) {
     debug('setRecordProcessed');
-    if (mongoOperator) {
-      await mongoOperator.updateBlob({
-        id,
-        payload: {
-          status, metadata,
-          op: BLOB_UPDATE_OPERATIONS.recordProcessed
-        }
-      });
-      return;
-    }
-
-    await updateBlobMetadata({
+    const conf = {
       id,
       payload: {
         status, metadata,
         op: BLOB_UPDATE_OPERATIONS.recordProcessed
       }
-    });
+    };
+    if (mongoOperator) {
+      await mongoOperator.updateBlob(conf);
+      return;
+    }
+
+    await updateBlobMetadata(conf);
   }
 
   // MARK: setCorrelationId
   async function setCorrelationId({id, correlationId}) {
     debug('setCorrelationId');
-    if (mongoOperator) {
-      await mongoOperator.updateBlob({
-        id,
-        payload: {
-          correlationId,
-          op: BLOB_UPDATE_OPERATIONS.addCorrelationId
-        }
-      });
-      return;
-    }
-
-    await updateBlobMetadata({
+    const conf = {
       id,
       payload: {
         correlationId,
         op: BLOB_UPDATE_OPERATIONS.addCorrelationId
       }
-    });
+    };
+    if (mongoOperator) {
+      await mongoOperator.updateBlob(conf);
+      return;
+    }
+
+    await updateBlobMetadata(conf);
   }
 
   // MARK: updateState
