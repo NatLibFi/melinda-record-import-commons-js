@@ -50,7 +50,7 @@ export default async function (mongoUrl) {
   }
 
   // MARK: Update Blob
-  async function updateBlob({id, payload}, melindaApiClient = false) {
+  async function updateBlob({id, payload}) {
     const clean = sanitize(id);
     logger.debug(`Update blob: ${clean}`);
     const blob = await db.collection('blobmetadatas').findOne({id: clean});
