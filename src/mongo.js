@@ -112,17 +112,7 @@ export default async function (mongoUrl) {
       }
 
       if (op === abort) {
-        const {correlationId} = blob;
-
-        if (correlationId === '') {
-          return {
-            state: BLOB_STATE.ABORTED,
-            modificationTime: moment()
-          };
-        }
-
         return {
-          correlationId,
           state: BLOB_STATE.ABORTED,
           modificationTime: moment()
         };
