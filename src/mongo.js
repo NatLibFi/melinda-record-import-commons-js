@@ -70,7 +70,7 @@ export default async function (mongoUrl) {
           throw new ApiError(httpStatus.CONFLICT);
         }
 
-        const {modifiedCount} = await db.collection('blobmetadatas').updateOne({id: clean}, doc);
+        const {modifiedCount} = await db.collection('blobmetadatas').findOneAndUpdate({id: clean}, doc, {projection: {_id: 0}, returnNewDocument: false});
 
         if (modifiedCount === 0) { // eslint-disable-line functional/no-conditional-statements
           throw new ApiError(httpStatus.CONFLICT);
@@ -113,17 +113,19 @@ export default async function (mongoUrl) {
 
       if (op === abort) {
         return {
-          state: BLOB_STATE.ABORTED,
-          modificationTime: moment()
+          $set: {
+            state: BLOB_STATE.ABORTED,
+            modificationTime: moment()
+          }
         };
       }
 
       if (op === transformationFailed) {
         logger.debug(`case: ${op}, Error: ${payload.error}`);
         return {
-          state: BLOB_STATE.TRANSFORMATION_FAILED,
-          modificationTime: moment(),
           $set: {
+            state: BLOB_STATE.TRANSFORMATION_FAILED,
+            modificationTime: moment(),
             'processingInfo.transformationError': payload.error
           }
         };
@@ -133,7 +135,9 @@ export default async function (mongoUrl) {
         if (payload.error) {
           payload.error.timestamp = moment().format(); // eslint-disable-line new-cap, functional/immutable-data
           return {
-            modificationTime: moment(),
+            $set: {
+              modificationTime: moment()
+            },
             $push: {
               'processingInfo.failedRecords': payload.error
             },
@@ -144,7 +148,9 @@ export default async function (mongoUrl) {
         }
 
         return {
-          modificationTime: moment(),
+          $set: {
+            modificationTime: moment()
+          },
           $inc: {
             'processingInfo.numberOfRecords': 1
           }
@@ -153,7 +159,9 @@ export default async function (mongoUrl) {
 
       if (op === recordProcessed) {
         return {
-          modificationTime: moment(),
+          $set: {
+            modificationTime: moment()
+          },
           $push: {
             'processingInfo.importResults': {
               status: payload.status,
@@ -166,8 +174,10 @@ export default async function (mongoUrl) {
       if (op === addCorrelationId) {
         logger.debug(`case: ${op}, CorrelationId: ${payload.correlationId}`);
         return {
-          modificationTime: moment(),
-          correlationId: payload.correlationId
+          $set: {
+            modificationTime: moment(),
+            correlationId: payload.correlationId
+          }
         };
       }
 
