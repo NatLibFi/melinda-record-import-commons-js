@@ -54,12 +54,8 @@ export async function createApiClient({recordImportApiUrl, userAgent = 'Record i
 
     // eslint-disable-next-line functional/no-conditional-statements
     if (mongoOperator) {
-      try {
-        const blob = await mongoOperator.readBlob({id});
-        return blob;
-      } catch (error) {
-        return false;
-      }
+      const blob = await mongoOperator.readBlob({id});
+      return blob;
     }
 
     const response = await doRequest(`${recordImportApiUrl}/blobs/${id}`, {
@@ -372,7 +368,6 @@ export async function createApiClient({recordImportApiUrl, userAgent = 'Record i
     debug(`updateBlobMetadata: ${payload.op}`);
     try {
       const Authorization = await serviceTokenOperator.getServiceAuthToken();
-      debug(`updateBlobMetadata, AUTH: ${Authorization}`);
 
       const response = await doRequest(`${recordImportApiUrl}/blobs/${id}`, {
         method: 'POST',

@@ -32,8 +32,7 @@ export default async function (mongoUrl) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Blob not found');
 
     function formatBlobDocument(doc) {
-      const blob = doc._doc;
-
+      const blob = doc;
       return Object.keys(blob).reduce((acc, key) => {
         if ((/^_+/u).test(key)) {
           return acc;
