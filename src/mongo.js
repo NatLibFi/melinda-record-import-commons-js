@@ -114,7 +114,7 @@ export default async function (mongoUrl) {
         return {
           $set: {
             state: BLOB_STATE.ABORTED,
-            modificationTime: moment()
+            modificationTime: moment().format()
           }
         };
       }
@@ -124,7 +124,7 @@ export default async function (mongoUrl) {
         return {
           $set: {
             state: BLOB_STATE.TRANSFORMATION_FAILED,
-            modificationTime: moment(),
+            modificationTime: moment().format(),
             'processingInfo.transformationError': payload.error
           }
         };
@@ -135,7 +135,7 @@ export default async function (mongoUrl) {
           payload.error.timestamp = moment().format(); // eslint-disable-line new-cap, functional/immutable-data
           return {
             $set: {
-              modificationTime: moment()
+              modificationTime: moment().format()
             },
             $push: {
               'processingInfo.failedRecords': payload.error
@@ -148,7 +148,7 @@ export default async function (mongoUrl) {
 
         return {
           $set: {
-            modificationTime: moment()
+            modificationTime: moment().format()
           },
           $inc: {
             'processingInfo.numberOfRecords': 1
@@ -159,7 +159,7 @@ export default async function (mongoUrl) {
       if (op === recordProcessed) {
         return {
           $set: {
-            modificationTime: moment()
+            modificationTime: moment().format()
           },
           $push: {
             'processingInfo.importResults': {
@@ -174,7 +174,7 @@ export default async function (mongoUrl) {
         logger.debug(`case: ${op}, CorrelationId: ${payload.correlationId}`);
         return {
           $set: {
-            modificationTime: moment(),
+            modificationTime: moment().format(),
             correlationId: payload.correlationId
           }
         };
