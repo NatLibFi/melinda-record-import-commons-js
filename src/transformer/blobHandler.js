@@ -66,7 +66,6 @@ export default function (riApiClient, transformHandler, amqplib, config) {
           .on('cataloger', async cataloger => {
             debugHandling('Setting cataloger for blob');
             await riApiClient.setCataloger({id: blobId, cataloger});
-            reject(err);
           })
           .on('record', payload => {
             pendingPromises.push(startProcessing(payload)); // eslint-disable-line functional/immutable-data
