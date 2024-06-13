@@ -17,7 +17,7 @@ export async function createApiClient({recordImportApiUrl, userAgent = 'Record i
   const serviceTokenOperator = await createServiceAuthoperator(keycloakOptions);
   return {
     getBlobs, createBlob, getBlobMetadata, deleteBlob,
-    getBlobContent, deleteBlobContent,
+    getBlobContent, deleteBlobContent, setCataloger,
     getProfile, modifyProfile, queryProfiles, deleteProfile,
     setTransformationFailed, setCorrelationId, setRecordProcessed,
     transformedRecord, setAborted, updateState
@@ -254,6 +254,24 @@ export async function createApiClient({recordImportApiUrl, userAgent = 'Record i
       payload: {
         status, metadata,
         op: BLOB_UPDATE_OPERATIONS.recordProcessed
+      }
+    };
+    if (mongoOperator) {
+      await mongoOperator.updateBlob(conf);
+      return;
+    }
+
+    await updateBlobMetadata(conf);
+  }
+
+  // MARK: setCataloger
+  async function setCataloger({id, cataloger}) {
+    debug('setCataloger');
+    const conf = {
+      id,
+      payload: {
+        cataloger,
+        op: BLOB_UPDATE_OPERATIONS.setCataloger
       }
     };
     if (mongoOperator) {
