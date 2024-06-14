@@ -67,6 +67,10 @@ export default function (riApiClient, transformHandler, amqplib, config) {
             debugHandling('Setting cataloger for blob');
             await riApiClient.setCataloger({id: blobId, cataloger});
           })
+          .on('notificationEmail', async notificationEmail => {
+            debugHandling('Setting notification email for blob');
+            await riApiClient.setNotificationEmail({id: blobId, notificationEmail});
+          })
           .on('record', payload => {
             pendingPromises.push(startProcessing(payload)); // eslint-disable-line functional/immutable-data
 
