@@ -17,6 +17,7 @@ export const BLOB_UPDATE_OPERATIONS = {
   recordProcessed: 'recordProcessed',
   recordQueued: 'recordQueued',
   setCataloger: 'setCataloger',
+  setNotificationEmail: 'setNotificationEmail',
   transformationFailed: 'transformationFailed',
   transformedRecord: 'transformedRecord',
   updateState: 'updateState'
