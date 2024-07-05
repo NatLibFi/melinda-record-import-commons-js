@@ -1,12 +1,14 @@
 /* eslint-disable camelcase */
 import {Issuer} from 'openid-client';
 import {promisify} from 'util';
+import createDebugLogger from 'debug';
 
 const setTimeoutPromise = promisify(setTimeout);
-
+const debug = createDebugLogger('@natlibfi/melinda-record-import-commons:oidc');
 
 export async function createServiceAuthoperator(keycloakOptions) {
   if (keycloakOptions.test === true) {
+    debug('Setting mock Auth tokens');
     await setTimeoutPromise(1);
     return {
       getServiceAuthToken: async () => {
@@ -15,7 +17,6 @@ export async function createServiceAuthoperator(keycloakOptions) {
       }
     };
   }
-
 
   let serviceTokenSet; // eslint-disable-line functional/no-let
 
@@ -41,8 +42,9 @@ export async function createServiceAuthoperator(keycloakOptions) {
     return serviceTokenSet.access_token;
 
     function serviceTokensRequireRefresh() {
-      const mandatoryAttributes = ['refresh_token', 'expires_at'];
+      const mandatoryAttributes = ['expires_at'];
       if (!mandatoryAttributes.every(attr => Object.keys(serviceTokenSet).includes(attr))) {
+        debug('Invalid serviceTokenSet');
         return true;
       }
 
@@ -52,6 +54,7 @@ export async function createServiceAuthoperator(keycloakOptions) {
     }
 
     async function refreshServiceTokenSet() {
+      debug('Auth serviceTokenSet refreshed');
       serviceTokenSet = await serviceClient.grant({grant_type: 'client_credentials'});
     }
   }
