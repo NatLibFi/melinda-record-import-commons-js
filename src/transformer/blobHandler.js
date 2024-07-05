@@ -96,7 +96,6 @@ export default function (riApiClient, transformHandler, amqplib, config) {
       }
 
       await startProcessing(recordResult);
-      await setTimeoutPromise(2);
       return handleRecordResultsPump(rest);
 
 
