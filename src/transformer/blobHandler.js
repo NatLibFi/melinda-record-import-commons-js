@@ -35,6 +35,7 @@ export default function (riApiClient, transformHandler, amqplib, config) {
           .on('end', async () => {
             debugHandling(`Transformer has handled all record to line. ${recordPayloads.length} records`);
             await setTimeoutPromise(50);
+            debugHandling(`All records are transformed`);
             resolve(true);
           })
           .on('error', async err => {
@@ -61,12 +62,14 @@ export default function (riApiClient, transformHandler, amqplib, config) {
         return;
       }
 
+      debugHandling(`Abort on invalid records was false or all records were okay. Queuing records...`);
       const pendingQueuings = recordPayloads.map(recordPayload => handleRecord(recordPayload));
       await Promise.all(pendingQueuings);
 
-      debugHandling(`Transforming is done (All Promises resolved)`);
+      debugHandling(`All records queued`);
       debugHandling(`Setting blob state ${BLOB_STATE.TRANSFORMED}...`);
       await riApiClient.updateState({id: blobId, state: BLOB_STATE.TRANSFORMED});
+      return;
     } catch (err) {
       const error = getError(err);
       debugHandling(`Failed transforming blob: ${error}`);
