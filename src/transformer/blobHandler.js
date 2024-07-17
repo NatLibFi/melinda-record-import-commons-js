@@ -3,7 +3,6 @@ import {v4 as uuid} from 'uuid';
 import {promisify} from 'util';
 
 import {BLOB_STATE} from '../constants';
-import {closeAmqpResources} from '../utils';
 
 export default function (riApiClient, transformHandler, amqplib, config) {
   const debug = createDebugLogger('@natlibfi/melinda-record-import-commons');
@@ -68,14 +67,14 @@ export default function (riApiClient, transformHandler, amqplib, config) {
       debugHandling(`Setting blob state ${BLOB_STATE.TRANSFORMED}...`);
       await riApiClient.updateState({id: blobId, state: BLOB_STATE.TRANSFORMED});
       debugHandling(`Closing AMQP resources!`);
-      await closeAmqpResources({connection, channel});
+      connection.close();
       return;
     } catch (err) {
       const error = getError(err);
       debugHandling(`Failed transforming blob: ${error}`);
       await riApiClient.setTransformationFailed({id: blobId, error});
       debugHandling(`Closing AMQP resources!`);
-      await closeAmqpResources({connection, channel});
+      connection.close();
       return;
     }
 

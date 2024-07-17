@@ -86,21 +86,3 @@ export async function getNextBlobId(riApiClient, {profileIds, state, importOffli
     return {id, profile, correlationId};
   }
 }
-
-export async function closeAmqpResources({connection, channel}) {
-  if (channel) {
-    await channel.close();
-    await closeConnection();
-    return;
-  }
-
-  await closeConnection();
-  return;
-
-  function closeConnection() {
-    if (connection) {
-      return connection.close();
-    }
-    return;
-  }
-}
