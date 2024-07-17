@@ -63,10 +63,8 @@ export default function (riApiClient, transformHandler, amqplib, config) {
       }
 
       debugHandling(`Abort on invalid records was false or all records were okay. Queuing records...`);
-      const pendingQueuings = recordPayloads.map(recordPayload => handleRecord(recordPayload));
-      await Promise.all(pendingQueuings);
+      await handleRecords(recordPayloads);
 
-      debugHandling(`All records queued`);
       debugHandling(`Setting blob state ${BLOB_STATE.TRANSFORMED}...`);
       await riApiClient.updateState({id: blobId, state: BLOB_STATE.TRANSFORMED});
       return;
@@ -75,6 +73,7 @@ export default function (riApiClient, transformHandler, amqplib, config) {
       debugHandling(`Failed transforming blob: ${error}`);
       await riApiClient.setTransformationFailed({id: blobId, error});
     } finally {
+      debugHandling(`Closing AMQP resources!`);
       await closeAmqpResources({connection, channel});
     }
 
@@ -82,29 +81,31 @@ export default function (riApiClient, transformHandler, amqplib, config) {
       return JSON.stringify(err.stack || err.message || err);
     }
 
-    async function handleRecord(payload) {
-      await sendRecordToQueue(payload);
-      await updateBlob(payload);
-      return;
+    async function handleRecords(recordPayloads) {
+      const [recordPayload, ...rest] = recordPayloads;
 
-      async function sendRecordToQueue(payload) {
-        if (!payload.failed) {
-          try {
-            const message = Buffer.from(JSON.stringify(payload.record));
-            await new Promise((resolve, reject) => {
-              channel.sendToQueue(blobId, message, {persistent: true, messageId: uuid()}, (err) => {
-                if (err !== null) { // eslint-disable-line functional/no-conditional-statements
-                  reject(err);
-                }
+      if (recordPayload === undefined) {
+        debugHandling(`All records queued`);
+        return;
+      }
 
-                debugHandling(`Record send to queue`);
-                resolve();
-              });
-            });
-          } catch (err) {
-            throw new Error(`Error while sending record to queue: ${getError(err)}`);
+      await sendRecordToQueue(recordPayload);
+      await updateBlob(recordPayload);
+      return handleRecords(rest);
+
+      async function sendRecordToQueue(recordPayload) {
+        try {
+          if (!recordPayload.failed) {
+            const message = Buffer.from(JSON.stringify(recordPayload.record));
+            await channel.sendToQueue(blobId, message, {persistent: true, messageId: uuid()});
+            debugRecordHandling(`Record send to queue`);
+            return;
           }
+
+          debugRecordHandling(`Record failed, skip queuing!`);
           return;
+        } catch (err) {
+          throw new Error(`Error while sending record to queue: ${getError(err)}`);
         }
       }
 
