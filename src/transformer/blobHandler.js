@@ -34,7 +34,7 @@ export default function (riApiClient, transformHandler, amqplib, config) {
         TransformEmitter
           .on('end', async () => {
             try {
-              debugHandling(`Transformer has handled all record promises to line, waiting ${pendingQueuings.length} to be resolved`);
+              debugHandling(`Transformer has handled all record to line. ${recordPayloads.length} records`);
               await setTimeoutPromise(50);
               return resolve(true);
             } catch (err) {
@@ -57,12 +57,12 @@ export default function (riApiClient, transformHandler, amqplib, config) {
             await riApiClient.setNotificationEmail({id: blobId, notificationEmail});
           })
           .on('record', payload => {
-            recordPayloads.push(payload);
+            recordPayloads.push(payload); // eslint-disable-line functional/immutable-data
           });
       });
 
 
-      if (abortOnInvalidRecords && recordPayloads.some(payload.failed)) {
+      if (abortOnInvalidRecords && recordPayloads.some(recordPayload => recordPayload.failed === true)) {
         debugHandling('Not sending records to queue because some records failed and abortOnInvalidRecords is true');
         await riApiClient.setTransformationFailed({id: blobId, error: {message: 'Some records have failed'}});
         return;
