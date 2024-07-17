@@ -95,10 +95,12 @@ export async function closeAmqpResources({connection, channel}) {
   }
 
   await closeConnection();
+  return;
 
   function closeConnection() {
     if (connection) {
       return connection.close();
     }
+    return;
   }
 }

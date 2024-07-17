@@ -67,14 +67,16 @@ export default function (riApiClient, transformHandler, amqplib, config) {
 
       debugHandling(`Setting blob state ${BLOB_STATE.TRANSFORMED}...`);
       await riApiClient.updateState({id: blobId, state: BLOB_STATE.TRANSFORMED});
+      debugHandling(`Closing AMQP resources!`);
+      await closeAmqpResources({connection, channel});
       return;
     } catch (err) {
       const error = getError(err);
       debugHandling(`Failed transforming blob: ${error}`);
       await riApiClient.setTransformationFailed({id: blobId, error});
-    } finally {
       debugHandling(`Closing AMQP resources!`);
       await closeAmqpResources({connection, channel});
+      return;
     }
 
     function getError(err) {
