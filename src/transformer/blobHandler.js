@@ -24,8 +24,9 @@ export default function (riApiClient, transformHandler, amqplib, config) {
       const {readStream} = await riApiClient.getBlobContent({id: blobId});
 
       connection = await amqplib.connect(amqpUrl);
-      channel = await connection.createConfirmChannel();
-      channel.assertQueue(blobId, {durable: true});
+      channel = await connection.createChannel();
+      await channel.assertQueue(blobId, {durable: true});
+      await channel.purgeQueue(blobId);
 
       const TransformEmitter = transformHandler(readStream);
 
@@ -58,6 +59,7 @@ export default function (riApiClient, transformHandler, amqplib, config) {
       if (abortOnInvalidRecords && recordPayloads.some(recordPayload => recordPayload.failed === true)) {
         debugHandling('Not sending records to queue because some records failed and abortOnInvalidRecords is true');
         await riApiClient.setTransformationFailed({id: blobId, error: {message: 'Some records have failed'}});
+        connection.close();
         return;
       }
 
