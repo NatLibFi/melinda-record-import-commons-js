@@ -12,11 +12,11 @@ export function isOfflinePeriod(importOfflinePeriod, nowTime = false) {
 
   const {startHour, lengthHours} = importOfflinePeriod;
   const now = nowTime ? new Date(nowTime) : new Date();
-  debugDev('now: ', formatISO(now)); // eslint-disable-line
+  console.log('now: ', formatISO(now)); // eslint-disable-line
   const todaysOfflineStart = set(now, {hours: startHour, minutes: 0, seconds: 0, milliseconds: 0});
-  debugDev('today offline starts: ', formatISO(todaysOfflineStart)); // eslint-disable-line
+  console.log('today offline starts: ', formatISO(todaysOfflineStart)); // eslint-disable-line
   const todaysOfflineEnd = add(todaysOfflineStart, {hours: lengthHours});
-  debugDev('today offline ends: ', formatISO(todaysOfflineEnd)); // eslint-disable-line
+  console.log('today offline ends: ', formatISO(todaysOfflineEnd)); // eslint-disable-line
 
   if (isAfter(now, todaysOfflineStart) && isBefore(now, todaysOfflineEnd)) {
     debugDev('Now is todays offline hours!'); // eslint-disable-line
