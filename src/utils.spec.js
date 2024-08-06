@@ -14,16 +14,15 @@ generateTests({
   }
 });
 
-async function callback({
-  getFixture,
+function callback({
   method = '',
-  importOfflinePeriod = {startHour: 12, lengthHours: 2},
-  nowTime = '2024-07-30T22:01:00.000Z',
+  importOfflinePeriod,
+  nowTime,
+  expectedResult,
   expectedToFail = false,
   expectedErrorStatus = 200,
   expectedErrorMessage = ''
 }) {
-  const {result: expectedResult} = await getFixture('expectedResult.json');
   try {
     if (method === 'isOfflinePeriod') {
       const result = isOfflinePeriod(importOfflinePeriod, nowTime);

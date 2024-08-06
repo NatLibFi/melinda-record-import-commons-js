@@ -1,5 +1,6 @@
 //import moment from 'moment';
-import {add, formatISO, isAfter, isBefore, set} from 'date-fns';
+import {add, formatISO, isAfter, isBefore, set, setDefaultOptions} from 'date-fns';
+import {fi} from 'date-fns/locale';
 import createDebugLogger from 'debug';
 
 const debug = createDebugLogger('@natlibfi/melinda-record-import-commons:utils');
@@ -10,13 +11,15 @@ export function isOfflinePeriod(importOfflinePeriod, nowTime = false) {
     return false;
   }
 
+  setDefaultOptions({weekStartsOn: 1, locale: fi});
+
   const {startHour, lengthHours} = importOfflinePeriod;
   const now = nowTime ? new Date(nowTime) : new Date();
-  console.log('now: ', formatISO(now)); // eslint-disable-line
+  debugDev('now: ', formatISO(now)); // eslint-disable-line
   const todaysOfflineStart = set(now, {hours: startHour, minutes: 0, seconds: 0, milliseconds: 0});
-  console.log('today offline starts: ', formatISO(todaysOfflineStart)); // eslint-disable-line
+  debugDev('today offline starts: ', formatISO(todaysOfflineStart)); // eslint-disable-line
   const todaysOfflineEnd = add(todaysOfflineStart, {hours: lengthHours});
-  console.log('today offline ends: ', formatISO(todaysOfflineEnd)); // eslint-disable-line
+  debugDev('today offline ends: ', formatISO(todaysOfflineEnd)); // eslint-disable-line
 
   if (isAfter(now, todaysOfflineStart) && isBefore(now, todaysOfflineEnd)) {
     debugDev('Now is todays offline hours!'); // eslint-disable-line
