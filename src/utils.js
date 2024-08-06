@@ -1,31 +1,45 @@
-import moment from 'moment';
+//import moment from 'moment';
+import {add, formatISO, isAfter, isBefore, set} from 'date-fns';
 import createDebugLogger from 'debug';
 
 const debug = createDebugLogger('@natlibfi/melinda-record-import-commons:utils');
 const debugDev = createDebugLogger('@natlibfi/melinda-record-import-commons:utils:dev');
 
-export function isOfflinePeriod(importOfflinePeriod) {
+export function isOfflinePeriod(importOfflinePeriod, nowTime = false) {
   if (importOfflinePeriod === undefined) {
     return false;
   }
 
   const {startHour, lengthHours} = importOfflinePeriod;
-  const now = moment();
+  const now = nowTime ? new Date(nowTime) : new Date();
+  debugDev('now: ', formatISO(now)); // eslint-disable-line
+  const todaysOfflineStart = set(now, {hours: startHour, minutes: 0, seconds: 0, milliseconds: 0});
+  debugDev('today offline starts: ', formatISO(todaysOfflineStart)); // eslint-disable-line
+  const todaysOfflineEnd = add(todaysOfflineStart, {hours: lengthHours});
+  debugDev('today offline ends: ', formatISO(todaysOfflineEnd)); // eslint-disable-line
 
-  if (startHour !== undefined && lengthHours !== undefined) {
-    if (now.hour() < startHour) {
-      const start = moment(now).hour(startHour).subtract(1, 'days');
-      return check(start);
-    }
-
-    const start = moment(now).hour(startHour);
-    return check(start);
+  if (isAfter(now, todaysOfflineStart) && isBefore(now, todaysOfflineEnd)) {
+    debugDev('Now is todays offline hours!'); // eslint-disable-line
+    return true;
   }
 
-  function check(startTime) {
-    const endTime = moment(startTime).add(lengthHours, 'hours');
-    return now >= startTime && now < endTime;
+  if (isAfter(now, todaysOfflineEnd)) {
+    debugDev('Now is after todays offline hours!'); // eslint-disable-line
+    return false;
   }
+
+  const yesterdaysOfflineStart = set(add(now, {days: -1}), {hours: startHour, minutes: 0, seconds: 0, milliseconds: 0});
+  debugDev('yesterdays offline starts: ', formatISO(yesterdaysOfflineStart)); // eslint-disable-line
+  const yesterdaysOfflineEnd = add(yesterdaysOfflineStart, {hours: lengthHours});
+  debugDev('yesterdays offline ends: ', formatISO(yesterdaysOfflineEnd)); // eslint-disable-line
+
+  if (isBefore(now, yesterdaysOfflineEnd)) {
+    debugDev('Now is yesterdays offline hours!'); // eslint-disable-line
+    return true;
+  }
+
+  debugDev('Now is before todays offline hours!'); // eslint-disable-line
+  return false;
 }
 
 export async function getNextBlobId(riApiClient, {profileIds, state, importOfflinePeriod}) {
