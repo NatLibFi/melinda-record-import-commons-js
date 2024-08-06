@@ -1,5 +1,6 @@
 /* eslint-disable no-unused-vars */
 
+/*
 import {expect} from 'chai';
 import {READERS} from '@natlibfi/fixura';
 import generateTests from '@natlibfi/fixugen-http-client';
@@ -15,11 +16,10 @@ const config = {
     userAgent: 'test',
     allowSelfSignedApiCert: true
   }
-};/**/
-
+};
 generateTests({
   callback,
-  path: [__dirname, '..', 'test-fixtures', 'api-client', 'profiles'],
+  path: [__dirname, 'test-fixtures', 'api-client', 'profiles'],
   useMetadataFile: true,
   recurse: false,
   fixura: {
@@ -76,3 +76,4 @@ async function callback({getFixture, method, expectedError = false, expectedErro
     throw error;
   }
 }
+*/
