@@ -1,0 +1,7 @@
+{
+  "description": "Read blob: id 001 => Blob state",
+  "only": false,
+  "operationParams": {
+    "id": "001"
+  }
+}

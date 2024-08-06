@@ -1,0 +1,20 @@
+{
+  "blobmetadatas": [
+    {
+      "processingInfo": {
+        "numberOfRecords": 0,
+        "failedRecords": [],
+        "importResults": []
+      },
+      "notificationEmail": "",
+      "id": "001",
+      "correlationId": "",
+      "profile": "profile",
+      "cataloger": "",
+      "contentType": "application/json",
+      "state": "UPLOADING",
+      "creationTime": "2024-07-31T05:50:00.000Z",
+      "modificationTime": "2024-07-31T05:51:00.000Z"
+    }
+  ]
+}

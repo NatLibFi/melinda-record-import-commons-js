@@ -1,0 +1,16 @@
+{
+  "processingInfo": {
+    "numberOfRecords": 96,
+    "failedRecords": [],
+    "importResults": []
+  },
+  "id": "15a14003-7ce2-4d02-9651-24a627beb0f4",
+  "correlationId": "c87027f6-81cb-4c25-83ab-15253fe56080",
+  "profile": "profile",
+  "cataloger": "",
+  "notificationEmail": "",
+  "contentType": "application/json",
+  "state": "ABORTED",
+  "creationTime": "2024-07-31T05:50:00.000Z",
+  "modificationTime": "2024-07-31T05:51:00.000Z"
+}

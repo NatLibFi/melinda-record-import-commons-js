@@ -1,0 +1,7 @@
+{
+  "description": "Read blob content: id 001 => JSON parse => OK",
+  "only": false,
+  "operationParams": {
+    "id": "001"
+  }
+}

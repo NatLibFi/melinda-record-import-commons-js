@@ -1,0 +1,14 @@
+{
+  "description": "PENDING_TRANSFORMATION => transformedRecord (record queued) => OK",
+  "only": false,
+  "operationParams": {
+    "id": "001",
+    "payload": {
+      "op": "transformedRecord",
+      "test": true
+    }
+  },
+  "expectedToFail": false,
+  "expectedErrorStatus": 200,
+  "expectedErrorMessage": ""
+}

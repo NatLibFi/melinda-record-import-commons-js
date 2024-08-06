@@ -1,0 +1,20 @@
+{
+  "blobmetadatas": [
+    {
+      "id": "001",
+      "correlationId": "00a",
+      "profile": "profile",
+      "cataloger": "",
+      "notificationEmail": "",
+      "contentType": "application/json",
+      "state": "PROCESSED",
+      "creationTime": "2024-07-30T11:08:30.000+03:00",
+      "modificationTime": "2024-07-30T11:20:39.000+03:00",
+      "numberOfRecords": 10,
+      "failedRecords": 2,
+      "processedRecords": 8,
+      "url": "http://localhost:8081/blobs/001"
+    }
+  ],
+  "blobmetadatas.files": []
+}

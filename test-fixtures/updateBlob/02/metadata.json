@@ -1,0 +1,15 @@
+{
+  "description": "Update blob => id 001 => state PROCESSED to TRANSFORMED => error",
+  "only": false,
+  "operationParams": {
+    "id": "001",
+    "payload": {
+      "op": "updateState",
+      "state": "TRANSFORMED",
+      "test": true
+    }
+  },
+  "expectedToFail": true,
+  "expectedErrorStatus": 409,
+  "expectedErrorMessage": "Not valid blob state for update"
+}
