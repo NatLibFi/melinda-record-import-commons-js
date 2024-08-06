@@ -8,7 +8,6 @@ import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
 
 import {BLOB_STATE, BLOB_UPDATE_OPERATIONS} from './constants';
-// import {v4 as uuid} from 'uuid';
 
 export async function createMongoOperator(mongoUrl, {db = 'db', collection = 'blobmetadatas'} = {db: 'db', collection: 'blobmetadatas'}) {
   const logger = createLogger();
