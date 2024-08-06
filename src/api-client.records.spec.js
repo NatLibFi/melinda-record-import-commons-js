@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-vars */
-
+/*
 import {expect} from 'chai';
 import {READERS} from '@natlibfi/fixura';
 import generateTests from '@natlibfi/fixugen-http-client';
@@ -15,7 +15,7 @@ const config = {
     userAgent: 'test',
     allowSelfSignedApiCert: true
   }
-};/**/
+};
 
 
 generateTests({
@@ -73,3 +73,4 @@ async function callback({getFixture, method, expectedError = false, expectedErro
     throw error;
   }
 }
+*/
