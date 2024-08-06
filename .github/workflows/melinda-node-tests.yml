@@ -8,6 +8,8 @@ jobs:
   build-node-versions:
     name: Node version matrix
     runs-on: ubuntu-latest
+    env:
+      TZ: Europe/Helsinki
 
     strategy:
       matrix:
