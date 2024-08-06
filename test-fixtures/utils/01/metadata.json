@@ -1,6 +1,6 @@
 {
   "description": "YOE 2024-07-30T01:00:00+03:00 < NOW 2024-07-30T04:01:00+03:00 < TOS 2024-07-30T22:00:00+03:00",
-  "only": false,
+  "only": true,
   "method": "isOfflinePeriod",
   "importOfflinePeriod": {
     "startHour": 22,
