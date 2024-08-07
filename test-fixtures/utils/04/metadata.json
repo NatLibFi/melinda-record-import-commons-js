@@ -1,5 +1,5 @@
 {
-  "description": "TOE 2024-07-30T13:00:00+03:00 > NOW 2024-07-30T22:01:00+03:00",
+  "description": "Todays offline end time < NOW => false",
   "only": false,
   "method": "isOfflinePeriod",
   "importOfflinePeriod": {

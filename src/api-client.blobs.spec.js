@@ -16,7 +16,7 @@ const config = {
     userAgent: 'test',
     allowSelfSignedApiCert: true
   }
-};/**/
+};
 
 generateTests({
   callback,
