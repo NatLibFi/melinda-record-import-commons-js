@@ -40,7 +40,7 @@
 		"date-fns": "^3.6.0",
 		"debug": "^4.3.4",
 		"http-status": "^1.6.2",
-		"keycloak-connect": "^23.0.4",
+		"keycloak-connect": "^25.0.5",
 		"mongo-sanitize": "^1.1.0",
 		"mongodb": "^6.8.0",
 		"node-fetch": "^2.7.0",
