@@ -1,0 +1,8 @@
+{
+  "description": "Query blob: creationTime 2024-08-30T12:00:00.000Z => 1 Blob",
+  "only": false,
+  "operationParams": {
+    "creationTime": "2024-08-30T12:00:00.000Z",
+    "test": true
+  }
+}

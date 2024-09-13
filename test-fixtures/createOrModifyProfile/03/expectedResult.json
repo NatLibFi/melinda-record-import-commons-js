@@ -1,0 +1,22 @@
+{
+  "profiles": [
+    {
+      "id": "profile1",
+      "groups": [
+        "profile"
+      ]
+    },
+    {
+      "id": "profile2",
+      "groups": [
+        "profile2"
+      ]
+    },
+    {
+      "id": "profile1s",
+      "groups": [
+        "profile1"
+      ]
+    }
+  ]
+}

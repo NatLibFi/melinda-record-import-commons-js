@@ -1,0 +1,12 @@
+{
+  "description": "Create or modify profile: Creates new profile",
+  "only": false,
+  "operationParams": {
+    "id": "profile1",
+    "payload": {
+      "groups": [
+        "profile1"
+      ]
+    }
+  }
+}

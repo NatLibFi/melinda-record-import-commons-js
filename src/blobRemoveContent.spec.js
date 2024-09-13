@@ -2,7 +2,7 @@ import {expect} from 'chai';
 import {READERS} from '@natlibfi/fixura';
 import mongoFixturesFactory from '@natlibfi/fixura-mongo';
 import generateTests from '@natlibfi/fixugen';
-import {createMongoOperator} from './mongoBlobs.js';
+import {createMongoBlobsOperator} from './mongoBlobs.js';
 
 let mongoFixtures; // eslint-disable-line functional/no-let
 
@@ -47,7 +47,7 @@ async function callback({
 }) {
   const mongoUri = await mongoFixtures.getUri();
   await mongoFixtures.populate(getFixture({components: ['dbContents.json'], reader: READERS.JSON}));
-  const mongoOperator = await createMongoOperator(mongoUri, {db: '', collection: 'blobmetadatas'});
+  const mongoOperator = await createMongoBlobsOperator(mongoUri, {db: '', collection: 'blobmetadatas'});
   const expectedResult = await getFixture({components: ['expectedResult.json'], reader: READERS.JSON});
   try {
     await mongoOperator.removeBlobContent(operationParams);

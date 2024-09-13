@@ -1,0 +1,7 @@
+{
+  "description": "Remove profile: id profile1 => removed",
+  "only": false,
+  "operationParams": {
+    "id": "profile1"
+  }
+}

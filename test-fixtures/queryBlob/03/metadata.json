@@ -1,0 +1,8 @@
+{
+  "description": "Query blob: creationTime 2024-08-30 => 1 Blob",
+  "only": false,
+  "operationParams": {
+    "creationTime": "2024-08-30",
+    "test": true
+  }
+}

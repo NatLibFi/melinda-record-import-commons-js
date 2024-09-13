@@ -88,6 +88,12 @@
 			}
 		}
 	},
+	"mocha": {
+		"timeout": "20000",
+		"exit": true,
+		"bail": true,
+		"require": "@babel/register"
+	},
 	"nyc": {
 		"exclude": [
 			"*/*.spec.js"

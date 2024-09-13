@@ -26,6 +26,7 @@ export async function createApiClient({recordImportApiUrl, userAgent = 'Record i
   // MARK: createBLob
   async function createBlob({blob, type, profile}) {
     debug('createBlob');
+
     const response = await doRequest(`${recordImportApiUrl}/blobs`, {
       method: 'POST',
       body: blob,
@@ -76,6 +77,13 @@ export async function createApiClient({recordImportApiUrl, userAgent = 'Record i
   // MARK: getBlobContent
   async function getBlobContent({id}) {
     debug('getBlobContent');
+
+    // eslint-disable-next-line functional/no-conditional-statements
+    if (mongoOperator) {
+      const readStream = await mongoOperator.readBlobContent({id});
+      return {readStream};
+    }
+
     const response = await doRequest(`${recordImportApiUrl}/blobs/${id}/content`, {
       headers: {
         'User-Agent': userAgent

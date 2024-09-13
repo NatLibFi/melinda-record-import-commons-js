@@ -1,0 +1,7 @@
+{
+  "description": "Query blob: profile: profile => 2 Blob",
+  "only": false,
+  "operationParams": {
+    "profile": "profile"
+  }
+}

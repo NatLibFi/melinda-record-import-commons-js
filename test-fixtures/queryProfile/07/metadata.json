@@ -1,0 +1,7 @@
+{
+  "description": "Query profile: foo: bar => {} => 4 profile",
+  "only": false,
+  "operationParams": {
+    "foo": "bar"
+  }
+}

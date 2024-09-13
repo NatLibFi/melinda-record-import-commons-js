@@ -2,6 +2,7 @@
 import {add, formatISO, isAfter, isBefore, set, setDefaultOptions} from 'date-fns';
 import {fi} from 'date-fns/locale';
 import createDebugLogger from 'debug';
+import sanitize from 'mongo-sanitize';
 
 const debug = createDebugLogger('@natlibfi/melinda-record-import-commons:utils');
 const debugDev = createDebugLogger('@natlibfi/melinda-record-import-commons:utils:dev');
@@ -43,6 +44,87 @@ export function isOfflinePeriod(importOfflinePeriod, nowTime = false) {
 
   debugDev('Now is before todays offline hours!'); // eslint-disable-line
   return false;
+}
+
+export function generateBlobQuery({profile, state, contentType, creationTime, modificationTime, test}) {
+  const doc = {};
+
+  if (profile) { // eslint-disable-line functional/no-conditional-statements
+    doc.profile = sanitize(profile); // eslint-disable-line functional/immutable-data
+  }
+
+  if (contentType) { // eslint-disable-line functional/no-conditional-statements
+    doc.contentType = sanitize(contentType); // eslint-disable-line functional/immutable-data
+  }
+
+  // we could have here also final: ABORT, DONE, ERROR, active: !final
+  if (state) { // eslint-disable-line functional/no-conditional-statements
+    doc.state = sanitize(state); // eslint-disable-line functional/immutable-data
+  }
+
+  if (creationTime) {
+    const timestampArray = creationTime.split(',');
+    if (timestampArray.length === 1) { // eslint-disable-line functional/no-conditional-statements
+      doc.$and = [ // eslint-disable-line functional/immutable-data
+        {creationTime: {$gte: formatTime(timestampArray[0], 'start', test)}},
+        {creationTime: {$lte: formatTime(timestampArray[0], 'end', test)}}
+      ];
+    } else { // eslint-disable-line functional/no-conditional-statements
+      doc.$and = [ // eslint-disable-line functional/immutable-data
+        {creationTime: {$gte: formatTime(timestampArray[0], false, test)}},
+        {creationTime: {$lte: formatTime(timestampArray[1], false, test)}}
+      ];
+    }
+  }
+
+  if (modificationTime) {
+    const timestampArray = sanitize(modificationTime.split(','));
+
+    if (timestampArray.length === 1) { // eslint-disable-line functional/no-conditional-statements
+      doc.$and = [ // eslint-disable-line functional/immutable-data
+        {modificationTime: {$gte: formatTime(timestampArray[0], 'start', test)}},
+        {modificationTime: {$lte: formatTime(timestampArray[0], 'end', test)}}
+      ];
+    } else { // eslint-disable-line functional/no-conditional-statements
+      doc.$and = [ // eslint-disable-line functional/immutable-data
+        {modificationTime: {$gte: formatTime(timestampArray[0], false, test)}},
+        {modificationTime: {$lte: formatTime(timestampArray[1], false, test)}}
+      ];
+    }
+  }
+
+  // console.log(JSON.stringify(doc)); // eslint-disable-line
+  return doc;
+
+  function formatTime(timestamp, startOrEndOfDay = false, test = false) {
+    if (startOrEndOfDay === 'start') {
+      const time = new Date(new Date(timestamp).setUTCHours(0, 0, 0, 0));
+      return test ? time.toISOString() : time;
+    }
+
+    if (startOrEndOfDay === 'end') {
+      const time = new Date(new Date(timestamp).setUTCHours(23, 59, 59, 999));
+      return test ? time.toISOString() : time;
+    }
+
+    const time = new Date(timestamp);
+    return test ? time.toISOString() : time;
+  }
+}
+
+export function generateProfileQuery({id, group}) {
+  const doc = {};
+
+  if (id) { // eslint-disable-line functional/no-conditional-statements
+    doc.id = sanitize(id); // eslint-disable-line functional/immutable-data
+  }
+
+  if (group) { // eslint-disable-line functional/no-conditional-statements
+    doc.groups = sanitize(group); // eslint-disable-line functional/immutable-data
+  }
+
+  // console.log(JSON.stringify(doc)); // eslint-disable-line
+  return doc;
 }
 
 export async function getNextBlobId(riApiClient, {profileIds, state, importOfflinePeriod}) {
