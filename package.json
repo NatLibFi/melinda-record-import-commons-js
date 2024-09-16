@@ -14,7 +14,7 @@
 		"url": "git@github.com:natlibfi/melinda-record-import-commons-js.git"
 	},
 	"license": "MIT",
-	"version": "11.0.0-alpha.47",
+	"version": "11.0.0-alpha.48",
 	"main": "./dist/index.js",
 	"engines": {
 		"node": ">=18"
