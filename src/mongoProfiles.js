@@ -12,8 +12,8 @@ import {generateProfileQuery} from './utils';
 
 export async function createMongoProfilesOperator(mongoUrl, {db = 'db', collection = 'profiles'} = {db: 'db', collection: 'profiles'}) {
   const logger = createLogger(); // eslint-disable-line
-  const debug = createDebugLogger('@natlibfi/melinda-record-import-commons:utils');
-  const debugDev = createDebugLogger('@natlibfi/melinda-record-import-commons:utils:dev');
+  const debug = createDebugLogger('@natlibfi/melinda-record-import-commons:mongoProfiles');
+  const debugDev = createDebugLogger('@natlibfi/melinda-record-import-commons:mongoProfiles:dev');
 
   // Connect to mongo (MONGO)
   const client = await MongoClient.connect(mongoUrl);
@@ -49,7 +49,7 @@ export async function createMongoProfilesOperator(mongoUrl, {db = 'db', collecti
           .skip(skip)
           .toArray();
 
-        // logger.debug(`blobsArray: ${blobsArray.length}`);
+        // logger.debug(`profilesArray: ${profilesArray.length}`);
         // logger.debug(`limit: ${limit}`);
         const hasNext = profilesArray.length > limit;
         // logger.debug(`hasNext: ${hasNext}`);
@@ -111,7 +111,7 @@ export async function createMongoProfilesOperator(mongoUrl, {db = 'db', collecti
   // MARK: Read Profile
   async function readProfile({id}) {
     const clean = sanitize(id);
-    debug(`Read blob: ${clean}`);
+    debug(`Read profile: ${clean}`);
     const doc = await operator.findOne({id: clean}, {projection: {_id: 0}});
 
     if (doc) {

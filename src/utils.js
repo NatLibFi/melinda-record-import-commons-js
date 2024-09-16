@@ -46,11 +46,30 @@ export function isOfflinePeriod(importOfflinePeriod, nowTime = false) {
   return false;
 }
 
-export function generateBlobQuery({profile, state, contentType, creationTime, modificationTime, test}) {
+export function generateBlobQuery({profile, state, contentType, creationTime, modificationTime, test}, user) {
   const doc = {};
 
-  if (profile) { // eslint-disable-line functional/no-conditional-statements
-    doc.profile = sanitize(profile); // eslint-disable-line functional/immutable-data
+  if (user) {
+    const allowedGroups = user.roles.groups.map(group => sanitize(group));
+    const profileIsAllowed = allowedGroups.includes(profile) || allowedGroups.includes('kvp');
+
+    if (!profile || !profileIsAllowed) { // eslint-disable-line functional/no-conditional-statements
+      doc.profile = {'$in': allowedGroups}; // eslint-disable-line functional/immutable-data
+    }
+
+    if (allowedGroups.includes('kvp')) { // eslint-disable-line functional/no-conditional-statements
+      delete doc.profile; // eslint-disable-line functional/immutable-data
+    }
+
+    if (profile && profileIsAllowed) { // eslint-disable-line functional/no-conditional-statements
+      doc.profile = sanitize(profile); // eslint-disable-line functional/immutable-data
+    }
+  }
+
+  if (!user) {
+    if (profile) { // eslint-disable-line functional/no-conditional-statements
+      doc.profile = sanitize(profile); // eslint-disable-line functional/immutable-data
+    }
   }
 
   if (contentType) { // eslint-disable-line functional/no-conditional-statements

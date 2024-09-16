@@ -42,6 +42,7 @@ async function callback({
   getFixture,
   operationParams,
   expectedNextOffset = false,
+  user = false,
   expectedToFail = false,
   expectedErrorStatus = 200,
   expectedErrorMessage = ''
@@ -53,7 +54,7 @@ async function callback({
   try {
     const blobsArray = [];
     const nextOffset = await new Promise((resolve, reject) => {
-      const emitter = mongoOperator.queryBlob(operationParams);
+      const emitter = mongoOperator.queryBlob(operationParams, user);
       emitter.on('blobs', blobs => blobs.forEach(blob => blobsArray.push(blob))) // eslint-disable-line functional/immutable-data
         .on('error', error => reject(error))
         .on('end', nextOffset => resolve(nextOffset));

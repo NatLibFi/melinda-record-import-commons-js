@@ -13,8 +13,8 @@ import {generateBlobQuery} from './utils';
 
 export async function createMongoBlobsOperator(mongoUrl, {db = 'db', collection = 'blobmetadatas'} = {db: 'db', collection: 'blobmetadatas'}) {
   const logger = createLogger(); // eslint-disable-line
-  const debug = createDebugLogger('@natlibfi/melinda-record-import-commons:utils');
-  const debugDev = createDebugLogger('@natlibfi/melinda-record-import-commons:utils:dev');
+  const debug = createDebugLogger('@natlibfi/melinda-record-import-commons:mongoBlobs');
+  const debugDev = createDebugLogger('@natlibfi/melinda-record-import-commons:mongoBlobs:dev');
 
   // Connect to mongo (MONGO)
   const client = await MongoClient.connect(mongoUrl);
@@ -40,13 +40,13 @@ export async function createMongoBlobsOperator(mongoUrl, {db = 'db', collection 
    * @param {string} params.modificationTime format '2024-08-30' or '2024-08-30T12:00:00.000Z' or '2024-08-30,2024-09-01'
    * @returns {EventEmitter} Emits event on blobs, error and end
    */
-  function queryBlob(params) {
+  function queryBlob(params, user = false) {
     debug(`Querying: ${JSON.stringify(params)}`);
     const emitter = new EventEmitter();
     const {limit = 100, skip = 0, order = 'asc', getAll = true, ...rest} = params;
     // logger.debug(`getAll: ${getAll}`);
 
-    const query = generateBlobQuery(rest);
+    const query = generateBlobQuery(rest, user);
     // -1 descending - 1 ascending
     const sortValue = handleSortValue(order);
     const sort = {creationTime: sortValue};
