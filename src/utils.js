@@ -79,6 +79,18 @@ export function generateBlobQuery({profile, state, contentType, creationTime, mo
   // we could have here also final: ABORT, DONE, ERROR, active: !final
   if (state) { // eslint-disable-line functional/no-conditional-statements
     doc.state = sanitize(state); // eslint-disable-line functional/immutable-data
+
+    if (state.includes(',')) { // eslint-disable-line functional/no-conditional-statements
+      const stateArray = state.split(',');
+      const cleanStates = stateArray.map(s => sanitize(s));
+      doc.state = {$in: cleanStates}; // eslint-disable-line functional/immutable-data
+    }
+
+    if (Array.isArray(state)) { // eslint-disable-line functional/no-conditional-statements
+      const stateArray = state;
+      const cleanStates = stateArray.map(s => sanitize(s));
+      doc.state = {$in: cleanStates}; // eslint-disable-line functional/immutable-data
+    }
   }
 
   if (creationTime) {

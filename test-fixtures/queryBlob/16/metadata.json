@@ -1,0 +1,12 @@
+{
+  "description": "Query blob: query {} + user groups profile => 2 Blob",
+  "only": false,
+  "operationParams": {},
+  "user": {
+    "roles": {
+      "groups": [
+        "profile"
+      ]
+    }
+  }
+}
