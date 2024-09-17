@@ -1,5 +1,5 @@
 {
-  "description": "Query blob: query {} + user groups profile2 => 1 Blob",
+  "description": "Query blob: query profile profile, profile3 + user groups profile2 => query profile profile2 => 1 Blob",
   "only": false,
   "operationParams": {
     "profile": [
