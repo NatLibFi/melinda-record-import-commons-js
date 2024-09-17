@@ -43,8 +43,9 @@ export async function createMongoBlobsOperator(mongoUrl, {db = 'db', collection 
   function queryBlob(params, user = false) {
     debug(`Querying: ${JSON.stringify(params)}`);
     const emitter = new EventEmitter();
-    const {limit = 100, skip = 0, order = 'asc', getAll = true, ...rest} = params;
-    // logger.debug(`getAll: ${getAll}`);
+    const limit = parseInt(params.limit || 100, 10);
+    const skip = parseInt(params.skip || 0, 10);
+    const {order = 'asc', getAll = true, ...rest} = params;
 
     const query = generateBlobQuery(rest, user);
     debug(`Query: ${JSON.stringify(query)}`);
