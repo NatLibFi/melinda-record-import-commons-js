@@ -47,6 +47,7 @@ export async function createMongoBlobsOperator(mongoUrl, {db = 'db', collection 
     // logger.debug(`getAll: ${getAll}`);
 
     const query = generateBlobQuery(rest, user);
+    debug(`Query: ${JSON.stringify(query)}`);
     // -1 descending - 1 ascending
     const sortValue = handleSortValue(order);
     const sort = {creationTime: sortValue};

@@ -47,50 +47,14 @@ export function isOfflinePeriod(importOfflinePeriod, nowTime = false) {
 }
 
 export function generateBlobQuery({profile, state, contentType, creationTime, modificationTime, test}, user) {
-  const doc = {};
-
-  if (user) {
-    const allowedGroups = user.roles.groups.map(group => sanitize(group));
-    const profileIsAllowed = allowedGroups.includes(profile) || allowedGroups.includes('kvp');
-
-    if (!profile || !profileIsAllowed) { // eslint-disable-line functional/no-conditional-statements
-      doc.profile = {'$in': allowedGroups}; // eslint-disable-line functional/immutable-data
-    }
-
-    if (allowedGroups.includes('kvp')) { // eslint-disable-line functional/no-conditional-statements
-      delete doc.profile; // eslint-disable-line functional/immutable-data
-    }
-
-    if (profile && profileIsAllowed) { // eslint-disable-line functional/no-conditional-statements
-      doc.profile = sanitize(profile); // eslint-disable-line functional/immutable-data
-    }
-  }
-
-  if (!user) {
-    if (profile) { // eslint-disable-line functional/no-conditional-statements
-      doc.profile = sanitize(profile); // eslint-disable-line functional/immutable-data
-    }
-  }
+  const doc = {...formatProfile(profile, user)};
 
   if (contentType) { // eslint-disable-line functional/no-conditional-statements
-    doc.contentType = sanitize(contentType); // eslint-disable-line functional/immutable-data
+    doc.contentType = {$in: splitAndSanitize(contentType)}; // eslint-disable-line functional/immutable-data
   }
 
-  // we could have here also final: ABORT, DONE, ERROR, active: !final
   if (state) { // eslint-disable-line functional/no-conditional-statements
-    doc.state = sanitize(state); // eslint-disable-line functional/immutable-data
-
-    if (state.includes(',')) { // eslint-disable-line functional/no-conditional-statements
-      const stateArray = state.split(',');
-      const cleanStates = stateArray.map(s => sanitize(s));
-      doc.state = {$in: cleanStates}; // eslint-disable-line functional/immutable-data
-    }
-
-    if (Array.isArray(state)) { // eslint-disable-line functional/no-conditional-statements
-      const stateArray = state;
-      const cleanStates = stateArray.map(s => sanitize(s));
-      doc.state = {$in: cleanStates}; // eslint-disable-line functional/immutable-data
-    }
+    doc.state = {$in: splitAndSanitize(state)}; // eslint-disable-line functional/immutable-data
   }
 
   if (creationTime) {
@@ -126,6 +90,52 @@ export function generateBlobQuery({profile, state, contentType, creationTime, mo
 
   // console.log(JSON.stringify(doc)); // eslint-disable-line
   return doc;
+
+  function splitAndSanitize(value) {
+    if (Array.isArray(value)) { // eslint-disable-line functional/no-conditional-statements
+      const cleanValueArray = value.map(valueToSanitize => sanitize(valueToSanitize));
+      return cleanValueArray;
+    }
+
+    const valueArray = value.split(',');
+    const cleanValueArray = valueArray.map(valueToSanitize => sanitize(valueToSanitize));
+    return cleanValueArray;
+  }
+
+  function formatProfile(profile, user) {
+    const profileDoc = {};
+    if (profile) {
+      const cleanProfiles = splitAndSanitize(profile);
+
+      if (user) {
+        const userGroups = user.roles.groups;
+        const allowedGroups = cleanProfiles.filter(cleanProfile => userGroups.includes(cleanProfile) || userGroups.includes('kvp'));
+
+        if (allowedGroups.length === 0) { // eslint-disable-line functional/no-conditional-statements
+          profileDoc.profile = {'$in': userGroups}; // eslint-disable-line functional/immutable-data
+        }
+
+        if (allowedGroups.length > 0) { // eslint-disable-line functional/no-conditional-statements
+          profileDoc.profile = {'$in': allowedGroups}; // eslint-disable-line functional/immutable-data
+        }
+      }
+
+      if (!user) { // eslint-disable-line functional/no-conditional-statements
+        profileDoc.profile = {'$in': cleanProfiles}; // eslint-disable-line functional/immutable-data
+      }
+    }
+
+    if (!profile && user) { // eslint-disable-line functional/no-conditional-statements
+      const userGroups = user.roles.groups;
+      profileDoc.profile = {'$in': userGroups}; // eslint-disable-line functional/immutable-data
+
+      if (userGroups.includes('kvp')) { // eslint-disable-line functional/no-conditional-statements
+        delete profileDoc.profile; // eslint-disable-line functional/immutable-data
+      }
+    }
+
+    return profileDoc;
+  }
 
   function formatTime(timestamp, startOrEndOfDay = false, test = false) {
     if (startOrEndOfDay === 'start') {
