@@ -15,10 +15,5 @@
       "processedRecords": 8,
       "url": "http://localhost:8081/blobs/001"
     }
-  ],
-  "blobmetadatas.files": [
-    {
-      "filename": "001"
-    }
   ]
 }

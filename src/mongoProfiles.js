@@ -23,7 +23,7 @@ export async function createMongoProfilesOperator(mongoUrl, {db = 'db', collecti
   return {queryProfile, createOrModifyProfile, readProfile, removeProfile, closeClient};
 
   // MARK: Query Profile
-  function queryProfile(params) {
+  function queryProfile(params = {}) {
     debug(`Querying: ${JSON.stringify(params)}`);
     const emitter = new EventEmitter();
     const {limit = 100, skip = 0, order = 'asc', getAll = true, ...rest} = params;

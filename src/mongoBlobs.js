@@ -20,7 +20,7 @@ export async function createMongoBlobsOperator(mongoUrl, {db = 'db', collection 
   const client = await MongoClient.connect(mongoUrl);
   const dbConnection = client.db(db);
   const operator = dbConnection.collection(collection);
-  const gridFSBucket = new GridFSBucket(dbConnection, {bucketName: collection});
+  const gridFSBucket = new GridFSBucket(dbConnection, {bucketName: 'blobmetadatas'});
 
   return {queryBlob, createBlob, readBlob, readBlobContent, updateBlob, removeBlob, removeBlobContent, closeClient};
 
@@ -254,7 +254,8 @@ export async function createMongoBlobsOperator(mongoUrl, {db = 'db', collection 
       const nowDate = test ? new Date('2024-07-31T06:00:00.000Z').toISOString() : new Date().toISOString();
       const {
         abort, recordProcessed, transformationFailed,
-        updateState, transformedRecord, addCorrelationId
+        updateState, transformedRecord, addCorrelationId,
+        setCataloger, setNotificationEmail
       } = BLOB_UPDATE_OPERATIONS;
 
       debug(`Update blob operation: ${op}`);
@@ -343,6 +344,26 @@ export async function createMongoBlobsOperator(mongoUrl, {db = 'db', collection 
           $set: {
             modificationTime: nowDate,
             correlationId: payload.correlationId
+          }
+        };
+      }
+
+      if (op === setCataloger) {
+        logger.debug(`case: ${op}, cataloger: ${payload.cataloger}`);
+        return {
+          modificationTime: nowDate,
+          $set: {
+            cataloger: payload.cataloger
+          }
+        };
+      }
+
+      if (op === setNotificationEmail) {
+        logger.debug(`case: ${op}, cataloger: ${payload.notificationEmail}`);
+        return {
+          modificationTime: nowDate,
+          $set: {
+            notificationEmail: payload.notificationEmail
           }
         };
       }

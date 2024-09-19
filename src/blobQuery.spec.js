@@ -33,7 +33,7 @@ generateTests({
 async function initMongofixtures() {
   mongoFixtures = await mongoFixturesFactory({
     rootPath: [__dirname, '..', 'test-fixtures', 'queryBlob'],
-    gridFS: {bucketName: 'blobs'},
+    gridFS: {bucketName: 'blobmetadatas'},
     useObjectId: true
   });
 }
