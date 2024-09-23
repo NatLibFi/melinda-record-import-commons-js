@@ -1,0 +1,19 @@
+{
+  "description": "Query blob: query profile profile + state PROCESSING_BULK + user groups profile => 0 Blob",
+  "only": false,
+  "operationParams": {
+    "profile": [
+      "profile"
+    ],
+    "state": [
+      "PROCESSING_BULK"
+    ]
+  },
+  "user": {
+    "roles": {
+      "groups": [
+        "profile"
+      ]
+    }
+  }
+}

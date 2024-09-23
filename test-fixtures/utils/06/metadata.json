@@ -1,0 +1,15 @@
+{
+  "description": "Get next blob: profile5 PENDING_TRANSFORMATION => false",
+  "only": false,
+  "method": "getNextBlob",
+  "profileIds": [
+    "profile5"
+  ],
+  "state": "PENDING_TRANSFORMATION",
+  "importOfflinePeriod": {
+    "startHour": 10,
+    "lengthHours": 3
+  },
+  "nowTime": "2024-07-30T19:01:00.000Z",
+  "expectedResult": false
+}
