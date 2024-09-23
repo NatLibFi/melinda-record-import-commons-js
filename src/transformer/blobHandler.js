@@ -2,9 +2,9 @@ import createDebugLogger from 'debug';
 import {v4 as uuid} from 'uuid';
 import {promisify} from 'util';
 
-import {BLOB_STATE} from '../constants';
+import {BLOB_STATE, BLOB_UPDATE_OPERATIONS} from '../constants';
 
-export default function (riApiClient, transformHandler, amqplib, config) {
+export default function (mongoOperator, transformHandler, amqplib, config) {
   const debug = createDebugLogger('@natlibfi/melinda-record-import-commons');
   const debugHandling = debug.extend('blobHandling');
   const debugRecordHandling = debug.extend('recordHandling');
@@ -21,7 +21,7 @@ export default function (riApiClient, transformHandler, amqplib, config) {
     debugHandling(`Starting transformation for blob ${blobId}`);
 
     try {
-      const {readStream} = await riApiClient.getBlobContent({id: blobId});
+      const readStream = await mongoOperator.readBlobContent({id: blobId});
 
       connection = await amqplib.connect(amqpUrl);
       channel = await connection.createChannel();
@@ -40,16 +40,34 @@ export default function (riApiClient, transformHandler, amqplib, config) {
           })
           .on('error', async err => {
             debugHandling('Transformation failed');
-            await riApiClient.setTransformationFailed({id: blobId, error: getError(err)});
+            await mongoOperator.updateBlob({
+              id: blobId,
+              payload: {
+                op: BLOB_UPDATE_OPERATIONS.transformationFailed,
+                error: getError(err)
+              }
+            });
             reject(err);
           })
           .on('cataloger', async cataloger => {
             debugHandling('Setting cataloger for blob');
-            await riApiClient.setCataloger({id: blobId, cataloger});
+            await mongoOperator.updateBlob({
+              id: blobId,
+              payload: {
+                op: BLOB_UPDATE_OPERATIONS.setCataloger,
+                cataloger
+              }
+            });
           })
           .on('notificationEmail', async notificationEmail => {
             debugHandling('Setting notification email for blob');
-            await riApiClient.setNotificationEmail({id: blobId, notificationEmail});
+            await mongoOperator.updateBlob({
+              id: blobId,
+              payload: {
+                op: BLOB_UPDATE_OPERATIONS.setNotificationEmail,
+                notificationEmail
+              }
+            });
           })
           .on('record', payload => {
             recordPayloads.push(payload); // eslint-disable-line functional/immutable-data
@@ -58,7 +76,13 @@ export default function (riApiClient, transformHandler, amqplib, config) {
 
       if (abortOnInvalidRecords && recordPayloads.some(recordPayload => recordPayload.failed === true)) {
         debugHandling('Not sending records to queue because some records failed and abortOnInvalidRecords is true');
-        await riApiClient.setTransformationFailed({id: blobId, error: {message: 'Some records have failed'}});
+        await mongoOperator.updateBlob({
+          id: blobId,
+          payload: {
+            op: BLOB_UPDATE_OPERATIONS.transformationFailed,
+            error: {message: 'Some records have failed'}
+          }
+        });
         connection.close();
         return;
       }
@@ -67,14 +91,26 @@ export default function (riApiClient, transformHandler, amqplib, config) {
       await handleRecords(recordPayloads);
 
       debugHandling(`Setting blob state ${BLOB_STATE.TRANSFORMED}...`);
-      await riApiClient.updateState({id: blobId, state: BLOB_STATE.TRANSFORMED});
+      await mongoOperator.updateBlob({
+        id: blobId,
+        payload: {
+          op: BLOB_UPDATE_OPERATIONS.updateState,
+          state: BLOB_STATE.TRANSFORMED
+        }
+      });
       debugHandling(`Closing AMQP resources!`);
       connection.close();
       return;
     } catch (err) {
       const error = getError(err);
       debugHandling(`Failed transforming blob: ${error}`);
-      await riApiClient.setTransformationFailed({id: blobId, error});
+      await mongoOperator.updateBlob({
+        id: blobId,
+        payload: {
+          op: BLOB_UPDATE_OPERATIONS.transformationFailed,
+          error
+        }
+      });
       debugHandling(`Closing AMQP resources!`);
       connection.close();
       return;
@@ -116,15 +152,21 @@ export default function (riApiClient, transformHandler, amqplib, config) {
         try {
           if (payload.failed) {
             debugRecordHandling('Adding failed record to blob');
-            return riApiClient.transformedRecord({
+            return mongoOperator.updateBlob({
               id: blobId,
-              error: payload
+              payload: {
+                op: BLOB_UPDATE_OPERATIONS.transformedRecord,
+                error: payload
+              }
             });
           }
 
           debugRecordHandling('Adding succes record to blob');
-          return riApiClient.transformedRecord({
-            id: blobId
+          return mongoOperator.updateBlob({
+            id: blobId,
+            payload: {
+              op: BLOB_UPDATE_OPERATIONS.transformedRecord
+            }
           });
         } catch (err) {
           throw new Error(`Error while updating blob: ${getError(err)}`);

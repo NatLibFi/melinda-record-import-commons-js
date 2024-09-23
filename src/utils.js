@@ -168,61 +168,34 @@ export function generateProfileQuery({id, group}) {
   return doc;
 }
 
-export async function getNextBlobId(riApiClient, {profileIds, state, importOfflinePeriod}) {
-  debugDev(`Checking blobs for ${profileIds} in ${state}`);
-  let result = ''; // eslint-disable-line functional/no-let
+export async function getNextBlob(mongoOperator, {profileIds, state, importOfflinePeriod}, nowTime = false) {
+  debug('Get next blob');
 
-  try {
-    result = await processBlobs({
-      client: riApiClient,
-      query: {state},
-      processCallback,
-      messageCallback: count => `${count} blobs in ${state} for ${profileIds}`,
-      filter: (blob) => profileIds.some(profileId => profileId === blob.profile)
+  if (!isOfflinePeriod(importOfflinePeriod, nowTime)) {
+    const queryResult = [];
+    await new Promise((resolve, reject) => {
+      debugDev(`Checking blobs for ${profileIds} in ${state}`);
+      const emitter = mongoOperator.queryBlob({
+        limit: 1,
+        getAll: false,
+        profile: profileIds.join(','),
+        state
+      });
+      emitter.on('blobs', blobs => blobs.forEach(blob => queryResult.push(blob))) // eslint-disable-line functional/immutable-data
+        .on('error', error => reject(error))
+        .on('end', () => resolve());
     });
 
-    // Returns false or blob id
-    return result;
-  } catch (error) {
-    debug(error);
-  }
-
-  function processBlobs({client, query, processCallback, messageCallback, updateState = false, filter = () => true}) {
-    return new Promise((resolve, reject) => {
-      const wantedBlobs = [];
-
-      const debug = createDebugLogger('@natlibfi/melinda-record-import-commons:processBlobs:dev');
-      const emitter = client.getBlobs(query);
-
-      emitter
-        .on('error', error => {
-          debug(error);
-          reject(error);
-        })
-        .on('blobs', blobs => {
-          const filteredBlobs = blobs.filter(filter);
-          filteredBlobs.forEach(blob => wantedBlobs.push(blob)); // eslint-disable-line functional/immutable-data
-        })
-        .on('end', () => {
-          if (messageCallback) { // eslint-disable-line functional/no-conditional-statements
-            debugDev(messageCallback(wantedBlobs.length));
-          }
-          const result = processCallback(wantedBlobs, updateState);
-          resolve(result);
-        });
-    });
-  }
-
-  function processCallback(blobs) {
-    const [blob] = blobs;
-
-    if (blob === undefined || isOfflinePeriod(importOfflinePeriod)) {
-      debugDev('No blobs or offline period');
-      return false;
+    const [blobInfo] = queryResult;
+    // debug(`No blobs in ${state} found for ${profileIds}`);
+    if (blobInfo) {
+      return blobInfo;
     }
 
-    const {id, profile, correlationId} = blob;
-
-    return {id, profile, correlationId};
+    debugDev('No blobs');
+    return false;
   }
+
+  debugDev('Offline period');
+  return false;
 }

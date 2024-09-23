@@ -1,7 +1,11 @@
 import {expect} from 'chai';
 import {READERS} from '@natlibfi/fixura';
 import generateTests from '@natlibfi/fixugen';
-import {isOfflinePeriod} from './utils.js';
+import {isOfflinePeriod, getNextBlob} from './utils.js';
+import mongoFixturesFactory from '@natlibfi/fixura-mongo';
+import {createMongoBlobsOperator} from './mongoBlobs.js';
+
+let mongoFixtures; // eslint-disable-line functional/no-let
 
 generateTests({
   callback,
@@ -11,13 +15,37 @@ generateTests({
   fixura: {
     reader: READERS.JSON,
     failWhenNotFound: true
+  },
+  mocha: {
+    before: async () => {
+      await initMongofixtures();
+    },
+    beforeEach: async () => {
+      await mongoFixtures.clear();
+    },
+    afterEach: async () => {
+      await mongoFixtures.clear();
+    },
+    after: async () => {
+      await mongoFixtures.close();
+    }
   }
 });
 
-function callback({
+async function initMongofixtures() {
+  mongoFixtures = await mongoFixturesFactory({
+    rootPath: [__dirname, '..', 'test-fixtures', 'utils'],
+    useObjectId: true
+  });
+}
+
+async function callback({
+  getFixture,
   method = '',
   importOfflinePeriod,
   nowTime,
+  profileIds = false,
+  state = '',
   expectedResult,
   expectedToFail = false,
   expectedErrorStatus = 200,
@@ -29,8 +57,11 @@ function callback({
       return expect(result).to.eql(expectedResult);
     }
 
-    if (method === 'getNextBlobId') {
-      const result = isOfflinePeriod(importOfflinePeriod, nowTime);
+    if (method === 'getNextBlob') {
+      const mongoUri = await mongoFixtures.getUri();
+      await mongoFixtures.populate(getFixture('dbContents.json'));
+      const mongoOperator = await createMongoBlobsOperator(mongoUri, {db: '', collection: 'blobmetadatas'});
+      const result = await getNextBlob(mongoOperator, {profileIds, state, importOfflinePeriod}, nowTime);
       return expect(result).to.eql(expectedResult);
     }
 
