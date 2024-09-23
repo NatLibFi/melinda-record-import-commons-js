@@ -16,6 +16,7 @@ export const BLOB_UPDATE_OPERATIONS = {
   addCorrelationId: 'addCorrelationId',
   recordProcessed: 'recordProcessed',
   recordQueued: 'recordQueued',
+  resetImportResults: 'resetImportResults',
   setCataloger: 'setCataloger',
   setNotificationEmail: 'setNotificationEmail',
   transformationFailed: 'transformationFailed',

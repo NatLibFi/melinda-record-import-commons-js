@@ -256,7 +256,7 @@ export async function createMongoBlobsOperator(mongoUrl, {db = 'db', collection 
       const {
         abort, recordProcessed, transformationFailed,
         updateState, transformedRecord, addCorrelationId,
-        setCataloger, setNotificationEmail
+        setCataloger, setNotificationEmail, resetImportResults
       } = BLOB_UPDATE_OPERATIONS;
 
       debug(`Update blob operation: ${op}`);
@@ -283,6 +283,15 @@ export async function createMongoBlobsOperator(mongoUrl, {db = 'db', collection 
         return {
           $set: {
             state: BLOB_STATE.ABORTED,
+            modificationTime: nowDate
+          }
+        };
+      }
+
+      if (op === resetImportResults) {
+        return {
+          $set: {
+            'processingInfo.importResults': [],
             modificationTime: nowDate
           }
         };

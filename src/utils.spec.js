@@ -29,6 +29,11 @@ function callback({
       return expect(result).to.eql(expectedResult);
     }
 
+    if (method === 'getNextBlobId') {
+      const result = isOfflinePeriod(importOfflinePeriod, nowTime);
+      return expect(result).to.eql(expectedResult);
+    }
+
     throw new Error('Invalid test method!');
   } catch (error) {
     handleError(error);
