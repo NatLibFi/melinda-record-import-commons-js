@@ -219,6 +219,7 @@ export async function createMongoBlobsOperator(mongoUrl, {db = 'db', collection 
     debug(`Update blob: ${clean}`);
     const blob = await operator.findOne({id: clean});
     // debugDev(blob);
+    debugDev(blob ? 'Blob found' : 'Blob not found');
     if (blob) {
       const {op, test = false} = payload;
       if (op) {
