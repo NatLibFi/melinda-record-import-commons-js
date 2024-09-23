@@ -12,7 +12,8 @@ generateTests({
   recurse: false,
   useMetadataFile: true,
   fixura: {
-    failWhenNotFound: true
+    failWhenNotFound: true,
+    reader: READERS.JSON
   },
   mocha: {
     before: async () => {
@@ -46,9 +47,9 @@ async function callback({
   expectedErrorMessage = ''
 }) {
   const mongoUri = await mongoFixtures.getUri();
-  await mongoFixtures.populate(getFixture({components: ['dbContents.json'], reader: READERS.JSON}));
+  await mongoFixtures.populate(getFixture('dbContents.json'));
   const mongoOperator = await createMongoBlobsOperator(mongoUri, {db: '', collection: 'blobmetadatas'});
-  const expectedResult = await getFixture({components: ['expectedResult.json'], reader: READERS.JSON});
+  const expectedResult = await getFixture('expectedResult.json');
   try {
     await mongoOperator.removeBlob(operationParams);
     const dump = await mongoFixtures.dump();

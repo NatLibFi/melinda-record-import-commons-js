@@ -74,7 +74,7 @@ export async function createMongoBlobsOperator(mongoUrl, {db = 'db', collection 
         const resultArray = hasNext ? blobsArray.slice(0, -1) : blobsArray;
         const nextOffset = skip + limit;
         debug(`Query result: ${resultArray.length > 0 ? 'Found!' : 'Not found!'}`);
-        debugDev(`${JSON.stringify(resultArray)}`);
+        // debugDev(`${JSON.stringify(resultArray.slice(0,3))}`);
         emitter.emit('blobs', resultArray);
 
         if (hasNext && getAll) {
@@ -218,7 +218,7 @@ export async function createMongoBlobsOperator(mongoUrl, {db = 'db', collection 
     const clean = sanitize(id);
     debug(`Update blob: ${clean}`);
     const blob = await operator.findOne({id: clean});
-    debugDev(blob);
+    // debugDev(blob);
     if (blob) {
       const {op, test = false} = payload;
       if (op) {
@@ -234,7 +234,7 @@ export async function createMongoBlobsOperator(mongoUrl, {db = 'db', collection 
           throw new ApiError(httpStatus.CONFLICT, 'Invalid blob record count');
         }
 
-        debugDev(doc);
+        // debugDev(doc);
         const {modifiedCount} = await operator.findOneAndUpdate({id: clean}, doc, {projection: {_id: 0}, returnNewDocument: false});
 
         if (modifiedCount === 0) { // eslint-disable-line functional/no-conditional-statements
@@ -406,7 +406,7 @@ export async function createMongoBlobsOperator(mongoUrl, {db = 'db', collection 
     const clean = sanitize(id);
 
     const result = await dbConnection.collection(`${collection}.files`).findOne({filename: clean}); // njsscan-ignore: node_nosqli_injection
-    debugDev(`blob removeContent check: result ${JSON.stringify(result)}`);
+    // debugDev(`blob removeContent check: result ${JSON.stringify(result)}`);
 
     if (result) {
       debug(`Content found and removed`);
