@@ -45,13 +45,10 @@ export async function createMongoBlobsOperator(mongoUrl, {db = 'db', collection 
     const emitter = new EventEmitter();
     const limit = parseInt(params.limit || 100, 10);
     const skip = parseInt(params.skip || 0, 10);
-    const {order = 'asc', getAll = true, ...rest} = params;
+    const {getAll = true, ...rest} = params;
 
     const query = generateBlobQuery(rest, user);
     debug(`Query: ${JSON.stringify(query)}`);
-    // -1 descending - 1 ascending
-    const sortValue = handleSortValue(order);
-    const sort = {creationTime: sortValue};
 
     handleBlobQuery(getAll, skip);
 
@@ -61,7 +58,6 @@ export async function createMongoBlobsOperator(mongoUrl, {db = 'db', collection 
       try {
         // .find(<query>, <projection>, <options>)
         const blobsArray = await operator.find(query, {projection: {_id: 0}}) // eslint-disable-line functional/immutable-data
-          .sort(sort)
           .limit(limit + 1)
           .skip(skip)
           .toArray();
@@ -89,18 +85,6 @@ export async function createMongoBlobsOperator(mongoUrl, {db = 'db', collection 
       } catch (error) {
         emitter.emit('error', error);
       }
-    }
-
-    function handleSortValue(order) {
-      if (order === 'asc' || order === '1') {
-        return 1;
-      }
-
-      if (order === 'desc' || order === '-1') {
-        return -1;
-      }
-
-      return 1;
     }
   }
 

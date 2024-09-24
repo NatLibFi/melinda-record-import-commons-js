@@ -14,20 +14,6 @@
     "processedRecords": 8
   },
   {
-    "id": "004",
-    "correlationId": "00d",
-    "profile": "profile",
-    "cataloger": "",
-    "notificationEmail": "",
-    "contentType": "application/json",
-    "state": "PENDING_TRANSFORMATION",
-    "creationTime": "2024-07-30T08:08:30.000Z",
-    "modificationTime": "2024-07-30T08:20:30.000Z",
-    "numberOfRecords": 10,
-    "failedRecords": 2,
-    "processedRecords": 8
-  },
-  {
     "id": "003",
     "correlationId": "00c",
     "profile": "profile3",
@@ -37,6 +23,20 @@
     "state": "ABORTED",
     "creationTime": "2024-08-30T08:08:30.000Z",
     "modificationTime": "2024-08-30T08:20:30.000Z",
+    "numberOfRecords": 10,
+    "failedRecords": 2,
+    "processedRecords": 8
+  },
+  {
+    "id": "004",
+    "correlationId": "00d",
+    "profile": "profile",
+    "cataloger": "",
+    "notificationEmail": "",
+    "contentType": "application/json",
+    "state": "PENDING_TRANSFORMATION",
+    "creationTime": "2024-09-30T08:08:30.000Z",
+    "modificationTime": "2024-09-30T08:20:30.000Z",
     "numberOfRecords": 10,
     "failedRecords": 2,
     "processedRecords": 8
