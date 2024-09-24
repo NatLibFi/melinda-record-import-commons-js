@@ -1,11 +1,15 @@
+import createDebugLogger from 'debug';
+import prettyPrint from 'pretty-print-ms';
+import {promisify} from 'util';
+
+import {createLogger} from '@natlibfi/melinda-backend-commons';
+
 import {getNextBlob} from '../utils';
 import {BLOB_STATE, BLOB_UPDATE_OPERATIONS} from '../constants';
-import {promisify} from 'util';
-import createDebugLogger from 'debug';
 import createBlobHandler from './blobHandler';
-import prettyPrint from 'pretty-print-ms';
 
 export default async function (mongoOperator, transformHandler, amqplib, config) {
+  const logger = createLogger();
   const setTimeoutPromise = promisify(setTimeout);
   const debug = createDebugLogger('@natlibfi/melinda-record-import-commons');
   const debugLogic = debug.extend('logic:dev');
@@ -45,6 +49,7 @@ export default async function (mongoOperator, transformHandler, amqplib, config)
       try {
         const {id, profile} = await getNextBlob(mongoOperator, {profileIds, state});
         if (id) {
+          logger.info(`Handling blob ${id} @ state ${state}, for profile: ${profile}`);
           debugCheckBlobInState(`Handling ${state} blob ${id}, for profile: ${profile}`);
 
           if (state === BLOB_STATE.TRANSFORMATION_IN_PROGRESS) {
@@ -72,7 +77,7 @@ export default async function (mongoOperator, transformHandler, amqplib, config)
     function logWait(waitTime) {
       // 60000ms = 1min
       if (waitTime % 60000 === 0) {
-        return debug(`Total wait: ${prettyPrint(waitTime)}`);
+        return logger.info(`Total wait: ${prettyPrint(waitTime)}`);
       }
     }
   }
