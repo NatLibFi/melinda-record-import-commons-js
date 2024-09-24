@@ -221,9 +221,9 @@ export async function createMongoBlobsOperator(mongoUrl, {db = 'db', collection 
     // debugDev(blob);
     debugDev(blob ? 'Blob found' : 'Blob not found');
     if (blob) {
-      const {op, test = false} = payload;
+      const {op} = payload;
       if (op) {
-        const doc = await getUpdateDoc(op, test);
+        const doc = await getUpdateDoc(op);
 
         const updateIfNotInStates = [BLOB_STATE.TRANSFORMATION_FAILED, BLOB_STATE.ABORTED, BLOB_STATE.PROCESSED];
         if (updateIfNotInStates.includes(blob.state)) {
@@ -251,8 +251,8 @@ export async function createMongoBlobsOperator(mongoUrl, {db = 'db', collection 
     throw new ApiError(httpStatus.NOT_FOUND, 'Blob not found');
 
     // MARK: Update - Get update doc
-    function getUpdateDoc(op, test) {
-      const nowDate = test ? new Date('2024-07-31T06:00:00.000Z').toISOString() : new Date().toISOString();
+    function getUpdateDoc(op) {
+      const nowDate = new Date().toISOString();
       const {
         abort, recordProcessed, transformationFailed,
         updateState, transformedRecord, addCorrelationId,

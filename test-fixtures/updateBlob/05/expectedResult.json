@@ -11,8 +11,7 @@
               "VER0000000",
               "978-952-000-000-0"
             ],
-            "message": "Record failed following conversion compatability check: filterProductForm",
-            "timestamp": "2024-07-31T06:00:00.000Z"
+            "message": "Record failed following conversion compatability check: filterProductForm"
           }
         ],
         "importResults": []
@@ -23,9 +22,7 @@
       "profile": "profile",
       "cataloger": "",
       "contentType": "application/json",
-      "state": "TRANSFORMATION_IN_PROGRESS",
-      "creationTime": "2024-07-31T05:50:00.000Z",
-      "modificationTime": "2024-07-31T06:00:00.000Z"
+      "state": "TRANSFORMATION_IN_PROGRESS"
     }
   ]
 }

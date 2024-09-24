@@ -12,9 +12,7 @@
       "profile": "profile",
       "cataloger": "",
       "contentType": "application/json",
-      "state": "ABORTED",
-      "creationTime": "2024-07-31T05:50:00.000Z",
-      "modificationTime": "2024-07-31T06:00:00.000Z"
+      "state": "ABORTED"
     }
   ]
 }

@@ -51,16 +51,30 @@ async function callback({
   const expectedResult = await getFixture({components: ['expectedResult.json'], reader: READERS.JSON});
   try {
     await mongoOperator.updateBlob(operationParams);
-    const dump = await mongoFixtures.dump();
+    const dump = dumpParser(await mongoFixtures.dump());
     expect(dump).to.eql(expectedResult);
   } catch (error) {
     if (!expectedToFail) {
       throw error;
     }
 
-    // console.log(error); // eslint-disable-line
+    console.log(error); // eslint-disable-line
     expect(error.status).to.eql(expectedErrorStatus);
     expect(error.payload).to.eql(expectedErrorMessage);
     expect(expectedToFail).to.eql(true, 'This test is not suppose to fail!');
+  }
+
+  function dumpParser(dump) {
+    // Drop timestamps
+    const blobmetadatas = dump.blobmetadatas.map(blobmetadata => {
+      const {_id, modificationTime, creationTime, timestamp, processingInfo, ...rest} = blobmetadata; // eslint-disable-line no-unused-vars
+      const {numberOfRecords, failedRecords, importResults} = processingInfo;
+
+      const handledFailedRecords = failedRecords.map(({timestamp, ...rest}) => rest); // eslint-disable-line no-unused-vars
+      const handledImportResults = importResults.map(({timestamp, ...rest}) => rest); // eslint-disable-line no-unused-vars
+      return {...rest, processingInfo: {numberOfRecords, failedRecords: handledFailedRecords, importResults: handledImportResults}};
+    });
+
+    return {blobmetadatas};
   }
 }
