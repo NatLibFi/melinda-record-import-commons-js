@@ -60,15 +60,17 @@ export function generateBlobQuery({profile, state, contentType, creationTime, mo
   if (creationTime) {
     const timestampArray = creationTime.split(',');
     if (timestampArray.length === 1) { // eslint-disable-line functional/no-conditional-statements
-      doc.$and = [ // eslint-disable-line functional/immutable-data
-        {creationTime: {$gte: formatTime(timestampArray[0], 'start', test)}},
-        {creationTime: {$lte: formatTime(timestampArray[0], 'end', test)}}
-      ];
+      // eslint-disable-next-line functional/immutable-data
+      doc.creationTime = {
+        $gte: formatTime(timestampArray[0], 'start', test),
+        $lte: formatTime(timestampArray[0], 'end', test)
+      };
     } else { // eslint-disable-line functional/no-conditional-statements
-      doc.$and = [ // eslint-disable-line functional/immutable-data
-        {creationTime: {$gte: formatTime(timestampArray[0], false, test)}},
-        {creationTime: {$lte: formatTime(timestampArray[1], false, test)}}
-      ];
+      // eslint-disable-next-line functional/immutable-data
+      doc.creationTime = {
+        $gte: formatTime(timestampArray[0], false, test),
+        $lte: formatTime(timestampArray[1], false, test)
+      };
     }
   }
 
@@ -76,15 +78,17 @@ export function generateBlobQuery({profile, state, contentType, creationTime, mo
     const timestampArray = sanitize(modificationTime.split(','));
 
     if (timestampArray.length === 1) { // eslint-disable-line functional/no-conditional-statements
-      doc.$and = [ // eslint-disable-line functional/immutable-data
-        {modificationTime: {$gte: formatTime(timestampArray[0], 'start', test)}},
-        {modificationTime: {$lte: formatTime(timestampArray[0], 'end', test)}}
-      ];
+      // eslint-disable-next-line functional/immutable-data
+      doc.modificationTime = {
+        $gte: formatTime(timestampArray[0], 'start', test),
+        $lte: formatTime(timestampArray[0], 'end', test)
+      };
     } else { // eslint-disable-line functional/no-conditional-statements
-      doc.$and = [ // eslint-disable-line functional/immutable-data
-        {modificationTime: {$gte: formatTime(timestampArray[0], false, test)}},
-        {modificationTime: {$lte: formatTime(timestampArray[1], false, test)}}
-      ];
+      // eslint-disable-next-line functional/immutable-data
+      doc.modificationTime = {
+        $gte: formatTime(timestampArray[0], false, test),
+        $lte: formatTime(timestampArray[1], false, test)
+      };
     }
   }
 
