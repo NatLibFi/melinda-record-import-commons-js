@@ -141,19 +141,19 @@ export function generateBlobQuery({profile, state, contentType, creationTime, mo
     return profileDoc;
   }
 
-  function formatTime(timestamp, startOrEndOfDay = false, test = false) {
+  function formatTime(timestamp, startOrEndOfDay = false) {
     if (startOrEndOfDay === 'start') {
       const time = new Date(new Date(timestamp).setUTCHours(0, 0, 0, 0));
-      return test ? time.toISOString() : time;
+      return time.toISOString();
     }
 
     if (startOrEndOfDay === 'end') {
       const time = new Date(new Date(timestamp).setUTCHours(23, 59, 59, 999));
-      return test ? time.toISOString() : time;
+      return time.toISOString();
     }
 
     const time = new Date(timestamp);
-    return test ? time.toISOString() : time;
+    return time.toISOString();
   }
 }
 
