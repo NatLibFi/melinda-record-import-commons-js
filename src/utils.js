@@ -46,7 +46,7 @@ export function isOfflinePeriod(importOfflinePeriod, nowTime = false) {
   return false;
 }
 
-export function generateBlobQuery({profile, state, contentType, creationTime, modificationTime}, user) {
+export function generateBlobQuery({profile, state, contentType, creationTime, modificationTime, test}, user) {
   const doc = {...formatProfile(profile, user)};
 
   if (contentType) { // eslint-disable-line functional/no-conditional-statements
@@ -62,14 +62,14 @@ export function generateBlobQuery({profile, state, contentType, creationTime, mo
     if (timestampArray.length === 1) { // eslint-disable-line functional/no-conditional-statements
       // eslint-disable-next-line functional/immutable-data
       doc.creationTime = {
-        $gte: formatTime(timestampArray[0], 'start'),
-        $lte: formatTime(timestampArray[0], 'end')
+        $gte: formatTime(timestampArray[0], 'start', test),
+        $lte: formatTime(timestampArray[0], 'end', test)
       };
     } else { // eslint-disable-line functional/no-conditional-statements
       // eslint-disable-next-line functional/immutable-data
       doc.creationTime = {
-        $gte: formatTime(timestampArray[0], false),
-        $lte: formatTime(timestampArray[1], false)
+        $gte: formatTime(timestampArray[0], false, test),
+        $lte: formatTime(timestampArray[1], false, test)
       };
     }
   }
@@ -80,14 +80,14 @@ export function generateBlobQuery({profile, state, contentType, creationTime, mo
     if (timestampArray.length === 1) { // eslint-disable-line functional/no-conditional-statements
       // eslint-disable-next-line functional/immutable-data
       doc.modificationTime = {
-        $gte: formatTime(timestampArray[0], 'start'),
-        $lte: formatTime(timestampArray[0], 'end')
+        $gte: formatTime(timestampArray[0], 'start', test),
+        $lte: formatTime(timestampArray[0], 'end', test)
       };
     } else { // eslint-disable-line functional/no-conditional-statements
       // eslint-disable-next-line functional/immutable-data
       doc.modificationTime = {
-        $gte: formatTime(timestampArray[0], false),
-        $lte: formatTime(timestampArray[1], false)
+        $gte: formatTime(timestampArray[0], false, test),
+        $lte: formatTime(timestampArray[1], false, test)
       };
     }
   }
@@ -141,19 +141,19 @@ export function generateBlobQuery({profile, state, contentType, creationTime, mo
     return profileDoc;
   }
 
-  function formatTime(timestamp, startOrEndOfDay = false) {
+  function formatTime(timestamp, startOrEndOfDay = false, test = false) {
     if (startOrEndOfDay === 'start') {
       const time = new Date(new Date(timestamp).setUTCHours(0, 0, 0, 0));
-      return time.toISOString();
+      return test ? time.toISOString() : time;
     }
 
     if (startOrEndOfDay === 'end') {
       const time = new Date(new Date(timestamp).setUTCHours(23, 59, 59, 999));
-      return time.toISOString();
+      return test ? time.toISOString() : time;
     }
 
     const time = new Date(timestamp);
-    return time.toISOString();
+    return test ? time.toISOString() : time;
   }
 }
 
