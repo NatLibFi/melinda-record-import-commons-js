@@ -8,11 +8,12 @@ let mongoFixtures; // eslint-disable-line functional/no-let
 
 generateTests({
   callback,
-  path: [__dirname, '..', 'test-fixtures', 'updateBlob'],
+  path: [__dirname, '..', 'test-fixtures', 'blob', 'update'],
   recurse: false,
   useMetadataFile: true,
   fixura: {
-    failWhenNotFound: true
+    failWhenNotFound: true,
+    reader: READERS.JSON
   },
   mocha: {
     before: async () => {
@@ -32,7 +33,7 @@ generateTests({
 
 async function initMongofixtures() {
   mongoFixtures = await mongoFixturesFactory({
-    rootPath: [__dirname, '..', 'test-fixtures', 'updateBlob'],
+    rootPath: [__dirname, '..', 'test-fixtures', 'blob', 'update'],
     gridFS: {bucketName: 'blobmetadatas'},
     useObjectId: true
   });
@@ -46,9 +47,9 @@ async function callback({
   expectedErrorMessage = ''
 }) {
   const mongoUri = await mongoFixtures.getUri();
-  await mongoFixtures.populate(getFixture({components: ['dbContents.json'], reader: READERS.JSON}));
+  await mongoFixtures.populate(getFixture('dbContents.json'));
   const mongoOperator = await createMongoBlobsOperator(mongoUri, {db: '', collection: 'blobmetadatas'});
-  const expectedResult = await getFixture({components: ['expectedResult.json'], reader: READERS.JSON});
+  const expectedResult = await getFixture('expectedResult.json');
   try {
     await mongoOperator.updateBlob(operationParams);
     const dump = dumpParser(await mongoFixtures.dump());

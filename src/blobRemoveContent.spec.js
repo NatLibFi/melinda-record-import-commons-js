@@ -8,7 +8,7 @@ let mongoFixtures; // eslint-disable-line functional/no-let
 
 generateTests({
   callback,
-  path: [__dirname, '..', 'test-fixtures', 'removeBlobContent'],
+  path: [__dirname, '..', 'test-fixtures', 'blob', 'removeContent'],
   recurse: false,
   useMetadataFile: true,
   fixura: {
@@ -33,7 +33,7 @@ generateTests({
 
 async function initMongofixtures() {
   mongoFixtures = await mongoFixturesFactory({
-    rootPath: [__dirname, '..', 'test-fixtures', 'removeBlobContent'],
+    rootPath: [__dirname, '..', 'test-fixtures', 'blob', 'removeContent'],
     gridFS: {bucketName: 'blobmetadatas'},
     useObjectId: true
   });

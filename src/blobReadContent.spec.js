@@ -8,7 +8,7 @@ let mongoFixtures; // eslint-disable-line functional/no-let
 
 generateTests({
   callback,
-  path: [__dirname, '..', 'test-fixtures', 'readBlobContent'],
+  path: [__dirname, '..', 'test-fixtures', 'blob', 'readContent'],
   recurse: false,
   useMetadataFile: true,
   fixura: {
@@ -33,7 +33,7 @@ generateTests({
 
 async function initMongofixtures() {
   mongoFixtures = await mongoFixturesFactory({
-    rootPath: [__dirname, '..', 'test-fixtures', 'readBlobContent'],
+    rootPath: [__dirname, '..', 'test-fixtures', 'blob', 'readContent'],
     gridFS: {bucketName: 'blobmetadatas'},
     useObjectId: true
   });
@@ -61,6 +61,7 @@ async function callback({
     if (!expectedToFail) {
       throw error;
     }
+    console.log(error); // eslint-disable-line
     expect(error.message).to.eql(expectedErrorMessage);
     expect(expectedToFail).to.eql(true, 'This test is not suppose to fail!');
   }

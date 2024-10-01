@@ -185,16 +185,10 @@ export async function createMongoBlobsOperator(mongoUrl, {db = 'db', collection 
   // MARK: Read Blob Content
   function readBlobContent({id}) {
     debug(`Forming stream from blob ${id}`);
-    try {
-      const clean = sanitize(id);
-      // Return content stream
-
-      return gridFSBucket.openDownloadStreamByName(clean);
-    } catch (error) {
-      const errorMessage = error.payload || error.message || '';
-      logger.error(error);
-      throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Mongo errored: ${errorMessage}`);
-    }
+    const clean = sanitize(id);
+    const stream = gridFSBucket.openDownloadStreamByName(clean);
+    // Return content stream
+    return stream;
   }
 
   // MARK: Update Blob
