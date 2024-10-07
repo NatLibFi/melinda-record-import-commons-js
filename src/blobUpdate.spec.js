@@ -48,7 +48,7 @@ async function callback({
 }) {
   const mongoUri = await mongoFixtures.getUri();
   await mongoFixtures.populate(getFixture('dbContents.json'));
-  const mongoOperator = await createMongoBlobsOperator(mongoUri, {db: '', collection: 'blobmetadatas'});
+  const mongoOperator = await createMongoBlobsOperator(mongoUri, '');
   const expectedResult = await getFixture('expectedResult.json');
   try {
     await mongoOperator.updateBlob(operationParams);

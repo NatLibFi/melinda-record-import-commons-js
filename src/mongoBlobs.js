@@ -2,7 +2,7 @@
 import createDebugLogger from 'debug';
 import httpStatus from 'http-status';
 import sanitize from 'mongo-sanitize';
-import {MongoClient, GridFSBucket, MongoDriverError} from 'mongodb';
+import {MongoClient, GridFSBucket} from 'mongodb';
 import {EventEmitter} from 'events';
 
 import {createLogger} from '@natlibfi/melinda-backend-commons';
@@ -11,7 +11,7 @@ import {Error as ApiError} from '@natlibfi/melinda-commons';
 import {BLOB_STATE, BLOB_UPDATE_OPERATIONS} from './constants';
 import {generateBlobQuery} from './utils';
 
-export async function createMongoBlobsOperator(mongoUrl, {db = 'db', collection = 'blobmetadatas'} = {db: 'db', collection: 'blobmetadatas'}) {
+export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
   const logger = createLogger(); // eslint-disable-line
   const debug = createDebugLogger('@natlibfi/melinda-record-import-commons:mongoBlobs');
   const debugDev = createDebugLogger('@natlibfi/melinda-record-import-commons:mongoBlobs:dev');
@@ -19,7 +19,7 @@ export async function createMongoBlobsOperator(mongoUrl, {db = 'db', collection 
   // Connect to mongo (MONGO)
   const client = await MongoClient.connect(mongoUrl);
   const dbConnection = client.db(db);
-  const operator = dbConnection.collection(collection);
+  const operator = dbConnection.collection('blobmetadatas');
   const gridFSBucket = new GridFSBucket(dbConnection, {bucketName: 'blobmetadatas'});
 
   return {queryBlob, createBlob, readBlob, readBlobContent, updateBlob, removeBlob, removeBlobContent, closeClient};
@@ -29,10 +29,9 @@ export async function createMongoBlobsOperator(mongoUrl, {db = 'db', collection 
    * Query blobs
    *
    * @param {Object} params object: limit, skip, sort, profiles, id, correlationId, state, cretionTime, modificationTime
-   * @param {integer} params.limit Mongo query limit
-   * @param {integer} params.skip Mongo skip
-   * @param {integer} params.getAll Mongo get all
-   * @param {string} params.sort asc (1), desc (-1)
+   * @param {string|integer} params.limit Mongo limit results to n results
+   * @param {string|integer} params.skip Mongo skip n query results
+   * @param {boolean} params.getAll Mongo get all query results
    * @param {string} params.profile
    * @param {string} params.contentType Stream data content-type
    * @param {string} params.state Blob state
@@ -58,8 +57,8 @@ export async function createMongoBlobsOperator(mongoUrl, {db = 'db', collection 
       try {
         // .find(<query>, <projection>, <options>)
         const blobsArray = await operator.find(query, {projection: {_id: 0}}) // eslint-disable-line functional/immutable-data
-          .limit(limit + 1)
           .skip(skip)
+          .limit(limit + 1)
           .toArray();
 
         // logger.debug(`blobsArray: ${blobsArray.length}`);
@@ -155,9 +154,9 @@ export async function createMongoBlobsOperator(mongoUrl, {db = 'db', collection 
 
   // MARK: Read Blob
   async function readBlob({id}) {
-    const clean = sanitize(id);
-    debug(`Read blob: ${clean}`);
-    const doc = await operator.findOne({id: clean});
+    const sanitizedId = sanitize(id);
+    debug(`Read blob: ${sanitizedId}`);
+    const doc = await operator.findOne({id: sanitizedId});
 
     if (doc) {
       return formatBlobDocument(doc);
@@ -185,51 +184,53 @@ export async function createMongoBlobsOperator(mongoUrl, {db = 'db', collection 
   // MARK: Read Blob Content
   function readBlobContent({id}) {
     debug(`Forming stream from blob ${id}`);
-    const clean = sanitize(id);
-    const stream = gridFSBucket.openDownloadStreamByName(clean);
+    const sanitizedId = sanitize(id);
+    const stream = gridFSBucket.openDownloadStreamByName(sanitizedId);
     // Return content stream
     return stream;
   }
 
   // MARK: Update Blob
   async function updateBlob({id, payload}) {
-    const clean = sanitize(id);
-    debug(`Update blob: ${clean}`);
-    const blob = await operator.findOne({id: clean});
-    // debugDev(blob);
+    const sanitizedId = sanitize(id);
+    debug(`Update blob: ${sanitizedId}`);
+
+    const blob = await operator.findOne({id: sanitizedId});
     debugDev(blob ? 'Blob found' : 'Blob not found');
-    if (blob) {
-      const {op} = payload;
-      if (op) {
-        const doc = await getUpdateDoc(op);
 
-        const updateIfNotInStates = [BLOB_STATE.TRANSFORMATION_FAILED, BLOB_STATE.ABORTED, BLOB_STATE.PROCESSED];
-        if (updateIfNotInStates.includes(blob.state)) {
-          throw new ApiError(httpStatus.CONFLICT, 'Not valid blob state for update');
-        }
+    if (!blob) {
+      throw new ApiError(httpStatus.NOT_FOUND, 'Blob not found');
+    }
+    // debugDev(blob);
+    const {op, ...rest} = payload;
 
-        const {numberOfRecords, failedRecords, importResults} = blob.processingInfo;
-        if (op === BLOB_UPDATE_OPERATIONS.recordProcessed && numberOfRecords <= failedRecords.length + importResults.length) { // eslint-disable-line functional/no-conditional-statements
-          throw new ApiError(httpStatus.CONFLICT, 'Invalid blob record count');
-        }
-
-        // debugDev(doc);
-        const {modifiedCount} = await operator.findOneAndUpdate({id: clean}, doc, {projection: {_id: 0}, returnNewDocument: false});
-
-        if (modifiedCount === 0) { // eslint-disable-line functional/no-conditional-statements
-          throw new ApiError(httpStatus.CONFLICT, 'No change');
-        }
-
-        return;
-      }
-
+    if (!op) {
       throw new ApiError(httpStatus.UNPROCESSABLE_ENTITY, 'Blob update operation error');
     }
 
-    throw new ApiError(httpStatus.NOT_FOUND, 'Blob not found');
+    const doc = await getUpdateDoc(op, rest);
+
+    const updateIfNotInStates = [BLOB_STATE.TRANSFORMATION_FAILED, BLOB_STATE.ABORTED, BLOB_STATE.PROCESSED];
+    if (updateIfNotInStates.includes(blob.state)) {
+      throw new ApiError(httpStatus.CONFLICT, 'Not valid blob state for update');
+    }
+
+    const {numberOfRecords, failedRecords, importResults} = blob.processingInfo;
+    if (op === BLOB_UPDATE_OPERATIONS.recordProcessed && numberOfRecords <= failedRecords.length + importResults.length) { // eslint-disable-line functional/no-conditional-statements
+      throw new ApiError(httpStatus.CONFLICT, 'Invalid blob record count');
+    }
+
+    // debugDev(doc);
+    const {modifiedCount} = await operator.findOneAndUpdate({id: sanitizedId}, doc, {projection: {_id: 0}, returnNewDocument: false});
+
+    if (modifiedCount === 0) { // eslint-disable-line functional/no-conditional-statements
+      throw new ApiError(httpStatus.CONFLICT, 'No change');
+    }
+
+    return;
 
     // MARK: Update - Get update doc
-    function getUpdateDoc(op) {
+    function getUpdateDoc(op, updatePayload) {
       const nowDate = new Date().toISOString();
       const {
         abort, recordProcessed, transformationFailed,
@@ -240,21 +241,22 @@ export async function createMongoBlobsOperator(mongoUrl, {db = 'db', collection 
       debug(`Update blob operation: ${op}`);
 
       if (op === updateState) {
-        const {state} = payload;
+        const {state} = updatePayload;
         debug(`State update to ${state}`);
 
-        if ([
+        const validStatesToUpdate = [
           BLOB_STATE.PROCESSED,
           BLOB_STATE.PROCESSING,
           BLOB_STATE.PROCESSING_BULK,
           BLOB_STATE.PENDING_TRANSFORMATION,
           BLOB_STATE.TRANSFORMATION_IN_PROGRESS,
           BLOB_STATE.TRANSFORMED
-        ].includes(state)) {
+        ];
+        if (validStatesToUpdate.includes(state)) {
           return {$set: {state, modificationTime: nowDate}};
         }
 
-        throw new ApiError(httpStatus.UNPROCESSABLE_ENTITY, 'Blob update state error');
+        throw new ApiError(httpStatus.UNPROCESSABLE_ENTITY, 'Blob update state error: invalid state');
       }
 
       if (op === abort) {
@@ -276,25 +278,25 @@ export async function createMongoBlobsOperator(mongoUrl, {db = 'db', collection 
       }
 
       if (op === transformationFailed) {
-        debugDev(`Error: ${payload.error}`);
+        debugDev(`Error: ${updatePayload.error}`);
         return {
           $set: {
             state: BLOB_STATE.TRANSFORMATION_FAILED,
             modificationTime: nowDate,
-            'processingInfo.transformationError': payload.error
+            'processingInfo.transformationError': updatePayload.error
           }
         };
       }
 
       if (op === transformedRecord) {
-        if (payload.error) {
-          payload.error.timestamp = nowDate; // eslint-disable-line new-cap, functional/immutable-data
+        if (updatePayload.error) {
+          updatePayload.error.timestamp = nowDate; // eslint-disable-line new-cap, functional/immutable-data
           return {
             $set: {
               modificationTime: nowDate
             },
             $push: {
-              'processingInfo.failedRecords': payload.error
+              'processingInfo.failedRecords': updatePayload.error
             },
             $inc: {
               'processingInfo.numberOfRecords': 1
@@ -319,39 +321,39 @@ export async function createMongoBlobsOperator(mongoUrl, {db = 'db', collection 
           },
           $push: {
             'processingInfo.importResults': {
-              status: payload.status,
-              metadata: payload.metadata
+              status: updatePayload.status,
+              metadata: updatePayload.metadata
             }
           }
         };
       }
 
       if (op === addCorrelationId) {
-        debug(`CorrelationId: ${payload.correlationId}`);
+        debug(`CorrelationId: ${updatePayload.correlationId}`);
         return {
           $set: {
             modificationTime: nowDate,
-            correlationId: payload.correlationId
+            correlationId: updatePayload.correlationId
           }
         };
       }
 
       if (op === setCataloger) {
-        logger.debug(`case: ${op}, cataloger: ${payload.cataloger}`);
+        logger.debug(`case: ${op}, cataloger: ${updatePayload.cataloger}`);
         return {
           modificationTime: nowDate,
           $set: {
-            cataloger: payload.cataloger
+            cataloger: updatePayload.cataloger
           }
         };
       }
 
       if (op === setNotificationEmail) {
-        logger.debug(`case: ${op}, cataloger: ${payload.notificationEmail}`);
+        logger.debug(`case: ${op}, cataloger: ${updatePayload.notificationEmail}`);
         return {
           modificationTime: nowDate,
           $set: {
-            notificationEmail: payload.notificationEmail
+            notificationEmail: updatePayload.notificationEmail
           }
         };
       }
@@ -363,27 +365,16 @@ export async function createMongoBlobsOperator(mongoUrl, {db = 'db', collection 
 
   // MARK: Remove Blob
   async function removeBlob({id}) {
-    const clean = sanitize(id);
-    debug(`Preparing to remove blob @ id: ${clean}`);
+    const sanitizedId = sanitize(id);
+    debug(`Preparing to remove blob @ id: ${sanitizedId}`);
 
     try {
-      const noContent = await removeBlobContent({id});
-      if (noContent) {
-        debug(`Removing blob id:${JSON.stringify(clean)}`);
-        await operator.deleteOne({id: clean});
-        return true;
-      }
+      await removeBlobContent({id});
+      debug(`Removing blob id:${JSON.stringify(sanitizedId)}`);
+      await operator.deleteOne({id: sanitizedId});
+      return;
     } catch (err) {
       debugDev('removeBlob handing error');
-      if (err instanceof MongoDriverError) {
-        if (err.message.indexOf('File not found for id') !== -1) {
-          debug(`Removing blob id:${JSON.stringify(clean)}`);
-          await operator.deleteOne({id: clean});
-          return true;
-        }
-        logger.error(err.message);
-        throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, err.message);
-      }
       throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, err.message);
     }
   }
@@ -391,19 +382,19 @@ export async function createMongoBlobsOperator(mongoUrl, {db = 'db', collection 
   // MARK: Remove Blob Content
   async function removeBlobContent({id}) {
     debug(`Checkking blob content, id: ${id}`);
-    const clean = sanitize(id);
+    const sanitizedId = sanitize(id);
 
-    const result = await dbConnection.collection(`${collection}.files`).findOne({filename: clean}); // njsscan-ignore: node_nosqli_injection
+    const result = await dbConnection.collection('blobmetadatas.files').findOne({filename: sanitizedId}); // njsscan-ignore: node_nosqli_injection
     // debugDev(`blob removeContent check: result ${JSON.stringify(result)}`);
 
     if (result) {
       debug(`Content found and removed`);
       await gridFSBucket.delete(result._id);
-      return true;
+      return;
     }
 
     debug(`No content found`);
-    return true;
+    return;
   }
 
   async function closeClient() {

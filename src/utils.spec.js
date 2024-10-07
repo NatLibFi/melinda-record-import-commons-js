@@ -60,7 +60,7 @@ async function callback({
     if (method === 'getNextBlob') {
       const mongoUri = await mongoFixtures.getUri();
       await mongoFixtures.populate(getFixture('dbContents.json'));
-      const mongoOperator = await createMongoBlobsOperator(mongoUri, {db: '', collection: 'blobmetadatas'});
+      const mongoOperator = await createMongoBlobsOperator(mongoUri, '');
       const result = await getNextBlob(mongoOperator, {profileIds, state, importOfflinePeriod}, nowTime);
       return expect(result).to.eql(expectedResult);
     }

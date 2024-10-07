@@ -1,6 +1,5 @@
 import createDebugLogger from 'debug';
 import {v4 as uuid} from 'uuid';
-import {promisify} from 'util';
 
 import {BLOB_STATE, BLOB_UPDATE_OPERATIONS} from '../constants';
 
@@ -9,7 +8,6 @@ export default function (mongoOperator, transformHandler, amqplib, config) {
   const debugHandling = debug.extend('blobHandling');
   const debugRecordHandling = debug.extend('recordHandling');
   const {amqpUrl, abortOnInvalidRecords} = config;
-  const setTimeoutPromise = promisify(setTimeout);
 
   return startHandling;
 
@@ -32,9 +30,8 @@ export default function (mongoOperator, transformHandler, amqplib, config) {
 
       await new Promise((resolve, reject) => {
         TransformEmitter
-          .on('end', async () => {
-            debugHandling(`Transformer has handled all record to line. ${recordPayloads.length} records`);
-            await setTimeoutPromise(50);
+          .on('end', () => {
+            debugHandling(`Transformer has collected all records. ${recordPayloads.length} records`);
             debugHandling(`All records are transformed`);
             resolve(true);
           })
@@ -75,7 +72,7 @@ export default function (mongoOperator, transformHandler, amqplib, config) {
       });
 
       if (abortOnInvalidRecords && recordPayloads.some(recordPayload => recordPayload.failed === true)) {
-        debugHandling('Not sending records to queue because some records failed and abortOnInvalidRecords is true');
+        debug('Not sending records to queue because some records failed and abortOnInvalidRecords is true');
         await mongoOperator.updateBlob({
           id: blobId,
           payload: {
@@ -83,14 +80,16 @@ export default function (mongoOperator, transformHandler, amqplib, config) {
             error: {message: 'Some records have failed'}
           }
         });
-        connection.close();
+
+        debug(`Closing AMQP resources!`);
+        await connection.close();
         return;
       }
 
-      debugHandling(`Abort on invalid records was false or all records were okay. Queuing records...`);
+      debug(`Abort on invalid records was false or all records were okay. Queuing records...`);
       await handleRecords(recordPayloads);
 
-      debugHandling(`Setting blob state ${BLOB_STATE.TRANSFORMED}...`);
+      debug(`Setting blob state ${BLOB_STATE.TRANSFORMED}...`);
       await mongoOperator.updateBlob({
         id: blobId,
         payload: {
@@ -98,8 +97,9 @@ export default function (mongoOperator, transformHandler, amqplib, config) {
           state: BLOB_STATE.TRANSFORMED
         }
       });
-      debugHandling(`Closing AMQP resources!`);
-      connection.close();
+
+      debug(`Closing AMQP resources!`);
+      await connection.close();
       return;
     } catch (err) {
       const error = getError(err);
@@ -111,8 +111,9 @@ export default function (mongoOperator, transformHandler, amqplib, config) {
           error
         }
       });
+
       debugHandling(`Closing AMQP resources!`);
-      connection.close();
+      await connection.close();
       return;
     }
 

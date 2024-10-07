@@ -51,7 +51,7 @@ async function callback({
   const expectedResult = await getFixture('expectedResult.json');
 
   try {
-    const mongoOperator = await createMongoBlobsOperator(mongoUri, {db: '', collection: 'blobmetadatas'});
+    const mongoOperator = await createMongoBlobsOperator(mongoUri, '');
     const readStream = await mongoOperator.readBlobContent(operationParams);
     const fileContentText = await getData(readStream);
     const result = JSON.parse(fileContentText);

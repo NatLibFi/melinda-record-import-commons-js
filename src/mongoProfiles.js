@@ -10,7 +10,7 @@ import {Error as ApiError} from '@natlibfi/melinda-commons';
 
 import {generateProfileQuery} from './utils';
 
-export async function createMongoProfilesOperator(mongoUrl, {db = 'db', collection = 'profiles'} = {db: 'db', collection: 'profiles'}) {
+export async function createMongoProfilesOperator(mongoUrl, db = 'db') {
   const logger = createLogger(); // eslint-disable-line
   const debug = createDebugLogger('@natlibfi/melinda-record-import-commons:mongoProfiles');
   const debugDev = createDebugLogger('@natlibfi/melinda-record-import-commons:mongoProfiles:dev');
@@ -18,7 +18,7 @@ export async function createMongoProfilesOperator(mongoUrl, {db = 'db', collecti
   // Connect to mongo (MONGO)
   const client = await MongoClient.connect(mongoUrl);
   const dbConnection = client.db(db);
-  const operator = dbConnection.collection(collection);
+  const operator = dbConnection.collection('profiles');
 
   return {queryProfile, createOrModifyProfile, readProfile, removeProfile, closeClient};
 
@@ -26,15 +26,11 @@ export async function createMongoProfilesOperator(mongoUrl, {db = 'db', collecti
   function queryProfile(params = {}) {
     debug(`Querying: ${JSON.stringify(params)}`);
     const emitter = new EventEmitter();
-    const {limit = 100, skip = 0, order = 'asc', getAll = true, ...rest} = params;
+    const {limit = 100, skip = 0, getAll = true, ...rest} = params;
     //logger.debug(`getAll: ${getAll}`);
     //logger.debug(`rest: ${rest}`);
 
     const query = generateProfileQuery(rest);
-
-    // -1 descending - 1 ascending
-    const sortValue = handleSortValue(order);
-    const sort = {creationTime: sortValue};
 
     handleProfileQuery(getAll, skip);
 
@@ -44,9 +40,8 @@ export async function createMongoProfilesOperator(mongoUrl, {db = 'db', collecti
       try {
         // .find(<query>, <projection>, <options>)
         const profilesArray = await operator.find(query, {projection: {_id: 0}}) // eslint-disable-line functional/immutable-data
-          .sort(sort)
-          .limit(limit + 1)
           .skip(skip)
+          .limit(limit + 1) // +1 is used to check if there is more results
           .toArray();
 
         // logger.debug(`profilesArray: ${profilesArray.length}`);
@@ -72,18 +67,6 @@ export async function createMongoProfilesOperator(mongoUrl, {db = 'db', collecti
       } catch (error) {
         emitter.emit('error', error);
       }
-    }
-
-    function handleSortValue(order) {
-      if (order === 'asc' || order === '1') {
-        return 1;
-      }
-
-      if (order === 'desc' || order === '-1') {
-        return -1;
-      }
-
-      return 1;
     }
   }
 
@@ -135,7 +118,7 @@ export async function createMongoProfilesOperator(mongoUrl, {db = 'db', collecti
 
     if (acknowledged === true && deletedCount === 1) {
       debugDev(`Profile removed`);
-      return;
+      return true;
     }
 
     if (acknowledged === true && deletedCount === 0) {

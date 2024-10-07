@@ -50,7 +50,7 @@ async function callback({
   await mongoFixtures.populate(getFixture('dbContents.json'));
   await mongoFixtures.populateFiles(getFixture('dbFiles.json'));
   const expectedResult = await getFixture('expectedResult.json');
-  const mongoOperator = await createMongoBlobsOperator(mongoUri, {db: '', collection: 'blobmetadatas'});
+  const mongoOperator = await createMongoBlobsOperator(mongoUri, '');
   try {
     await mongoOperator.removeBlobContent(operationParams);
     const dump = dumpParser(await mongoFixtures.dump());

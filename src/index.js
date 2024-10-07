@@ -1,7 +1,7 @@
 import transformerBlobLogic from './transformer/index';
 import transformerCliLogic from './transformer/cli';
-import {createMongoBlobsOperator} from './mongoBlobs.js';
-import {createMongoProfilesOperator} from './mongoProfiles.js';
+import {createMongoBlobsOperator} from './mongoBlobs';
+import {createMongoProfilesOperator} from './mongoProfiles';
 
 export * from './constants';
 export * from './api-client';

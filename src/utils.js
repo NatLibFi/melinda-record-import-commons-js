@@ -58,7 +58,7 @@ export function generateBlobQuery({profile, state, contentType, creationTime, mo
   }
 
   if (creationTime) {
-    const timestampArray = creationTime.split(',');
+    const timestampArray = splitAndSanitize(creationTime);
     if (timestampArray.length === 1) { // eslint-disable-line functional/no-conditional-statements
       // eslint-disable-next-line functional/immutable-data
       doc.creationTime = {
@@ -75,7 +75,7 @@ export function generateBlobQuery({profile, state, contentType, creationTime, mo
   }
 
   if (modificationTime) {
-    const timestampArray = sanitize(modificationTime.split(','));
+    const timestampArray = splitAndSanitize(modificationTime);
 
     if (timestampArray.length === 1) { // eslint-disable-line functional/no-conditional-statements
       // eslint-disable-next-line functional/immutable-data

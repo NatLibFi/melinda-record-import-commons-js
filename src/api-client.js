@@ -16,11 +16,10 @@ export async function createApiClient({recordImportApiUrl, userAgent = 'Record i
 
   const serviceTokenOperator = await createServiceAuthoperator(keycloakOptions);
   return {
-    getBlobs, createBlob, getBlobMetadata, deleteBlob,
-    getBlobContent, deleteBlobContent, setCataloger, setNotificationEmail,
-    getProfile, modifyProfile, queryProfiles, deleteProfile,
-    setTransformationFailed, setCorrelationId, setRecordProcessed,
-    transformedRecord, setAborted, updateState
+    getBlobs, createBlob, getBlobMetadata, deleteBlob, deleteProfile, deleteBlobContent,
+    getBlobContent, getProfile, createOrModifyProfile, queryProfiles,
+    setCataloger, setNotificationEmail, setTransformationFailed, setCorrelationId,
+    setRecordProcessed, setTransformedRecord, setAborted, updateState
   };
 
   // MARK: createBLob
@@ -31,7 +30,6 @@ export async function createApiClient({recordImportApiUrl, userAgent = 'Record i
       method: 'POST',
       body: blob,
       headers: {
-        'User-Agent': userAgent,
         'content-type': type,
         'Import-Profile': profile
       }
@@ -54,8 +52,7 @@ export async function createApiClient({recordImportApiUrl, userAgent = 'Record i
     debug('getBlobMetadata');
     const response = await doRequest(`${recordImportApiUrl}/blobs/${id}`, {
       headers: {
-        'User-Agent': userAgent,
-        Accept: 'application/json'
+        'Accept': 'application/json'
       }
     });
 
@@ -71,9 +68,7 @@ export async function createApiClient({recordImportApiUrl, userAgent = 'Record i
   async function getBlobContent({id}) {
     debug('getBlobContent');
     const response = await doRequest(`${recordImportApiUrl}/blobs/${id}/content`, {
-      headers: {
-        'User-Agent': userAgent
-      }
+      headers: {}
     });
 
     if (response.status === httpStatus.OK) {
@@ -92,8 +87,7 @@ export async function createApiClient({recordImportApiUrl, userAgent = 'Record i
     debug('getProfile');
     const response = await doRequest(`${recordImportApiUrl}/profiles/${id}`, {
       headers: {
-        'User-Agent': userAgent,
-        Accept: 'application/json'
+        'Accept': 'application/json'
       }
     });
 
@@ -110,9 +104,7 @@ export async function createApiClient({recordImportApiUrl, userAgent = 'Record i
     debug('deleteProfile');
     const response = await doRequest(`${recordImportApiUrl}/profiles/${id}`, {
       method: 'DELETE',
-      headers: {
-        'User-Agent': userAgent
-      }
+      headers: {}
     });
 
     if (response.status !== httpStatus.NO_CONTENT) { // eslint-disable-line functional/no-conditional-statements
@@ -126,8 +118,7 @@ export async function createApiClient({recordImportApiUrl, userAgent = 'Record i
     debug('queryProfiles');
     const response = await doRequest(`${recordImportApiUrl}/profiles`, {
       headers: {
-        'User-Agent': userAgent,
-        Accept: 'application/json'
+        'Accept': 'application/json'
       }
     });
 
@@ -140,14 +131,13 @@ export async function createApiClient({recordImportApiUrl, userAgent = 'Record i
   }
 
   // MARK: modifyProfile
-  async function modifyProfile({id, payload}) {
+  async function createOrModifyProfile({id, payload}) {
     debug('modifyProfile');
     const response = await doRequest(`${recordImportApiUrl}/profiles/${id}`, {
       method: 'POST',
       body: JSON.stringify(payload),
       headers: {
-        'User-Agent': userAgent,
-        'content-type': 'application/json'
+        'Content-Type': 'application/json'
       }
     });
 
@@ -162,9 +152,7 @@ export async function createApiClient({recordImportApiUrl, userAgent = 'Record i
     debug('deleteBlob');
     const response = await doRequest(`${recordImportApiUrl}/blobs/${id}`, {
       method: 'DELETE',
-      headers: {
-        'User-Agent': userAgent
-      }
+      headers: {}
     });
 
     if (response.status === httpStatus.NO_CONTENT) {
@@ -180,9 +168,7 @@ export async function createApiClient({recordImportApiUrl, userAgent = 'Record i
     debug('deleteBlobContent');
     const response = await doRequest(`${recordImportApiUrl}/blobs/${id}/content`, {
       method: 'DELETE',
-      headers: {
-        'User-Agent': userAgent
-      }
+      headers: {}
     });
 
     if (response.status === httpStatus.NO_CONTENT) {
@@ -194,7 +180,7 @@ export async function createApiClient({recordImportApiUrl, userAgent = 'Record i
   }
 
   // MARK: transformedRecord
-  async function transformedRecord({id, error = undefined}) {
+  async function setTransformedRecord({id, error = undefined}) {
     debug('transformedRecord');
     const conf = {
       id,
@@ -304,6 +290,7 @@ export async function createApiClient({recordImportApiUrl, userAgent = 'Record i
   function getBlobs(query = {}) {
     debug('getBlobs');
     const blobsUrl = createURL();
+    const getAll = query.getAll || true;
     debug(`Blob url: ${blobsUrl}`);
     const emitter = new EventEmitter();
 
@@ -332,17 +319,18 @@ export async function createApiClient({recordImportApiUrl, userAgent = 'Record i
       try {
         const response = await doRequest(blobsUrl, getOptions(offset));
         debug(`getBlobs response status: ${response.status}`);
+        const nextOffset = response.headers.has('NextOffset') ? response.headers.get('NextOffset') : false;
 
         if (response.status === httpStatus.OK) {
           const blobs = await response.json();
           emitter.emit('blobs', blobs);
 
-          if (response.headers.has('NextOffset')) {
-            pump(response.headers.get('NextOffset'));
+          if (getAll && nextOffset) {
+            pump(nextOffset);
             return;
           }
 
-          emitter.emit('end');
+          emitter.emit('end', nextOffset);
           return;
         }
 
@@ -354,8 +342,7 @@ export async function createApiClient({recordImportApiUrl, userAgent = 'Record i
       function getOptions(offset) {
         const options = {
           headers: {
-            'User-Agent': userAgent,
-            Accept: 'application/json'
+            'Accept': 'application/json'
           }
         };
 
@@ -373,15 +360,11 @@ export async function createApiClient({recordImportApiUrl, userAgent = 'Record i
   async function updateBlobMetadata({id, payload}) {
     debug(`updateBlobMetadata: ${payload.op}`);
     try {
-      const Authorization = await serviceTokenOperator.getServiceAuthToken();
-
       const response = await doRequest(`${recordImportApiUrl}/blobs/${id}`, {
         method: 'POST',
         body: JSON.stringify(payload),
         headers: {
-          'User-Agent': userAgent,
-          'content-type': 'application/json',
-          Authorization
+          'Content-Type': 'application/json'
         }
       });
 
@@ -407,22 +390,22 @@ export async function createApiClient({recordImportApiUrl, userAgent = 'Record i
 
     try {
       const options = {headers: {}, ...reqOptions};
-      options.headers.Accept = 'html'; // eslint-disable-line functional/immutable-data
+      options.headers['User-Agent'] = userAgent; // eslint-disable-line functional/immutable-data
       options.headers.Authorization = await serviceTokenOperator.getServiceAuthToken(); // eslint-disable-line functional/immutable-data
       options.agent = `${reqUrl}`.indexOf('https') >= 0 ? new https.Agent({rejectUnauthorized: !allowSelfSignedApiCert}) : undefined; // eslint-disable-line functional/immutable-data
 
       const response = await fetch(reqUrl, options);
       debug(`doRequest response status: ${response.status}`);
 
-      if (response.status === httpStatus.UNAUTHORIZED) {
+      if (![httpStatus.OK, httpStatus.CREATED, httpStatus.NO_CONTENT].includes(response.status)) {
         const errorMessage = await response.text();
-        throw new ApiError(response.status, errorMessage);
+        return {status: response.status, message: errorMessage};
       }
 
       return response;
     } catch (error) {
       debug(error);
-      return {status: 500, message: 'Error on auth'};
+      throw error;
     }
   }
 }

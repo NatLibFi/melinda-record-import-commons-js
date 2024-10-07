@@ -46,7 +46,7 @@ async function callback({
 }) {
   const mongoUri = await mongoFixtures.getUri();
   await mongoFixtures.populate(getFixture({components: ['dbContents.json'], reader: READERS.JSON}));
-  const mongoOperator = await createMongoProfilesOperator(mongoUri, {db: '', collection: 'profiles'});
+  const mongoOperator = await createMongoProfilesOperator(mongoUri, '');
   const expectedResult = await getFixture({components: ['expectedResult.json'], reader: READERS.JSON});
   try {
     await mongoOperator.createOrModifyProfile(operationParams);

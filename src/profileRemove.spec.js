@@ -47,7 +47,7 @@ async function callback({
 }) {
   const mongoUri = await mongoFixtures.getUri();
   await mongoFixtures.populate(getFixture('dbContents.json'));
-  const mongoOperator = await createMongoProfilesOperator(mongoUri, {db: '', collection: 'profiles'});
+  const mongoOperator = await createMongoProfilesOperator(mongoUri, '');
   const expectedResult = await getFixture('expectedResult.json');
   try {
     await mongoOperator.removeProfile(operationParams);

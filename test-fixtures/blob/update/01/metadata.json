@@ -11,5 +11,5 @@
   },
   "expectedToFail": true,
   "expectedErrorStatus": 422,
-  "expectedErrorMessage": "Blob update state error"
+  "expectedErrorMessage": "Blob update state error: invalid state"
 }
