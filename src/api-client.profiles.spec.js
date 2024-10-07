@@ -12,7 +12,7 @@ const debug = createDebugLogger('@natlibfi/melinda-record-import-commons/api-cli
 const config = {
   keycloakOptions: {test: true},
   recordImportApiOptions: {
-    recordImportApiUrl: 'http://foo.bar',
+    recordImportApiUrl: 'http://example.com',
     userAgent: 'test',
     allowSelfSignedApiCert: true
   }

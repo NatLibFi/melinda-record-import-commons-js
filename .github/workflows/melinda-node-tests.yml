@@ -35,7 +35,7 @@ jobs:
   njsscan:
     name: Njsscan-check
     runs-on: ubuntu-latest
-    container: docker://node:18
+    container: node:18
 
     steps:
     - name: Checkout the code
@@ -49,7 +49,7 @@ jobs:
   license-scan:
     name: License compliance check
     runs-on: ubuntu-latest
-    container: docker://node:18
+    container: node:18
 
     steps:
       - uses: actions/checkout@v4
@@ -58,7 +58,9 @@ jobs:
           exclude_pattern: /^@natlibfi/
 
   publish:
+    name: Npm publishing
     runs-on: ubuntu-latest
+    container: node:18
     needs: [build-node-versions, njsscan]
     if: contains(github.ref, 'refs/tags/')
 

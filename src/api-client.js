@@ -8,7 +8,7 @@ import https from 'https';
 import {createServiceAuthoperator} from './oidc.js';
 import httpStatus from 'http-status';
 
-export async function createApiClient({recordImportApiUrl, userAgent = 'Record import API client / Javascript', allowSelfSignedApiCert}, keycloakOptions, mongoOperator = false) {
+export async function createApiClient({recordImportApiUrl, userAgent = 'Record import API client / Javascript', allowSelfSignedApiCert}, keycloakOptions) {
   const debug = createDebugLogger('@natlibfi/melinda-record-import-commons:api-client');
   if (!keycloakOptions) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Keycloak options missing on record import api client creation');
@@ -52,13 +52,6 @@ export async function createApiClient({recordImportApiUrl, userAgent = 'Record i
   // MARK: getBlobMetadata
   async function getBlobMetadata({id}) {
     debug('getBlobMetadata');
-
-    // eslint-disable-next-line functional/no-conditional-statements
-    if (mongoOperator) {
-      const blob = await mongoOperator.readBlob({id});
-      return blob;
-    }
-
     const response = await doRequest(`${recordImportApiUrl}/blobs/${id}`, {
       headers: {
         'User-Agent': userAgent,
@@ -77,13 +70,6 @@ export async function createApiClient({recordImportApiUrl, userAgent = 'Record i
   // MARK: getBlobContent
   async function getBlobContent({id}) {
     debug('getBlobContent');
-
-    // eslint-disable-next-line functional/no-conditional-statements
-    if (mongoOperator) {
-      const readStream = await mongoOperator.readBlobContent({id});
-      return {readStream};
-    }
-
     const response = await doRequest(`${recordImportApiUrl}/blobs/${id}/content`, {
       headers: {
         'User-Agent': userAgent
@@ -217,10 +203,6 @@ export async function createApiClient({recordImportApiUrl, userAgent = 'Record i
         error
       }
     };
-    if (mongoOperator) {
-      await mongoOperator.updateBlob(conf);
-      return;
-    }
 
     await updateBlobMetadata(conf);
   }
@@ -234,10 +216,6 @@ export async function createApiClient({recordImportApiUrl, userAgent = 'Record i
         op: BLOB_UPDATE_OPERATIONS.abort
       }
     };
-    if (mongoOperator) {
-      await mongoOperator.updateBlob(conf);
-      return;
-    }
 
     await updateBlobMetadata(conf);
   }
@@ -264,10 +242,6 @@ export async function createApiClient({recordImportApiUrl, userAgent = 'Record i
         op: BLOB_UPDATE_OPERATIONS.recordProcessed
       }
     };
-    if (mongoOperator) {
-      await mongoOperator.updateBlob(conf);
-      return;
-    }
 
     await updateBlobMetadata(conf);
   }
@@ -282,10 +256,6 @@ export async function createApiClient({recordImportApiUrl, userAgent = 'Record i
         op: BLOB_UPDATE_OPERATIONS.setNotificationEmail
       }
     };
-    if (mongoOperator) {
-      await mongoOperator.updateBlob(conf);
-      return;
-    }
 
     await updateBlobMetadata(conf);
   }
@@ -300,10 +270,6 @@ export async function createApiClient({recordImportApiUrl, userAgent = 'Record i
         op: BLOB_UPDATE_OPERATIONS.setCataloger
       }
     };
-    if (mongoOperator) {
-      await mongoOperator.updateBlob(conf);
-      return;
-    }
 
     await updateBlobMetadata(conf);
   }
@@ -318,10 +284,6 @@ export async function createApiClient({recordImportApiUrl, userAgent = 'Record i
         op: BLOB_UPDATE_OPERATIONS.addCorrelationId
       }
     };
-    if (mongoOperator) {
-      await mongoOperator.updateBlob(conf);
-      return;
-    }
 
     await updateBlobMetadata(conf);
   }
