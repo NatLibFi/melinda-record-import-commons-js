@@ -1,5 +1,5 @@
 {
-  "description": "getBlobs: no query, retuns 2 blobs",
+  "description": "getBlobs: no query, returns 2 blobs",
   "only": false,
   "skip": false,
   "method": "getBlobs",
