@@ -1,12 +1,12 @@
 import {EventEmitter} from 'events';
+import createDebugLogger from 'debug';
+import https from 'https';
+import httpStatus from 'http-status';
 import fetch from 'node-fetch';
 import {URL} from 'url';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
-import {BLOB_UPDATE_OPERATIONS} from './constants.js';
-import createDebugLogger from 'debug';
-import https from 'https';
-import {createServiceAuthoperator} from './oidc.js';
-import httpStatus from 'http-status';
+import {BLOB_UPDATE_OPERATIONS} from './constants';
+import {createServiceAuthoperator} from './keycloakAuthOperator';
 
 export async function createApiClient({recordImportApiUrl, userAgent = 'Record import API client / Javascript', allowSelfSignedApiCert}, keycloakOptions) {
   const debug = createDebugLogger('@natlibfi/melinda-record-import-commons:api-client');
