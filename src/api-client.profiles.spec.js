@@ -1,5 +1,3 @@
-/* eslint-disable no-unused-vars */
-
 /*
 import {expect} from 'chai';
 import {READERS} from '@natlibfi/fixura';

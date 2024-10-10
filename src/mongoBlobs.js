@@ -12,7 +12,7 @@ import {BLOB_STATE, BLOB_UPDATE_OPERATIONS} from './constants';
 import {generateBlobQuery} from './utils';
 
 export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
-  const logger = createLogger(); // eslint-disable-line
+  const logger = createLogger();
   const debug = createDebugLogger('@natlibfi/melinda-record-import-commons:mongoBlobs');
   const debugDev = createDebugLogger('@natlibfi/melinda-record-import-commons:mongoBlobs:dev');
 
@@ -216,14 +216,14 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
     }
 
     const {numberOfRecords, failedRecords, importResults} = blob.processingInfo;
-    if (op === BLOB_UPDATE_OPERATIONS.recordProcessed && numberOfRecords <= failedRecords.length + importResults.length) { // eslint-disable-line functional/no-conditional-statements
+    if (op === BLOB_UPDATE_OPERATIONS.recordProcessed && numberOfRecords <= failedRecords.length + importResults.length) {
       throw new ApiError(httpStatus.CONFLICT, 'Invalid blob record count');
     }
 
     // debugDev(doc);
     const {modifiedCount} = await operator.findOneAndUpdate({id: sanitizedId}, doc, {projection: {_id: 0}, returnNewDocument: false});
 
-    if (modifiedCount === 0) { // eslint-disable-line functional/no-conditional-statements
+    if (modifiedCount === 0) {
       throw new ApiError(httpStatus.CONFLICT, 'No change');
     }
 

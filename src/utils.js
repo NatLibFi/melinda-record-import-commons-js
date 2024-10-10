@@ -16,33 +16,33 @@ export function isOfflinePeriod(importOfflinePeriod, nowTime = false) {
 
   const {startHour, lengthHours} = importOfflinePeriod;
   const now = nowTime ? new Date(nowTime) : new Date();
-  debugDev('now: ', formatISO(now)); // eslint-disable-line
+  debugDev('now: ', formatISO(now));
   const todaysOfflineStart = set(now, {hours: startHour, minutes: 0, seconds: 0, milliseconds: 0});
-  debugDev('today offline starts: ', formatISO(todaysOfflineStart)); // eslint-disable-line
+  debugDev('today offline starts: ', formatISO(todaysOfflineStart));
   const todaysOfflineEnd = add(todaysOfflineStart, {hours: lengthHours});
-  debugDev('today offline ends: ', formatISO(todaysOfflineEnd)); // eslint-disable-line
+  debugDev('today offline ends: ', formatISO(todaysOfflineEnd));
 
   if (isAfter(now, todaysOfflineStart) && isBefore(now, todaysOfflineEnd)) {
-    debugDev('Now is todays offline hours!'); // eslint-disable-line
+    debugDev('Now is todays offline hours!');
     return true;
   }
 
   if (isAfter(now, todaysOfflineEnd)) {
-    debugDev('Now is after todays offline hours!'); // eslint-disable-line
+    debugDev('Now is after todays offline hours!');
     return false;
   }
 
   const yesterdaysOfflineStart = set(add(now, {days: -1}), {hours: startHour, minutes: 0, seconds: 0, milliseconds: 0});
-  debugDev('yesterdays offline starts: ', formatISO(yesterdaysOfflineStart)); // eslint-disable-line
+  debugDev('yesterdays offline starts: ', formatISO(yesterdaysOfflineStart));
   const yesterdaysOfflineEnd = add(yesterdaysOfflineStart, {hours: lengthHours});
-  debugDev('yesterdays offline ends: ', formatISO(yesterdaysOfflineEnd)); // eslint-disable-line
+  debugDev('yesterdays offline ends: ', formatISO(yesterdaysOfflineEnd));
 
   if (isBefore(now, yesterdaysOfflineEnd)) {
-    debugDev('Now is yesterdays offline hours!'); // eslint-disable-line
+    debugDev('Now is yesterdays offline hours!');
     return true;
   }
 
-  debugDev('Now is before todays offline hours!'); // eslint-disable-line
+  debugDev('Now is before todays offline hours!');
   return false;
 }
 

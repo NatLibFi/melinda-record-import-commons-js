@@ -5,13 +5,13 @@ import sanitize from 'mongo-sanitize';
 import {MongoClient} from 'mongodb';
 import {EventEmitter} from 'events';
 
-import {createLogger} from '@natlibfi/melinda-backend-commons';
+// import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
 
 import {generateProfileQuery} from './utils';
 
 export async function createMongoProfilesOperator(mongoUrl, db = 'db') {
-  const logger = createLogger(); // eslint-disable-line
+  // const logger = createLogger();
   const debug = createDebugLogger('@natlibfi/melinda-record-import-commons:mongoProfiles');
   const debugDev = createDebugLogger('@natlibfi/melinda-record-import-commons:mongoProfiles:dev');
 

@@ -61,7 +61,7 @@ async function callback({
     if (!expectedToFail) {
       throw error;
     }
-    console.log(error); // eslint-disable-line
+    // console.log(error); // eslint-disable-line
     expect(error.message).to.eql(expectedErrorMessage);
     expect(expectedToFail).to.eql(true, 'This test is not suppose to fail!');
   }
