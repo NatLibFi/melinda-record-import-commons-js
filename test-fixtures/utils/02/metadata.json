@@ -1,0 +1,11 @@
+{
+  "description": "Yesterdays offline end time > NOW => true",
+  "only": false,
+  "method": "isOfflinePeriod",
+  "importOfflinePeriod": {
+    "startHour": 22,
+    "lengthHours": 3
+  },
+  "nowTime": "2024-07-30T21:01:00.000Z",
+  "expectedResult": true
+}

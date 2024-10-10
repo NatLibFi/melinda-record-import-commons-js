@@ -1,0 +1,12 @@
+{
+  "description": "Query blob: profile: profile, state: PROCESSED, limit: 3, getAll: false => 1 querys, 3 Blobs (1->3), nextOffset: 3",
+  "only": false,
+  "expectedNextOffset": 3,
+  "operationParams": {
+    "profile": "profile",
+    "state": "PROCESSED",
+    "getAll": false,
+    "limit": 3,
+    "test": true
+  }
+}

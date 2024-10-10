@@ -1,16 +1,20 @@
-import {getNextBlobId} from '../utils';
-import {BLOB_STATE} from '../constants';
-import {promisify} from 'util';
 import createDebugLogger from 'debug';
-import createBlobHandler from './blobHandler';
 import prettyPrint from 'pretty-print-ms';
+import {promisify} from 'util';
 
-export default async function (riApiClient, transformHandler, amqplib, config) {
+import {createLogger} from '@natlibfi/melinda-backend-commons';
+
+import {getNextBlob} from '../utils';
+import {BLOB_STATE, BLOB_UPDATE_OPERATIONS} from '../constants';
+import createBlobHandler from './blobHandler';
+
+export default async function (mongoOperator, transformHandler, amqplib, config) {
+  const logger = createLogger();
   const setTimeoutPromise = promisify(setTimeout);
   const debug = createDebugLogger('@natlibfi/melinda-record-import-commons');
   const debugLogic = debug.extend('logic:dev');
   const debugCheckBlobInState = debug.extend('checkBlobInState:dev');
-  const blobHandler = createBlobHandler(riApiClient, transformHandler, amqplib, config);
+  const blobHandler = createBlobHandler(mongoOperator, transformHandler, amqplib, config);
   const polltime = config.polltime ? parseInt(config.polltime, 10) : 3000;
 
   await logic();
@@ -43,8 +47,9 @@ export default async function (riApiClient, transformHandler, amqplib, config) {
 
     async function checkBlobInState(state) {
       try {
-        const {id, profile} = await getNextBlobId(riApiClient, {profileIds, state});
+        const {id, profile} = await getNextBlob(mongoOperator, {profileIds, state});
         if (id) {
+          logger.info(`Handling blob ${id} @ state ${state}, for profile: ${profile}`);
           debugCheckBlobInState(`Handling ${state} blob ${id}, for profile: ${profile}`);
 
           if (state === BLOB_STATE.TRANSFORMATION_IN_PROGRESS) {
@@ -53,20 +58,26 @@ export default async function (riApiClient, transformHandler, amqplib, config) {
           }
 
           if (state === BLOB_STATE.PENDING_TRANSFORMATION) {
-            await riApiClient.updateState({id, state: BLOB_STATE.TRANSFORMATION_IN_PROGRESS});
+            await mongoOperator.updateBlob({
+              id,
+              payload: {
+                op: BLOB_UPDATE_OPERATIONS.updateState,
+                state: BLOB_STATE.TRANSFORMATION_IN_PROGRESS
+              }
+            });
             return true;
           }
         }
         return false;
       } catch (error) {
-        debugCheckBlobInState(error);
+        debug(error);
       }
     }
 
     function logWait(waitTime) {
       // 60000ms = 1min
       if (waitTime % 60000 === 0) {
-        return debug(`Total wait: ${prettyPrint(waitTime)}`);
+        return logger.info(`Total wait: ${prettyPrint(waitTime)}`);
       }
     }
   }

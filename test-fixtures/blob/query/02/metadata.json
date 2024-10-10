@@ -1,0 +1,7 @@
+{
+  "description": "Query blob: state PENDING_TRANSFORMATION => 2 Blob",
+  "only": false,
+  "operationParams": {
+    "state": "PENDING_TRANSFORMATION"
+  }
+}

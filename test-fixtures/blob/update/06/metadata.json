@@ -1,0 +1,14 @@
+{
+  "description": "PENDING_TRANSFORMATION => ABORTED => OK",
+  "only": false,
+  "operationParams": {
+    "id": "001",
+    "payload": {
+      "op": "abort",
+      "test": true
+    }
+  },
+  "expectedToFail": false,
+  "expectedErrorStatus": 200,
+  "expectedErrorMessage": ""
+}

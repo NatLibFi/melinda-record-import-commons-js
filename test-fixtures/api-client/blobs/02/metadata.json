@@ -1,0 +1,24 @@
+{
+  "description": "getBlobs: no query, returns 4 blobs in 2 sets",
+  "only": false,
+  "skip": false,
+  "method": "getBlobs",
+  "requests": [
+    {
+      "method": "get",
+      "url": "/blobs",
+      "status": 200,
+      "responseHeaders": {
+        "NextOffset": 2
+      }
+    },
+    {
+      "method": "get",
+      "url": "/blobs",
+      "status": 200,
+      "requestHeaders": {
+        "QueryOffset": 2
+      }
+    }
+  ]
+}

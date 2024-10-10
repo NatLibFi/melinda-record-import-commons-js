@@ -1,0 +1,15 @@
+{
+  "description": "",
+  "only": false,
+  "skip": false,
+  "method": "",
+  "requests": [
+    {
+      "method": "get",
+      "url": "/",
+      "status": 200,
+      "requestHeaders": {},
+      "responseHeaders": {}
+    }
+  ]
+}

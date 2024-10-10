@@ -1,12 +1,9 @@
-import {v4 as uuid} from 'uuid';
-import {BLOB_STATE} from '../constants';
-import {closeAmqpResources} from '../utils';
 import createDebugLogger from 'debug';
-import {promisify} from 'util';
+import {v4 as uuid} from 'uuid';
 
-const setTimeoutPromise = promisify(setTimeout);
+import {BLOB_STATE, BLOB_UPDATE_OPERATIONS} from '../constants';
 
-export default function (riApiClient, transformHandler, amqplib, config) {
+export default function (mongoOperator, transformHandler, amqplib, config) {
   const debug = createDebugLogger('@natlibfi/melinda-record-import-commons');
   const debugHandling = debug.extend('blobHandling');
   const debugRecordHandling = debug.extend('recordHandling');
@@ -17,128 +14,163 @@ export default function (riApiClient, transformHandler, amqplib, config) {
   async function startHandling(blobId) {
     let connection; // eslint-disable-line functional/no-let
     let channel; // eslint-disable-line functional/no-let
-    let hasFailed = false; // eslint-disable-line functional/no-let
-    const pendingRecords = [];
+    const recordPayloads = [];
 
     debugHandling(`Starting transformation for blob ${blobId}`);
 
     try {
-      const {readStream} = await riApiClient.getBlobContent({id: blobId});
+      const readStream = await mongoOperator.readBlobContent({id: blobId});
 
       connection = await amqplib.connect(amqpUrl);
-      channel = await connection.createConfirmChannel();
-      channel.assertQueue(blobId, {durable: true});
+      channel = await connection.createChannel();
+      await channel.assertQueue(blobId, {durable: true});
+      await channel.purgeQueue(blobId);
 
       const TransformEmitter = transformHandler(readStream);
 
       await new Promise((resolve, reject) => {
         TransformEmitter
           .on('end', () => {
-            try {
-              debugHandling(`Transformer has handled ${pendingRecords.length} record promises to line, waiting them to be resolved`);
-
-              return resolve(true);
-            } catch (err) {
-              reject(err);
-            }
-
+            debugHandling(`Transformer has collected all records. ${recordPayloads.length} records`);
+            debugHandling(`All records are transformed`);
             resolve(true);
           })
           .on('error', async err => {
             debugHandling('Transformation failed');
-            await riApiClient.setTransformationFailed({id: blobId, error: getError(err)});
+            await mongoOperator.updateBlob({
+              id: blobId,
+              payload: {
+                op: BLOB_UPDATE_OPERATIONS.transformationFailed,
+                error: getError(err)
+              }
+            });
             reject(err);
           })
+          .on('cataloger', async cataloger => {
+            debugHandling('Setting cataloger for blob');
+            await mongoOperator.updateBlob({
+              id: blobId,
+              payload: {
+                op: BLOB_UPDATE_OPERATIONS.setCataloger,
+                cataloger
+              }
+            });
+          })
+          .on('notificationEmail', async notificationEmail => {
+            debugHandling('Setting notification email for blob');
+            await mongoOperator.updateBlob({
+              id: blobId,
+              payload: {
+                op: BLOB_UPDATE_OPERATIONS.setNotificationEmail,
+                notificationEmail
+              }
+            });
+          })
           .on('record', payload => {
-            pendingRecords.push(payload); // eslint-disable-line functional/immutable-data
+            recordPayloads.push(payload); // eslint-disable-line functional/immutable-data
           });
       });
 
-      if (pendingRecords.length === 0) {
-        debugHandling(`Setting blob state ${BLOB_STATE.DONE}...`);
-        await riApiClient.updateState({id: blobId, state: BLOB_STATE.DONE});
+      if (abortOnInvalidRecords && recordPayloads.some(recordPayload => recordPayload.failed === true)) {
+        debug('Not sending records to queue because some records failed and abortOnInvalidRecords is true');
+        await mongoOperator.updateBlob({
+          id: blobId,
+          payload: {
+            op: BLOB_UPDATE_OPERATIONS.transformationFailed,
+            error: {message: 'Some records have failed'}
+          }
+        });
+
+        debug(`Closing AMQP resources!`);
+        await connection.close();
         return;
       }
 
-      await handleRecordResultsPump(pendingRecords);
+      debug(`Abort on invalid records was false or all records were okay. Queuing records...`);
+      await handleRecords(recordPayloads);
 
+      debug(`Setting blob state ${BLOB_STATE.TRANSFORMED}...`);
+      await mongoOperator.updateBlob({
+        id: blobId,
+        payload: {
+          op: BLOB_UPDATE_OPERATIONS.updateState,
+          state: BLOB_STATE.TRANSFORMED
+        }
+      });
+
+      debug(`Closing AMQP resources!`);
+      await connection.close();
+      return;
     } catch (err) {
       const error = getError(err);
       debugHandling(`Failed transforming blob: ${error}`);
-      await riApiClient.setTransformationFailed({id: blobId, error});
-    } finally {
-      await closeAmqpResources({connection, channel});
+      await mongoOperator.updateBlob({
+        id: blobId,
+        payload: {
+          op: BLOB_UPDATE_OPERATIONS.transformationFailed,
+          error
+        }
+      });
+
+      debugHandling(`Closing AMQP resources!`);
+      await connection.close();
+      return;
     }
 
     function getError(err) {
       return JSON.stringify(err.stack || err.message || err);
     }
 
-    async function handleRecordResultsPump(recordResults) {
-      if (abortOnInvalidRecords && hasFailed) {
-        debugHandling('Not sending records to queue because some records failed and abortOnInvalidRecords is true');
-        await riApiClient.setTransformationFailed({id: blobId, error: {message: 'Some records have failed'}});
+    async function handleRecords(recordPayloads) {
+      const [recordPayload, ...rest] = recordPayloads;
+
+      if (recordPayload === undefined) {
+        debugHandling(`All records queued`);
         return;
       }
 
-      const [recordResult, ...rest] = recordResults;
+      await sendRecordToQueue(recordPayload);
+      await updateBlob(recordPayload);
+      return handleRecords(rest);
 
-      if (recordResult === undefined) {
-        debugHandling(`Transforming is done (All Promises resolved)`);
-        debugHandling(`Setting blob state ${BLOB_STATE.TRANSFORMED}...`);
-        await riApiClient.updateState({id: blobId, state: BLOB_STATE.TRANSFORMED});
-        return;
-      }
-
-      await startProcessing(recordResult);
-      await setTimeoutPromise(2);
-      return handleRecordResultsPump(rest);
-
-
-      async function startProcessing(payload) {
-        await sendRecordToQueue(payload);
-        await updateBlob(payload);
-        return;
-
-        async function sendRecordToQueue(payload) {
-          if (!payload.failed) {
-            try {
-              const message = Buffer.from(JSON.stringify(payload.record));
-              await new Promise((resolve, reject) => {
-                channel.sendToQueue(blobId, message, {persistent: true, messageId: uuid()}, (err) => {
-                  if (err !== null) { // eslint-disable-line functional/no-conditional-statements
-                    reject(err);
-                  }
-
-                  debugHandling(`Record send to queue`);
-                  resolve();
-                });
-              });
-            } catch (err) {
-              throw new Error(`Error while sending record to queue: ${getError(err)}`);
-            }
+      async function sendRecordToQueue(recordPayload) {
+        try {
+          if (!recordPayload.failed) {
+            const message = Buffer.from(JSON.stringify(recordPayload.record));
+            await channel.sendToQueue(blobId, message, {persistent: true, messageId: uuid()});
+            debugRecordHandling(`Record send to queue`);
             return;
           }
+
+          debugRecordHandling(`Record failed, skip queuing!`);
+          return;
+        } catch (err) {
+          throw new Error(`Error while sending record to queue: ${getError(err)}`);
         }
+      }
 
-        function updateBlob(payload) {
-          try {
-            if (payload.failed) {
-              debugRecordHandling('Adding failed record to blob');
-              hasFailed = true;
-              return riApiClient.transformedRecord({
-                id: blobId,
+      function updateBlob(payload) {
+        try {
+          if (payload.failed) {
+            debugRecordHandling('Adding failed record to blob');
+            return mongoOperator.updateBlob({
+              id: blobId,
+              payload: {
+                op: BLOB_UPDATE_OPERATIONS.transformedRecord,
                 error: payload
-              });
-            }
-
-            debugRecordHandling('Adding succes record to blob');
-            return riApiClient.transformedRecord({
-              id: blobId
+              }
             });
-          } catch (err) {
-            throw new Error(`Error while updating blob: ${getError(err)}`);
           }
+
+          debugRecordHandling('Adding succes record to blob');
+          return mongoOperator.updateBlob({
+            id: blobId,
+            payload: {
+              op: BLOB_UPDATE_OPERATIONS.transformedRecord
+            }
+          });
+        } catch (err) {
+          throw new Error(`Error while updating blob: ${getError(err)}`);
         }
       }
     }

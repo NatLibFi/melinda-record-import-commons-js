@@ -1,0 +1,10 @@
+{
+  "description": "Read blob: id 002 => Error: not found",
+  "only": false,
+  "operationParams": {
+    "id": "002"
+  },
+  "expectedToFail": true,
+  "expectedErrorStatus": 404,
+  "expectedErrorMessage": "Blob not found"
+}

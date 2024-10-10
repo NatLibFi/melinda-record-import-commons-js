@@ -1,0 +1,9 @@
+{
+  "description": "Query blob: profile: profile, state: PENDING_TRANSFORMATION => 1 Blob",
+  "only": false,
+  "operationParams": {
+    "profile": "profile",
+    "state": "PENDING_TRANSFORMATION",
+    "test": true
+  }
+}

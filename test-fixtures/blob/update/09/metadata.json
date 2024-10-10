@@ -1,0 +1,14 @@
+{
+  "description": "resetImportResults => importResults resets => OK",
+  "only": false,
+  "operationParams": {
+    "id": "001",
+    "payload": {
+      "op": "resetImportResults",
+      "test": true
+    }
+  },
+  "expectedToFail": false,
+  "expectedErrorStatus": 200,
+  "expectedErrorMessage": ""
+}

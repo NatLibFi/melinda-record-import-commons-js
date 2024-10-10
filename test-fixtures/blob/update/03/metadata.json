@@ -1,0 +1,15 @@
+{
+  "description": "UPLOADING to pending PENDING_TRANSFORMATION",
+  "only": false,
+  "operationParams": {
+    "id": "001",
+    "payload": {
+      "op": "updateState",
+      "state": "PENDING_TRANSFORMATION",
+      "test": true
+    }
+  },
+  "expectedToFail": false,
+  "expectedErrorStatus": 200,
+  "expectedErrorMessage": ""
+}

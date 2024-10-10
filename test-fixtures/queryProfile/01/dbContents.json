@@ -1,0 +1,29 @@
+{
+  "profiles": [
+    {
+      "id": "profile1",
+      "groups": [
+        "profile1"
+      ]
+    },
+    {
+      "id": "profile2",
+      "groups": [
+        "profile2"
+      ]
+    },
+    {
+      "id": "profile3",
+      "groups": [
+        "profile3"
+      ]
+    },
+    {
+      "id": "profile4",
+      "groups": [
+        "profile4",
+        "profile5"
+      ]
+    }
+  ]
+}

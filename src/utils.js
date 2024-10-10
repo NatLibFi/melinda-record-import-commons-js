@@ -1,101 +1,205 @@
-import moment from 'moment';
+//import moment from 'moment';
+import {add, formatISO, isAfter, isBefore, set, setDefaultOptions} from 'date-fns';
+import {fi} from 'date-fns/locale';
 import createDebugLogger from 'debug';
+import sanitize from 'mongo-sanitize';
 
-const debug = createDebugLogger('@natlibfi/melinda-record-import-commons:utils:dev');
+const debug = createDebugLogger('@natlibfi/melinda-record-import-commons:utils');
+const debugDev = createDebugLogger('@natlibfi/melinda-record-import-commons:utils:dev');
 
-export function isOfflinePeriod(importOfflinePeriod) {
+export function isOfflinePeriod(importOfflinePeriod, nowTime = false) {
   if (importOfflinePeriod === undefined) {
     return false;
   }
 
+  setDefaultOptions({weekStartsOn: 1, locale: fi});
+
   const {startHour, lengthHours} = importOfflinePeriod;
-  const now = moment();
+  const now = nowTime ? new Date(nowTime) : new Date();
+  debugDev('now: ', formatISO(now));
+  const todaysOfflineStart = set(now, {hours: startHour, minutes: 0, seconds: 0, milliseconds: 0});
+  debugDev('today offline starts: ', formatISO(todaysOfflineStart));
+  const todaysOfflineEnd = add(todaysOfflineStart, {hours: lengthHours});
+  debugDev('today offline ends: ', formatISO(todaysOfflineEnd));
 
-  if (startHour !== undefined && lengthHours !== undefined) {
-    if (now.hour() < startHour) {
-      const start = moment(now).hour(startHour).subtract(1, 'days');
-      return check(start);
-    }
-
-    const start = moment(now).hour(startHour);
-    return check(start);
+  if (isAfter(now, todaysOfflineStart) && isBefore(now, todaysOfflineEnd)) {
+    debugDev('Now is todays offline hours!');
+    return true;
   }
 
-  function check(startTime) {
-    const endTime = moment(startTime).add(lengthHours, 'hours');
-    return now >= startTime && now < endTime;
+  if (isAfter(now, todaysOfflineEnd)) {
+    debugDev('Now is after todays offline hours!');
+    return false;
+  }
+
+  const yesterdaysOfflineStart = set(add(now, {days: -1}), {hours: startHour, minutes: 0, seconds: 0, milliseconds: 0});
+  debugDev('yesterdays offline starts: ', formatISO(yesterdaysOfflineStart));
+  const yesterdaysOfflineEnd = add(yesterdaysOfflineStart, {hours: lengthHours});
+  debugDev('yesterdays offline ends: ', formatISO(yesterdaysOfflineEnd));
+
+  if (isBefore(now, yesterdaysOfflineEnd)) {
+    debugDev('Now is yesterdays offline hours!');
+    return true;
+  }
+
+  debugDev('Now is before todays offline hours!');
+  return false;
+}
+
+export function generateBlobQuery({profile, state, contentType, creationTime, modificationTime}, user) {
+  const doc = {...formatProfile(profile, user)};
+
+  if (contentType) { // eslint-disable-line functional/no-conditional-statements
+    doc.contentType = {$in: splitAndSanitize(contentType)}; // eslint-disable-line functional/immutable-data
+  }
+
+  if (state) { // eslint-disable-line functional/no-conditional-statements
+    doc.state = {$in: splitAndSanitize(state)}; // eslint-disable-line functional/immutable-data
+  }
+
+  if (creationTime) {
+    const timestampArray = splitAndSanitize(creationTime);
+    if (timestampArray.length === 1) { // eslint-disable-line functional/no-conditional-statements
+      // eslint-disable-next-line functional/immutable-data
+      doc.creationTime = {
+        $gte: formatTime(timestampArray[0], 'start'),
+        $lte: formatTime(timestampArray[0], 'end')
+      };
+    } else { // eslint-disable-line functional/no-conditional-statements
+      // eslint-disable-next-line functional/immutable-data
+      doc.creationTime = {
+        $gte: formatTime(timestampArray[0], false),
+        $lte: formatTime(timestampArray[1], false)
+      };
+    }
+  }
+
+  if (modificationTime) {
+    const timestampArray = splitAndSanitize(modificationTime);
+
+    if (timestampArray.length === 1) { // eslint-disable-line functional/no-conditional-statements
+      // eslint-disable-next-line functional/immutable-data
+      doc.modificationTime = {
+        $gte: formatTime(timestampArray[0], 'start'),
+        $lte: formatTime(timestampArray[0], 'end')
+      };
+    } else { // eslint-disable-line functional/no-conditional-statements
+      // eslint-disable-next-line functional/immutable-data
+      doc.modificationTime = {
+        $gte: formatTime(timestampArray[0], false),
+        $lte: formatTime(timestampArray[1], false)
+      };
+    }
+  }
+
+  // console.log(JSON.stringify(doc)); // eslint-disable-line
+  return doc;
+
+  function splitAndSanitize(value) {
+    if (Array.isArray(value)) { // eslint-disable-line functional/no-conditional-statements
+      const cleanValueArray = value.map(valueToSanitize => sanitize(valueToSanitize));
+      return cleanValueArray;
+    }
+
+    const valueArray = value.split(',');
+    const cleanValueArray = valueArray.map(valueToSanitize => sanitize(valueToSanitize));
+    return cleanValueArray;
+  }
+
+  function formatProfile(profile, user) {
+    const profileDoc = {};
+    if (profile) {
+      const cleanProfiles = splitAndSanitize(profile);
+
+      if (user) {
+        const userGroups = user.roles.groups;
+        const allowedGroups = cleanProfiles.filter(cleanProfile => userGroups.includes(cleanProfile) || userGroups.includes('kvp'));
+
+        if (allowedGroups.length === 0) { // eslint-disable-line functional/no-conditional-statements
+          profileDoc.profile = {'$in': userGroups}; // eslint-disable-line functional/immutable-data
+        }
+
+        if (allowedGroups.length > 0) { // eslint-disable-line functional/no-conditional-statements
+          profileDoc.profile = {'$in': allowedGroups}; // eslint-disable-line functional/immutable-data
+        }
+      }
+
+      if (!user) { // eslint-disable-line functional/no-conditional-statements
+        profileDoc.profile = {'$in': cleanProfiles}; // eslint-disable-line functional/immutable-data
+      }
+    }
+
+    if (!profile && user) { // eslint-disable-line functional/no-conditional-statements
+      const userGroups = user.roles.groups;
+      profileDoc.profile = {'$in': userGroups}; // eslint-disable-line functional/immutable-data
+
+      if (userGroups.includes('kvp')) { // eslint-disable-line functional/no-conditional-statements
+        delete profileDoc.profile; // eslint-disable-line functional/immutable-data
+      }
+    }
+
+    return profileDoc;
+  }
+
+  function formatTime(timestamp, startOrEndOfDay = false) {
+    if (startOrEndOfDay === 'start') {
+      const time = new Date(new Date(timestamp).setUTCHours(0, 0, 0, 0));
+      return time.toISOString();
+    }
+
+    if (startOrEndOfDay === 'end') {
+      const time = new Date(new Date(timestamp).setUTCHours(23, 59, 59, 999));
+      return time.toISOString();
+    }
+
+    const time = new Date(timestamp);
+    return time.toISOString();
   }
 }
 
-export async function getNextBlobId(riApiClient, {profileIds, state, importOfflinePeriod}) {
-  debug(`Checking blobs for ${profileIds} in ${state}`);
-  let result = ''; // eslint-disable-line functional/no-let
+export function generateProfileQuery({id, group}) {
+  const doc = {};
 
-  try {
-    result = await processBlobs({
-      client: riApiClient,
-      query: {state},
-      processCallback,
-      messageCallback: count => `${count} blobs in ${state} for ${profileIds}`,
-      filter: (blob) => profileIds.some(profileId => profileId === blob.profile)
-    });
-
-    // Returns false or blob id
-    return result;
-  } catch (error) {
-    debug(error);
+  if (id) { // eslint-disable-line functional/no-conditional-statements
+    doc.id = sanitize(id); // eslint-disable-line functional/immutable-data
   }
 
-  function processBlobs({client, query, processCallback, messageCallback, updateState = false, filter = () => true}) {
-    return new Promise((resolve, reject) => {
-      const wantedBlobs = [];
-
-      const debug = createDebugLogger('@natlibfi/melinda-record-import-commons:processBlobs:dev');
-      const emitter = client.getBlobs(query);
-
-      emitter
-        .on('error', reject)
-        .on('blobs', blobs => {
-          const filteredBlobs = blobs.filter(filter);
-          filteredBlobs.forEach(blob => wantedBlobs.push(blob)); // eslint-disable-line functional/immutable-data
-        })
-        .on('end', () => {
-          if (messageCallback) { // eslint-disable-line functional/no-conditional-statements
-            debug(messageCallback(wantedBlobs.length));
-          }
-          const result = processCallback(wantedBlobs, updateState);
-
-          resolve(result);
-        });
-    });
+  if (group) { // eslint-disable-line functional/no-conditional-statements
+    doc.groups = sanitize(group); // eslint-disable-line functional/immutable-data
   }
 
-  function processCallback(blobs) {
-    const [blob] = blobs;
-
-    if (blob === undefined || isOfflinePeriod(importOfflinePeriod)) {
-      debug('No blobs or offline period');
-      return false;
-    }
-
-    const {id, profile, correlationId} = blob;
-
-    return {id, profile, correlationId};
-  }
+  // console.log(JSON.stringify(doc)); // eslint-disable-line
+  return doc;
 }
 
-export async function closeAmqpResources({connection, channel}) {
-  if (channel) {
-    await channel.close();
-    await closeConnection();
-    return;
-  }
+export async function getNextBlob(mongoOperator, {profileIds, state, importOfflinePeriod}, nowTime = false) {
+  debug('Get next blob');
 
-  await closeConnection();
+  if (!isOfflinePeriod(importOfflinePeriod, nowTime)) {
+    const queryResult = [];
+    await new Promise((resolve, reject) => {
+      debugDev(`Checking blobs for ${profileIds} in ${state}`);
+      const emitter = mongoOperator.queryBlob({
+        limit: 1,
+        getAll: false,
+        profile: profileIds.join(','),
+        state
+      });
+      emitter.on('blobs', blobs => blobs.forEach(blob => queryResult.push(blob))) // eslint-disable-line functional/immutable-data
+        .on('error', error => reject(error))
+        .on('end', () => resolve());
+    });
 
-  function closeConnection() {
-    if (connection) {
-      return connection.close();
+    const [blobInfo] = queryResult;
+    // debug(`No blobs in ${state} found for ${profileIds}`);
+    if (blobInfo) {
+      return blobInfo;
     }
+
+    debugDev('No blobs');
+    return false;
   }
+
+  debugDev('Offline period');
+  return false;
 }

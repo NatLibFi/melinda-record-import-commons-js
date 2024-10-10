@@ -1,0 +1,28 @@
+{
+  "blobmetadatas": [
+    {
+      "processingInfo": {
+        "numberOfRecords": 1,
+        "failedRecords": [
+          {
+            "failed": true,
+            "title": "Tietue title",
+            "standardIdentifiers": [
+              "VER0000000",
+              "978-952-000-000-0"
+            ],
+            "message": "Record failed following conversion compatability check: filterProductForm"
+          }
+        ],
+        "importResults": []
+      },
+      "notificationEmail": "",
+      "id": "001",
+      "correlationId": "",
+      "profile": "profile",
+      "cataloger": "",
+      "contentType": "application/json",
+      "state": "TRANSFORMATION_IN_PROGRESS"
+    }
+  ]
+}

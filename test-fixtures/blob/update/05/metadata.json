@@ -1,0 +1,24 @@
+{
+  "description": "PENDING_TRANSFORMATION => transformedRecord (record failed validation) => OK",
+  "only": false,
+  "operationParams": {
+    "id": "001",
+    "payload": {
+      "op": "transformedRecord",
+      "test": true,
+      "error": {
+        "failed": true,
+        "title": "Tietue title",
+        "standardIdentifiers": [
+          "VER0000000",
+          "978-952-000-000-0"
+        ],
+        "message": "Record failed following conversion compatability check: filterProductForm",
+        "timestamp": "2024-07-31T05:50:16.000Z"
+      }
+    }
+  },
+  "expectedToFail": false,
+  "expectedErrorStatus": 200,
+  "expectedErrorMessage": ""
+}

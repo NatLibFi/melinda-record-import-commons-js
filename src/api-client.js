@@ -1,195 +1,212 @@
 import {EventEmitter} from 'events';
-import fetch from 'node-fetch';
-import HttpStatus from 'http-status';
-import {URL} from 'url';
-import {generateAuthorizationHeader, Error as ApiError} from '@natlibfi/melinda-commons';
-import {BLOB_UPDATE_OPERATIONS} from './constants';
 import createDebugLogger from 'debug';
+import https from 'https';
+import httpStatus from 'http-status';
+import fetch from 'node-fetch';
+import {URL} from 'url';
+import {Error as ApiError} from '@natlibfi/melinda-commons';
+import {BLOB_UPDATE_OPERATIONS} from './constants';
+import {createServiceAuthoperator} from './keycloakAuthOperator';
 
-export function createApiClient({recordImportApiUrl, recordImportApiUsername, recordImportApiPassword, userAgent = 'Record import API client / Javascript'}) {
-  let authHeader; // eslint-disable-line functional/no-let
-  const debug = createDebugLogger('@natlibfi/melinda-record-import-commons:api-client:dev');
+export async function createApiClient({recordImportApiUrl, userAgent = 'Record import API client / Javascript', allowSelfSignedApiCert}, keycloakOptions) {
+  const debug = createDebugLogger('@natlibfi/melinda-record-import-commons:api-client');
+  if (!keycloakOptions) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Keycloak options missing on record import api client creation');
+  }
 
+  const serviceTokenOperator = await createServiceAuthoperator(keycloakOptions);
   return {
-    getBlobs, createBlob, getBlobMetadata, deleteBlob,
-    getBlobContent, deleteBlobContent,
-    getProfile, modifyProfile, queryProfiles, deleteProfile,
-    setTransformationFailed, setCorrelationId, setRecordProcessed,
-    setRecordQueued, transformedRecord, setAborted, updateState
+    getBlobs, createBlob, getBlobMetadata, deleteBlob, deleteProfile, deleteBlobContent,
+    getBlobContent, getProfile, createOrModifyProfile, queryProfiles,
+    setCataloger, setNotificationEmail, setTransformationFailed, setCorrelationId,
+    setRecordProcessed, setTransformedRecord, setAborted, updateState
   };
 
+  // MARK: createBLob
   async function createBlob({blob, type, profile}) {
     debug('createBlob');
+
     const response = await doRequest(`${recordImportApiUrl}/blobs`, {
       method: 'POST',
       body: blob,
       headers: {
-        'User-Agent': userAgent,
         'content-type': type,
         'Import-Profile': profile
       }
     });
 
-    if (response.status === HttpStatus.CREATED) {
+    if (response.status === httpStatus.CREATED) {
       return parseBlobId();
     }
 
-    throw new ApiError(response.status);
+    const errorMessage = await response.text();
+    throw new ApiError(response.status, errorMessage);
 
     function parseBlobId() {
       return (/\/(?<def>.[^/]*)$/u).exec(response.headers.get('location'))[1];
     }
   }
 
+  // MARK: getBlobMetadata
   async function getBlobMetadata({id}) {
     debug('getBlobMetadata');
     const response = await doRequest(`${recordImportApiUrl}/blobs/${id}`, {
       headers: {
-        'User-Agent': userAgent,
-        Accept: 'application/json'
+        'Accept': 'application/json'
       }
     });
 
-    if (response.status === HttpStatus.OK) {
+    if (response.status === httpStatus.OK) {
       return response.json();
     }
 
-    throw new ApiError(response.status);
+    const errorMessage = await response.text();
+    throw new ApiError(response.status, errorMessage);
   }
 
+  // MARK: getBlobContent
   async function getBlobContent({id}) {
     debug('getBlobContent');
     const response = await doRequest(`${recordImportApiUrl}/blobs/${id}/content`, {
-      headers: {
-        'User-Agent': userAgent
-      }
+      headers: {}
     });
 
-    if (response.status === HttpStatus.OK) {
+    if (response.status === httpStatus.OK) {
       return {
         contentType: response.headers.get('content-type'),
         readStream: response.body
       };
     }
 
-    throw new ApiError(response.status);
+    const errorMessage = await response.text();
+    throw new ApiError(response.status, errorMessage);
   }
 
+  // MARK: getProfile
   async function getProfile({id}) {
     debug('getProfile');
     const response = await doRequest(`${recordImportApiUrl}/profiles/${id}`, {
       headers: {
-        'User-Agent': userAgent,
-        Accept: 'application/json'
+        'Accept': 'application/json'
       }
     });
 
-    if (response.status === HttpStatus.OK) {
+    if (response.status === httpStatus.OK) {
       return response.json();
     }
 
-    throw new ApiError(response.status);
+    const errorMessage = await response.text();
+    throw new ApiError(response.status, errorMessage);
   }
 
+  // MARK: deleteProfile
   async function deleteProfile({id}) {
     debug('deleteProfile');
     const response = await doRequest(`${recordImportApiUrl}/profiles/${id}`, {
       method: 'DELETE',
-      headers: {
-        'User-Agent': userAgent
-      }
+      headers: {}
     });
 
-    if (response.status !== HttpStatus.NO_CONTENT) { // eslint-disable-line functional/no-conditional-statements
-      throw new ApiError(response.status);
+    if (response.status !== httpStatus.NO_CONTENT) { // eslint-disable-line functional/no-conditional-statements
+      const errorMessage = await response.text();
+      throw new ApiError(response.status, errorMessage);
     }
   }
 
+  // MARK: queryProfiles
   async function queryProfiles() {
     debug('queryProfiles');
     const response = await doRequest(`${recordImportApiUrl}/profiles`, {
       headers: {
-        'User-Agent': userAgent,
-        Accept: 'application/json'
+        'Accept': 'application/json'
       }
     });
 
-    if (response.status === HttpStatus.OK) {
+    if (response.status === httpStatus.OK) {
       return response.json();
     }
 
-    throw new ApiError(response.status);
+    const errorMessage = await response.text();
+    throw new ApiError(response.status, errorMessage);
   }
 
-  async function modifyProfile({id, payload}) {
+  // MARK: modifyProfile
+  async function createOrModifyProfile({id, payload}) {
     debug('modifyProfile');
     const response = await doRequest(`${recordImportApiUrl}/profiles/${id}`, {
-      method: 'PUT',
+      method: 'POST',
       body: JSON.stringify(payload),
       headers: {
-        'User-Agent': userAgent,
-        'content-type': 'application/json'
+        'Content-Type': 'application/json'
       }
     });
 
-    if (![HttpStatus.CREATED, HttpStatus.NO_CONTENT].includes(response.status)) { // eslint-disable-line functional/no-conditional-statements
-      throw new ApiError(response.status);
+    if (![httpStatus.CREATED, httpStatus.NO_CONTENT].includes(response.status)) { // eslint-disable-line functional/no-conditional-statements
+      const errorMessage = await response.text();
+      throw new ApiError(response.status, errorMessage);
     }
   }
 
+  // MARK: deleteBlob
   async function deleteBlob({id}) {
     debug('deleteBlob');
     const response = await doRequest(`${recordImportApiUrl}/blobs/${id}`, {
       method: 'DELETE',
-      headers: {
-        'User-Agent': userAgent
-      }
+      headers: {}
     });
 
-    if (response.status === HttpStatus.NO_CONTENT) {
+    if (response.status === httpStatus.NO_CONTENT) {
       return response.body;
     }
 
-    throw new ApiError(response.status);
+    const errorMessage = await response.text();
+    throw new ApiError(response.status, errorMessage);
   }
 
+  // MARK: deleteBlobContent
   async function deleteBlobContent({id}) {
     debug('deleteBlobContent');
     const response = await doRequest(`${recordImportApiUrl}/blobs/${id}/content`, {
       method: 'DELETE',
-      headers: {
-        'User-Agent': userAgent
-      }
+      headers: {}
     });
 
-    if (response.status === HttpStatus.NO_CONTENT) {
+    if (response.status === httpStatus.NO_CONTENT) {
       return response.body;
     }
 
-    throw new ApiError(response.status);
+    const errorMessage = await response.text();
+    throw new ApiError(response.status, errorMessage);
   }
 
-  async function transformedRecord({id, error = undefined}) {
+  // MARK: transformedRecord
+  async function setTransformedRecord({id, error = undefined}) {
     debug('transformedRecord');
-    await updateBlobMetadata({
+    const conf = {
       id,
       payload: {
         op: BLOB_UPDATE_OPERATIONS.transformedRecord,
         error
       }
-    });
+    };
+
+    await updateBlobMetadata(conf);
   }
 
+  // MARK: setAborted
   async function setAborted({id}) {
-    debug('setAborted');
-    await updateBlobMetadata({
+    debug('blob setAborted');
+    const conf = {
       id,
       payload: {
         op: BLOB_UPDATE_OPERATIONS.abort
       }
-    });
+    };
+
+    await updateBlobMetadata(conf);
   }
 
+  // MARK: setTransformationFailed
   async function setTransformationFailed({id, error}) {
     debug('setTransformationFailed');
     await updateBlobMetadata({
@@ -201,41 +218,63 @@ export function createApiClient({recordImportApiUrl, recordImportApiUsername, re
     });
   }
 
+  // MARK: setRecordProcessed
   async function setRecordProcessed({id, status, metadata}) {
     debug('setRecordProcessed');
-    await updateBlobMetadata({
+    const conf = {
       id,
       payload: {
         status, metadata,
         op: BLOB_UPDATE_OPERATIONS.recordProcessed
       }
-    });
+    };
+
+    await updateBlobMetadata(conf);
   }
 
-  async function setRecordQueued({id, title, standardIdentifiers}) {
-    debug('setRecordQueued');
-    debug(`${title}`);
-    debug(`${standardIdentifiers}`);
-    await updateBlobMetadata({
+  // MARK: setNotificationEmail
+  async function setNotificationEmail({id, notificationEmail}) {
+    debug('setNotificationEmail');
+    const conf = {
       id,
       payload: {
-        title, standardIdentifiers,
-        op: BLOB_UPDATE_OPERATIONS.recordQueued
+        notificationEmail,
+        op: BLOB_UPDATE_OPERATIONS.setNotificationEmail
       }
-    });
+    };
+
+    await updateBlobMetadata(conf);
   }
 
+  // MARK: setCataloger
+  async function setCataloger({id, cataloger}) {
+    debug('setCataloger');
+    const conf = {
+      id,
+      payload: {
+        cataloger,
+        op: BLOB_UPDATE_OPERATIONS.setCataloger
+      }
+    };
+
+    await updateBlobMetadata(conf);
+  }
+
+  // MARK: setCorrelationId
   async function setCorrelationId({id, correlationId}) {
     debug('setCorrelationId');
-    await updateBlobMetadata({
+    const conf = {
       id,
       payload: {
         correlationId,
         op: BLOB_UPDATE_OPERATIONS.addCorrelationId
       }
-    });
+    };
+
+    await updateBlobMetadata(conf);
   }
 
+  // MARK: updateState
   async function updateState({id, state}) {
     debug('updateState');
     await updateBlobMetadata({
@@ -247,9 +286,11 @@ export function createApiClient({recordImportApiUrl, recordImportApiUsername, re
     });
   }
 
+  // MARK: getBlobs
   function getBlobs(query = {}) {
     debug('getBlobs');
     const blobsUrl = createURL();
+    const getAll = query.getAll || true;
     debug(`Blob url: ${blobsUrl}`);
     const emitter = new EventEmitter();
 
@@ -275,28 +316,33 @@ export function createApiClient({recordImportApiUrl, recordImportApiUsername, re
     }
 
     async function pump(offset = false) {
-      const response = await doRequest(blobsUrl, getOptions(offset));
-      debug(`getBlobs response status: ${response.status}`);
+      try {
+        const response = await doRequest(blobsUrl, getOptions(offset));
+        debug(`getBlobs response status: ${response.status}`);
+        const nextOffset = response.headers.has('NextOffset') ? response.headers.get('NextOffset') : false;
 
-      if (response.status === HttpStatus.OK) {
-        emitter.emit('blobs', await response.json());
+        if (response.status === httpStatus.OK) {
+          const blobs = await response.json();
+          emitter.emit('blobs', blobs);
 
-        if (response.headers.has('NextOffset')) {
-          pump(response.headers.get('NextOffset'));
+          if (getAll && nextOffset) {
+            pump(nextOffset);
+            return;
+          }
+
+          emitter.emit('end', nextOffset);
           return;
         }
 
-        emitter.emit('end');
-        return;
+        emitter.emit('error', new ApiError(response.status));
+      } catch (error) {
+        emitter.emit('error', error);
       }
-
-      emitter.emit('error', new ApiError(response.status));
 
       function getOptions(offset) {
         const options = {
           headers: {
-            'User-Agent': userAgent,
-            Accept: 'application/json'
+            'Accept': 'application/json'
           }
         };
 
@@ -310,75 +356,56 @@ export function createApiClient({recordImportApiUrl, recordImportApiUsername, re
     }
   }
 
+  // MARK: updateBlobMetadata
   async function updateBlobMetadata({id, payload}) {
     debug(`updateBlobMetadata: ${payload.op}`);
-    const response = await doRequest(`${recordImportApiUrl}/blobs/${id}`, {
-      method: 'POST',
-      body: JSON.stringify(payload),
-      headers: {
-        'User-Agent': userAgent,
-        'content-type': 'application/json'
-      }
-    });
+    try {
+      const response = await doRequest(`${recordImportApiUrl}/blobs/${id}`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
 
-    if (response.status !== HttpStatus.NO_CONTENT) { // eslint-disable-line functional/no-conditional-statements
-      throw new ApiError(response.status);
+      if (response.status === httpStatus.UNPROCESSABLE_ENTITY) {
+        debug(`Update blob got: ${response.status}`);
+        throw new ApiError(response.status, '');
+      }
+
+      if (response.status !== httpStatus.NO_CONTENT) { // eslint-disable-line functional/no-conditional-statements
+        debug(`Update blob got unexpected response status: ${response.status}`);
+        throw new ApiError(response.status);
+      }
+    } catch (error) {
+      console.log(error); // eslint-disable-line
     }
   }
 
   // Requests a new token once
+  // MARK: doRequest
   async function doRequest(reqUrl, reqOptions) {
     debug('doRequest');
     debug(`Request url: ${reqUrl}`);
-    const options = {headers: {}, ...reqOptions};
 
-    if (authHeader) {
-      options.headers.Authorization = authHeader; // eslint-disable-line functional/immutable-data
+    try {
+      const options = {headers: {}, ...reqOptions};
+      options.headers['User-Agent'] = userAgent; // eslint-disable-line functional/immutable-data
+      options.headers.Authorization = await serviceTokenOperator.getServiceAuthToken(); // eslint-disable-line functional/immutable-data
+      options.agent = `${reqUrl}`.indexOf('https') >= 0 ? new https.Agent({rejectUnauthorized: !allowSelfSignedApiCert}) : undefined; // eslint-disable-line functional/immutable-data
 
       const response = await fetch(reqUrl, options);
       debug(`doRequest response status: ${response.status}`);
 
-      if (response.status === HttpStatus.UNAUTHORIZED) {
-        const token = await getAuthToken();
-        authHeader = `Bearer ${token}`; // eslint-disable-line require-atomic-updates
-        options.headers.Authorization = authHeader; // eslint-disable-line functional/immutable-data
-
-        return fetch(reqUrl, options);
+      if (![httpStatus.OK, httpStatus.CREATED, httpStatus.NO_CONTENT].includes(response.status)) {
+        const errorMessage = await response.text();
+        return {status: response.status, message: errorMessage};
       }
 
       return response;
-    }
-
-    const token = await getAuthToken();
-    authHeader = `Bearer ${token}`; // eslint-disable-line require-atomic-updates
-    options.headers.Authorization = authHeader; // eslint-disable-line functional/immutable-data
-    debug('Auth header updated!');
-
-    return doRequest(reqUrl, options);
-
-    async function getAuthToken() {
-      debug('getAuthToken');
-      const encodedCreds = generateAuthorizationHeader(recordImportApiUsername, recordImportApiPassword);
-      const response = await fetch(`${recordImportApiUrl}/auth`, {
-        method: 'POST',
-        headers: {
-          'User-Agent': userAgent,
-          Authorization: encodedCreds
-        }
-      });
-      debug(`getAuthToken response status: ${response.status}`);
-
-      if (response.status === HttpStatus.NO_CONTENT) {
-        const token = response.headers.get('Token');
-        if (token === '0-0-0') {
-          debug('Got dev token 0-0-0');
-          return token;
-        }
-
-        return token;
-      }
-
-      throw new ApiError(response.status);
+    } catch (error) {
+      debug(error);
+      throw error;
     }
   }
 }

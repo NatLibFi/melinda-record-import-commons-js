@@ -1,0 +1,11 @@
+{
+  "description": "Todays offline start time < NOW < Todays offline end time => true",
+  "only": false,
+  "method": "isOfflinePeriod",
+  "importOfflinePeriod": {
+    "startHour": 22,
+    "lengthHours": 3
+  },
+  "nowTime": "2024-07-30T19:01:00.000Z",
+  "expectedResult": true
+}

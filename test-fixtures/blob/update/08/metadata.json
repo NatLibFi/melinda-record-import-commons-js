@@ -1,0 +1,27 @@
+{
+  "description": "recordProcessed => importResults gets new record => OK",
+  "only": false,
+  "operationParams": {
+    "id": "001",
+    "payload": {
+      "op": "recordProcessed",
+      "test": true,
+      "status": "SKIPPED",
+      "metadata": {
+        "id": "012345678",
+        "title": "Tietue Title",
+        "standardIdentifiers": [
+          "978-952-000-000-0"
+        ],
+        "sourceIds": [
+          "(FI-KV)VER0000000"
+        ],
+        "message": "Found 1 matching records in the database. - Merged to 012345678 preferring incoming record. - No changes detected while trying to update existing record 012345678, update skipped.",
+        "recordStatusNote": "SKIPPED_CHANGE"
+      }
+    }
+  },
+  "expectedToFail": false,
+  "expectedErrorStatus": 200,
+  "expectedErrorMessage": ""
+}

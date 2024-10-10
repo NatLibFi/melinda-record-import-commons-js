@@ -1,0 +1,10 @@
+{
+  "profiles": [
+    {
+      "id": "profile1",
+      "groups": [
+        "profile1"
+      ]
+    }
+  ]
+}

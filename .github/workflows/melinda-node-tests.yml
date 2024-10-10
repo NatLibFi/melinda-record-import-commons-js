@@ -8,6 +8,8 @@ jobs:
   build-node-versions:
     name: Node version matrix
     runs-on: ubuntu-latest
+    env:
+      TZ: Europe/Helsinki
 
     strategy:
       matrix:
@@ -24,6 +26,8 @@ jobs:
         cache: 'npm'
       env:
         NPM_CONFIG_IGNORE_SCRIPTS: true
+        MONGOMS_DOWNLOAD_URL: https://fastdl.mongodb.org/linux/mongodb-linux-x86_64-rhel80-7.0.12.tgz
+        MONGOMS_VERSION: 7.0.12
     - run: npm i -g npm@latest
     - run: npm audit --package-lock-only --production --audit-level=high
     - run: npm i
@@ -33,6 +37,7 @@ jobs:
   njsscan:
     name: Njsscan-check
     runs-on: ubuntu-latest
+    container: node:18
 
     steps:
     - name: Checkout the code
@@ -46,15 +51,18 @@ jobs:
   license-scan:
     name: License compliance check
     runs-on: ubuntu-latest
+    container: node:18
 
     steps:
-      - uses: actions/checkout@v3
-      - uses: mikaelvesavuori/license-compliance-action@v1.0.2
+      - uses: actions/checkout@v4
+      - uses: mikaelvesavuori/license-compliance-action@v1
         with:
           exclude_pattern: /^@natlibfi/
 
   publish:
+    name: Npm publishing
     runs-on: ubuntu-latest
+    container: node:18
     needs: [build-node-versions, njsscan]
     if: contains(github.ref, 'refs/tags/')
 

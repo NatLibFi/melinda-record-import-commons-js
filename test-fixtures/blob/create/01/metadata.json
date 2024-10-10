@@ -1,0 +1,10 @@
+{
+  "description": "Create blob: Creates blob",
+  "only": false,
+  "operationParams": {
+    "id": "001",
+    "profile": "profile",
+    "contentType": "application/json",
+    "date": "2024-07-31T07:00:00.000Z"
+  }
+}

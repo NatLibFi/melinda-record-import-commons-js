@@ -1,0 +1,10 @@
+{
+  "description": "Query blob: profile: profile, state: PROCESSED, limit: 3 => 4 Blob, 2 querys",
+  "only": false,
+  "operationParams": {
+    "profile": "profile",
+    "state": "PROCESSED",
+    "limit": 3,
+    "test": true
+  }
+}

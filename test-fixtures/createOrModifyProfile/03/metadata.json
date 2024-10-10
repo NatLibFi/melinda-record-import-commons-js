@@ -1,0 +1,12 @@
+{
+  "description": "Create or modify profile: Updating profile, id typo => new profile",
+  "only": false,
+  "operationParams": {
+    "id": "profile1s",
+    "payload": {
+      "groups": [
+        "profile1"
+      ]
+    }
+  }
+}

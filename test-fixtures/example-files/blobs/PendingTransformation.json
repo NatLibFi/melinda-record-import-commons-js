@@ -1,0 +1,16 @@
+{
+  "processingInfo": {
+    "numberOfRecords": 0,
+    "failedRecords": [],
+    "importResults": []
+  },
+  "notificationEmail": "",
+  "id": "61607152-2a94-434a-86ca-12714caa50a5",
+  "correlationId": "",
+  "profile": "profile",
+  "cataloger": "",
+  "contentType": "application/json",
+  "state": "PENDING_TRANSFORMATION",
+  "creationTime": "2024-07-31T05:50:00.000Z",
+  "modificationTime": "2024-07-31T05:51:00.000Z"
+}

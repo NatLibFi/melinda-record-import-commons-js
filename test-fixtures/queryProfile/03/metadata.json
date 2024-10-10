@@ -1,0 +1,7 @@
+{
+  "description": "Query profile: group: profile1 => 3 profile",
+  "only": false,
+  "operationParams": {
+    "group": "profile1"
+  }
+}

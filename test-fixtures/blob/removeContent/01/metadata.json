@@ -1,0 +1,8 @@
+{
+  "description": "Remove blob content: id 001 => File found => ok",
+  "only": false,
+  "mongoOperatorFunction": "removeBlobContent",
+  "operationParams": {
+    "id": "001"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "description": "Query blob: query {} + user groups kvp => 4 Blob",
+  "only": false,
+  "operationParams": {},
+  "user": {
+    "roles": {
+      "groups": [
+        "kvp"
+      ]
+    }
+  }
+}

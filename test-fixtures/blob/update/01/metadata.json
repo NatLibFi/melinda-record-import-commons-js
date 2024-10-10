@@ -1,0 +1,15 @@
+{
+  "description": "Update blob: State UNKNOWN => Error",
+  "only": false,
+  "operationParams": {
+    "id": "001",
+    "payload": {
+      "op": "updateState",
+      "state": "UNKNOWN",
+      "test": true
+    }
+  },
+  "expectedToFail": true,
+  "expectedErrorStatus": 422,
+  "expectedErrorMessage": "Blob update state error: invalid state"
+}

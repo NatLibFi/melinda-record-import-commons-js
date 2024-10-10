@@ -1,0 +1,10 @@
+{
+  "description": "Read profile: id profile10 => Error: Profile not found",
+  "only": false,
+  "operationParams": {
+    "id": "profile10"
+  },
+  "expectedToFail": true,
+  "expectedErrorStatus": 404,
+  "expectedErrorMessage": "Profile not found"
+}

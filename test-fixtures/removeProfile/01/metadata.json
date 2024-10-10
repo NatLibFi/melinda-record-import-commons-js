@@ -1,0 +1,10 @@
+{
+  "description": "Remove profile: 404 no profile found",
+  "only": false,
+  "operationParams": {
+    "id": "profile2"
+  },
+  "expectedToFail": true,
+  "expectedErrorStatus": 404,
+  "expectedErrorMessage": "Profile not found"
+}

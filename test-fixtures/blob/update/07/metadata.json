@@ -1,0 +1,15 @@
+{
+  "description": "addCorrelationId => OK",
+  "only": false,
+  "operationParams": {
+    "id": "001",
+    "payload": {
+      "op": "addCorrelationId",
+      "test": true,
+      "correlationId": "00a"
+    }
+  },
+  "expectedToFail": false,
+  "expectedErrorStatus": 200,
+  "expectedErrorMessage": ""
+}

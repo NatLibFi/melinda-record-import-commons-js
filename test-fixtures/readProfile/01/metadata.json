@@ -1,0 +1,7 @@
+{
+  "description": "Read profile: id profile1 => profile state",
+  "only": false,
+  "operationParams": {
+    "id": "profile1"
+  }
+}

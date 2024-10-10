@@ -1,0 +1,26 @@
+{
+  "blobmetadatas": [
+    {
+      "cataloger": "",
+      "contentType": "application/json",
+      "correlationId": "",
+      "creationTime": "2024-07-31T07:00:00.000Z",
+      "id": "001",
+      "modificationTime": "2024-07-31T07:00:00.000Z",
+      "notificationEmail": "",
+      "processingInfo": {
+        "failedRecords": [],
+        "importResults": [],
+        "numberOfRecords": 0,
+        "transformationError": {}
+      },
+      "profile": "profile",
+      "state": "UPLOADING"
+    }
+  ],
+  "blobmetadatas.files": [
+    {
+      "filename": "001"
+    }
+  ]
+}
