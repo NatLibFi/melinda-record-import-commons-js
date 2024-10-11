@@ -216,7 +216,7 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
     }
 
     const {numberOfRecords, failedRecords, importResults} = blob.processingInfo;
-    if (op === BLOB_UPDATE_OPERATIONS.recordProcessed && numberOfRecords <= failedRecords.length + importResults.length) {
+    if (op === BLOB_UPDATE_OPERATIONS.recordProcessed && numberOfRecords < failedRecords.length + importResults.length) {
       throw new ApiError(httpStatus.CONFLICT, 'Invalid blob record count');
     }
 
