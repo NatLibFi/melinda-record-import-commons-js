@@ -341,8 +341,8 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
       if (op === setCataloger) {
         logger.debug(`case: ${op}, cataloger: ${updatePayload.cataloger}`);
         return {
-          modificationTime: nowDate,
           $set: {
+            modificationTime: nowDate,
             cataloger: updatePayload.cataloger
           }
         };
@@ -351,8 +351,8 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
       if (op === setNotificationEmail) {
         logger.debug(`case: ${op}, cataloger: ${updatePayload.notificationEmail}`);
         return {
-          modificationTime: nowDate,
           $set: {
+            modificationTime: nowDate,
             notificationEmail: updatePayload.notificationEmail
           }
         };

@@ -1,0 +1,18 @@
+{
+  "blobmetadatas": [
+    {
+      "processingInfo": {
+        "numberOfRecords": 10,
+        "failedRecords": [],
+        "importResults": []
+      },
+      "notificationEmail": "foo",
+      "id": "001",
+      "correlationId": "",
+      "profile": "profile",
+      "cataloger": "",
+      "contentType": "application/json",
+      "state": "PROCESSING"
+    }
+  ]
+}
