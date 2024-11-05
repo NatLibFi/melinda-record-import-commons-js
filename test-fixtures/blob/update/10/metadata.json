@@ -1,0 +1,15 @@
+{
+  "description": "setCataloger => OK",
+  "only": false,
+  "operationParams": {
+    "id": "001",
+    "payload": {
+      "op": "setCataloger",
+      "test": true,
+      "cataloger": "foo"
+    }
+  },
+  "expectedToFail": false,
+  "expectedErrorStatus": 200,
+  "expectedErrorMessage": ""
+}

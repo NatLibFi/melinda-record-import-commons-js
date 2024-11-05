@@ -1,0 +1,15 @@
+{
+  "description": "setNotificationEmail => OK",
+  "only": false,
+  "operationParams": {
+    "id": "001",
+    "payload": {
+      "op": "setNotificationEmail",
+      "test": true,
+      "notificationEmail": "foo"
+    }
+  },
+  "expectedToFail": false,
+  "expectedErrorStatus": 200,
+  "expectedErrorMessage": ""
+}
