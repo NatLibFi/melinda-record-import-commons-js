@@ -33,3 +33,5 @@ export const RECORD_IMPORT_STATE = {
   SKIPPED: 'SKIPPED',
   UPDATED: 'UPDATED'
 };
+
+export const CHUNK_SIZE = 100;
