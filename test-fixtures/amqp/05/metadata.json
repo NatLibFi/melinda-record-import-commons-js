@@ -1,0 +1,10 @@
+{
+  "description": "Prepares 10 records to queue and gets one",
+  "only": false,
+  "operationParams": {
+    "queueRecords": 10,
+    "operations": [
+      "getOne"
+    ]
+  }
+}
