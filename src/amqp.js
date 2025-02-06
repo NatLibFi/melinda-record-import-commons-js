@@ -6,7 +6,7 @@ import {CHUNK_SIZE} from './constants';
 import {inspect} from 'util';
 import httpStatus from 'http-status';
 
-export default async function (amqplib, AMQP_URL) {
+export async function createAmqpOperator(amqplib, AMQP_URL) {
   const debug = createDebugLogger('@natlibfi/melinda-record-import-commons:amqp');
   const debugData = debug.extend('data');
 
@@ -14,8 +14,8 @@ export default async function (amqplib, AMQP_URL) {
   const connection = await amqplib.connect(AMQP_URL);
   const channel = await connection.createChannel();
 
-  // debug(`Connection: ${connection}`);
-  // debug(`Channel: ${channel}`);
+  debug(`Connection: ${connection}`);
+  debug(`Channel: ${channel}`);
 
   return {purgeQueue, countQueue, getChunk, getOne, ackMessages, nackMessages, sendToQueue, removeQueue, closeChannel, closeConnection};
 
@@ -96,14 +96,14 @@ export default async function (amqplib, AMQP_URL) {
       errorUndefinedQueue(queue);
       const channelInfo = await channel.assertQueue(queue, {durable: true});
       if (checkMessageCount(channelInfo)) {
-        debug(`Prepared to consumeChunk from queue: ${queue}`);
+        debug(`Prepared to getChunk from queue: ${queue}`);
         // getData: next chunk (100) messages
         const messages = await getData(queue);
 
         // Note: headers are from the first message of the chunk
-        const headers = getHeaderInfo(messages[0]);
-        debug(`consumeChunk (${messages ? messages.length : '0'} from queue ${queue}) to records`);
+        debug(`getChunk (${messages ? messages.length : '0'} from queue ${queue}) to records`);
 
+        const headers = getHeaderInfo(messages[0]);
         const records = await messagesToRecords(messages);
         return {headers, records, messages};
       }
@@ -131,15 +131,15 @@ export default async function (amqplib, AMQP_URL) {
       errorUndefinedQueue(queue);
       const channelInfo = await channel.assertQueue(queue, {durable: true});
       if (checkMessageCount(channelInfo)) {
-        debug(`Prepared to consumeOne from queue: ${queue}`);
+        debug(`Prepared to getOne from queue: ${queue}`);
         // Returns false if 0 items in queue
         const message = await channel.get(queue);
 
-        debugData(`Message: ${inspect(message, {colors: true, maxArrayLength: 3, depth: 3})}`);
+        // debugData(`Message: ${inspect(message, {colors: true, maxArrayLength: 3, depth: 3})}`);
         // Do not spam the logs
-        debug(`consumeOne from queue: ${queue} to records`);
 
         if (message) {
+          debug(`Got one from queue: ${queue}`);
           const headers = getHeaderInfo(message);
           const records = messagesToRecords([message]);
           return {headers, records, messages: [message]};

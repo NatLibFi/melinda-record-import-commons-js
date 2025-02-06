@@ -1,18 +1,15 @@
 import createDebugLogger from 'debug';
-
-import createAmqpOperator from '../amqp';
 import {BLOB_UPDATE_OPERATIONS} from '../constants';
 
-export default async function (mongoOperator, processHandler, amqplib, config) {
+export default function (mongoOperator, amqpOperator, processHandler, config) {
   const debug = createDebugLogger('@natlibfi/melinda-record-import-commons');
   const debugHandling = debug.extend('blobHandling');
   const debugRecordHandling = debug.extend('recordHandling');
-  const {amqpUrl, abortOnInvalidRecords, readFrom = 'blobContent', nextQueueStatus} = config;
-  const amqpOperator = await createAmqpOperator(amqplib, amqpUrl);
+  const {abortOnInvalidRecords, readFrom = 'blobContent', nextQueueStatus} = config;
 
   return startHandling;
 
-  async function startHandling(blobId, status) {
+  async function startHandling(blobId) {
     const recordPayloadQueuings = [];
     const blobUpdates = [];
     let hasFailed = false; // eslint-disable-line functional/no-let
@@ -20,10 +17,10 @@ export default async function (mongoOperator, processHandler, amqplib, config) {
     debugHandling(`Starting process for blob ${blobId}`);
 
     try {
-      const HandlerEmitter = getEmitter(processHandler, readFrom);
+      const handlerEmitter = await getEmitter(processHandler, readFrom, nextQueueStatus);
 
       await new Promise((resolve, reject) => {
-        HandlerEmitter
+        handlerEmitter
           .on('end', async () => {
             debugHandling(`Process has collected all records. ${recordPayloadQueuings.length} records`);
             await Promise.all(recordPayloadQueuings);
@@ -107,8 +104,6 @@ export default async function (mongoOperator, processHandler, amqplib, config) {
           }
         });
 
-        debug(`Closing AMQP resources!`);
-        await amqpOperator.closeChannel();
         return;
       }
 
@@ -121,8 +116,6 @@ export default async function (mongoOperator, processHandler, amqplib, config) {
         }
       });
 
-      debug(`Closing AMQP resources!`);
-      await amqpOperator.closeConnection();
       return;
     } catch (err) {
       const error = getError(err);
@@ -135,20 +128,21 @@ export default async function (mongoOperator, processHandler, amqplib, config) {
         }
       });
 
-      debugHandling(`Closing AMQP resources!`);
-      await amqpOperator.closeConnection();
       return;
     }
 
-    async function getEmitter(processHandler, readFrom) {
-      if (readFrom === 'blobContent') {
-        await amqpOperator.countQueue({blobId, status});
-        await amqpOperator.purgeQueue({blobId, status});
+    async function getEmitter(processHandler, readFrom, nextQueueStatus) {
+      debugHandling(`Preparing next queue: ${blobId}.${nextQueueStatus}`);
+      await amqpOperator.countQueue({blobId, status: nextQueueStatus});
+      await amqpOperator.purgeQueue({blobId, status: nextQueueStatus});
 
-        const readStream = mongoOperator.readBlobContent({id: blobId});
+      if (readFrom === 'blobContent') {
+        debugHandling(`Streaming blob content: ${blobId}`);
+        const readStream = await mongoOperator.readBlobContent({id: blobId});
         return processHandler(readStream);
       }
 
+      debugHandling(`Passing read source ${readFrom} to process handler`);
       return processHandler(readFrom);
     }
 

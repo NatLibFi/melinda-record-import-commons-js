@@ -208,8 +208,6 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
       throw new ApiError(httpStatus.UNPROCESSABLE_ENTITY, 'Blob update operation error');
     }
 
-    const doc = await getUpdateDoc(op, rest);
-
     const updateIfNotInStates = [BLOB_STATE.TRANSFORMATION_FAILED, BLOB_STATE.ABORTED, BLOB_STATE.PROCESSED];
     if (updateIfNotInStates.includes(blob.state)) {
       throw new ApiError(httpStatus.CONFLICT, 'Not valid blob state for update');
@@ -219,6 +217,8 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
     if (op === BLOB_UPDATE_OPERATIONS.recordProcessed && numberOfRecords < failedRecords.length + importResults.length) {
       throw new ApiError(httpStatus.CONFLICT, 'Invalid blob record count');
     }
+
+    const doc = await getUpdateDoc(op, rest);
 
     // debugDev(doc);
     const {modifiedCount} = await operator.findOneAndUpdate({id: sanitizedId}, doc, {projection: {_id: 0}, returnNewDocument: false});

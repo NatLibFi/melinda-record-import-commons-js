@@ -8,13 +8,13 @@ import {getNextBlob} from '../utils';
 import {BLOB_STATE, BLOB_UPDATE_OPERATIONS} from '../constants';
 import createBlobHandler from './blobHandler';
 
-export default async function (mongoOperator, transformHandler, amqplib, config) {
+export default async function (mongoOperator, amqpOperator, processHandler, config) {
   const logger = createLogger();
   const setTimeoutPromise = promisify(setTimeout);
   const debug = createDebugLogger('@natlibfi/melinda-record-import-commons');
   const debugLogic = debug.extend('logic:dev');
   const debugCheckBlobInState = debug.extend('checkBlobInState:dev');
-  const blobHandler = createBlobHandler(mongoOperator, transformHandler, amqplib, config);
+  const blobHandler = createBlobHandler(mongoOperator, amqpOperator, processHandler, config);
   const polltime = config.polltime ? parseInt(config.polltime, 10) : 3000;
 
   await logic();
