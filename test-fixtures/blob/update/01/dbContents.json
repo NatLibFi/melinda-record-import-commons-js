@@ -21,23 +21,6 @@
               "recordStatusNote": "SKIPPED_UPDATE"
             },
             "timestamp": "2024-07-31T05:14:12.573Z"
-          },
-          {
-            "status": "SKIPPED",
-            "metadata": {
-              "id": "012345678",
-              "title": "Tietue 2",
-              "standardIdentifiers": [
-                "978-952-00-0000-0"
-              ],
-              "sourceIds": [
-                "(FI-BTJ)0000000",
-                "(helme)0000000"
-              ],
-              "message": "Found 1 matching records in the database. - No new incoming changes from IMP_SAMPLE detected while trying to update existing record 012345678, update skipped.",
-              "recordStatusNote": "SKIPPED_UPDATE"
-            },
-            "timestamp": "2024-07-31T05:14:12.573Z"
           }
         ]
       },
@@ -47,7 +30,7 @@
       "cataloger": "",
       "notificationEmail": "",
       "contentType": "application/json",
-      "state": "PROCESSED",
+      "state": "PROCESSING",
       "creationTime": "2024-07-31T05:50:00.000Z",
       "modificationTime": "2024-07-31T05:50:55.000Z"
     }

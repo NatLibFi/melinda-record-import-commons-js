@@ -3,7 +3,6 @@ import {MarcRecord} from '@natlibfi/marc-record';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
 import createDebugLogger from 'debug';
 import {CHUNK_SIZE} from './constants';
-import {inspect} from 'util';
 import httpStatus from 'http-status';
 
 export async function createAmqpOperator(amqplib, AMQP_URL) {

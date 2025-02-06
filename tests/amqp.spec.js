@@ -1,13 +1,13 @@
 import {expect} from 'chai';
 import {READERS} from '@natlibfi/fixura';
 import generateTests from '@natlibfi/fixugen';
-import FakeAmqplib from '@onify/fake-amqplib';
-import createAmqpOperator from '../src/amqp';
+import * as fakeAmqpLib from '@onify/fake-amqplib';
+import {createAmqpOperator} from '../src/amqp.js';
 
 run();
 
 async function run() {
-  const amqpOperator = await createAmqpOperator(FakeAmqplib, 'amqp://example.com');;
+  const amqpOperator = await createAmqpOperator(fakeAmqpLib, 'amqp://example.com');
   const blobId = 'test-queue-aaa-111-bbb';
   const status = 'PENDING_TEST';
 
@@ -30,6 +30,9 @@ async function run() {
       afterEach: async () => {
         await amqpOperator.purgeQueue({blobId, status});
         await amqpOperator.removeQueue({blobId, status});
+      },
+      after: () => {
+        fakeAmqpLib.resetMock();
       }
     }
   });
@@ -47,6 +50,8 @@ async function run() {
     try {
       const prepared = await prepareQueues({blobId, status, ...operationParams});
       const operationsDone = await runOperations({blobId, status, ...operationParams});
+      console.log(operationsDone); // eslint-disable-line
+
       const count = await amqpOperator.countQueue({blobId, status, ...operationParams});
 
       const expectedResult = await getFixture('expectedResult.json');
@@ -64,23 +69,27 @@ async function run() {
 
     async function prepareQueues({blobId, status, queueRecords}) {
       if (queueRecords > 0) {
+        await amqpOperator.countQueue({blobId, status});
         const records = prepareRecords(queueRecords);
         await sendRecordsToQueue(records);
+        const count = await amqpOperator.countQueue({blobId, status});
+        console.log(`${count} records prepared for test`); // eslint-disable-line
+
         return queueRecords;
-
-        async function sendRecordsToQueue(records) {
-          const [record, ...rest] = records;
-          if (record === undefined) {
-            return;
-          }
-
-          await amqpOperator.sendToQueue({blobId, status, headers: {test: true}, data: record});
-          return sendRecordsToQueue(rest);
-        }
       }
 
       await amqpOperator.countQueue({blobId, status});
       return false;
+    }
+
+    async function sendRecordsToQueue(records) {
+      const [record, ...rest] = records;
+      if (record === undefined) {
+        return;
+      }
+
+      await amqpOperator.sendToQueue({blobId, status, headers: {test: true}, data: record});
+      return sendRecordsToQueue(rest);
     }
 
     async function runOperations({blobId, status, operations = [], operationsDone = []}) {
@@ -121,19 +130,19 @@ async function run() {
       if (operation === 'getOneAndAck') {
         const count = await amqpOperator.countQueue({blobId, status});
         const result = await amqpOperator.getOne({blobId, status});
+        console.log(result);
 
-        if (count > 0) {
-          //console.log(result);
-          expect(result.records).to.have.lengthOf(1);
-          expect(result.messages).to.have.lengthOf(1);
-          await amqpOperator.ackMessages(result.messages);
-
-          return runOperations({blobId, status, operations: rest, operationsDone: [...operationsDone, `${operation}: OK`]});
+        if (count === 0) {
+          expect(result).to.eql(false);
+          return runOperations({blobId, status, operations: rest, operationsDone: [...operationsDone, `${operation}: FALSE`]});
         }
-        // console.log(result);
 
-        expect(result).to.eql(false);
-        return runOperations({blobId, status, operations: rest, operationsDone: [...operationsDone, `${operation}: FALSE`]});
+        //console.log(result);
+        expect(result.records).to.have.lengthOf(1);
+        expect(result.messages).to.have.lengthOf(1);
+        amqpOperator.ackMessages(result.messages);
+
+        return runOperations({blobId, status, operations: rest, operationsDone: [...operationsDone, `${operation}: OK`]});
       }
 
       if (operation === 'getChunk') {
@@ -161,7 +170,7 @@ async function run() {
           //console.log(result);
           expect(result.records).to.have.lengthOf(count <= 100 ? count : 100);
           expect(result.messages).to.have.lengthOf(count <= 100 ? count : 100);
-          await amqpOperator.ackMessages(result.messages);
+          amqpOperator.ackMessages(result.messages);
 
           return runOperations({blobId, status, operations: rest, operationsDone: [...operationsDone, `${operation}: OK`]});
         }
