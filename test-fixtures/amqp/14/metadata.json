@@ -1,0 +1,27 @@
+{
+  "description": "Prepares 1000 records to queue, gets all chunks, acks 900 and nacks 900 messages",
+  "only": false,
+  "operationParams": {
+    "queueRecords": 1000,
+    "operations": [
+      "getChunkAndAck",
+      "getChunkAndNack",
+      "getChunkAndAck",
+      "getChunkAndNack",
+      "getChunkAndAck",
+      "getChunkAndNack",
+      "getChunkAndAck",
+      "getChunkAndNack",
+      "getChunkAndAck",
+      "getChunkAndNack",
+      "getChunkAndAck",
+      "getChunkAndNack",
+      "getChunkAndAck",
+      "getChunkAndNack",
+      "getChunkAndAck",
+      "getChunkAndNack",
+      "getChunkAndAck",
+      "getChunkAndNack"
+    ]
+  }
+}
