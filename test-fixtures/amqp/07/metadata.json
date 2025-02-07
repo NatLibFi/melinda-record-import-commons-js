@@ -1,10 +1,10 @@
 {
-  "description": "Prepares 10 records to queue and gets chunk",
+  "description": "Tryes to get one from non existing",
   "only": false,
   "operationParams": {
-    "queueRecords": 10,
+    "queueRecords": false,
     "operations": [
-      "getChunk"
+      "getOne"
     ]
   }
 }

@@ -260,6 +260,7 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
       }
 
       if (op === abort) {
+        debug(`case: ${op}`);
         return {
           $set: {
             state: BLOB_STATE.ABORTED,
@@ -269,6 +270,7 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
       }
 
       if (op === resetImportResults) {
+        debug(`case: ${op}`);
         return {
           $set: {
             'processingInfo.importResults': [],
@@ -278,7 +280,7 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
       }
 
       if (op === transformationFailed) {
-        debugDev(`Error: ${updatePayload.error}`);
+        debugDev(`case: ${op}, error: ${updatePayload.error}`);
         return {
           $set: {
             state: BLOB_STATE.TRANSFORMATION_FAILED,
@@ -289,6 +291,7 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
       }
 
       if (op === transformedRecord) {
+        debug(`case: ${op}`);
         if (updatePayload.error) {
           updatePayload.error.timestamp = nowDate; // eslint-disable-line new-cap, functional/immutable-data
           return {
@@ -315,6 +318,7 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
       }
 
       if (op === recordProcessed) {
+        debug(`case: ${op}`);
         return {
           $set: {
             modificationTime: nowDate
@@ -329,7 +333,7 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
       }
 
       if (op === addCorrelationId) {
-        debug(`CorrelationId: ${updatePayload.correlationId}`);
+        debug(`case: ${op}, CorrelationId: ${updatePayload.correlationId}`);
         return {
           $set: {
             modificationTime: nowDate,
@@ -339,7 +343,7 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
       }
 
       if (op === setCataloger) {
-        logger.debug(`case: ${op}, cataloger: ${updatePayload.cataloger}`);
+        debug(`case: ${op}, cataloger: ${updatePayload.cataloger}`);
         return {
           $set: {
             modificationTime: nowDate,
@@ -349,7 +353,7 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
       }
 
       if (op === setNotificationEmail) {
-        logger.debug(`case: ${op}, cataloger: ${updatePayload.notificationEmail}`);
+        debug(`case: ${op}, cataloger: ${updatePayload.notificationEmail}`);
         return {
           $set: {
             modificationTime: nowDate,

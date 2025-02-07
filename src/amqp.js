@@ -4,10 +4,13 @@ import {Error as ApiError} from '@natlibfi/melinda-commons';
 import createDebugLogger from 'debug';
 import {CHUNK_SIZE} from './constants';
 import httpStatus from 'http-status';
+import {promisify} from 'util';
 
 export async function createAmqpOperator(amqplib, AMQP_URL) {
   const debug = createDebugLogger('@natlibfi/melinda-record-import-commons:amqp');
+  const debugDev = debug.extend('dev');
   const debugData = debug.extend('data');
+  const setTimeoutPromise = promisify(setTimeout);
 
   debug(`Creating an AMQP operator to ${AMQP_URL}`);
   const connection = await amqplib.connect(AMQP_URL);
@@ -42,12 +45,10 @@ export async function createAmqpOperator(amqplib, AMQP_URL) {
    */
   async function purgeQueue({blobId, status}) {
     const queue = generateQueueId({blobId, status});
-    debug(`checkQueue: ${queue} and purge`);
+    debug(`Purging queue: ${queue}`);
     try {
-
       errorUndefinedQueue(queue);
       const channelInfo = await channel.assertQueue(queue, {durable: true});
-      debug(`Purging queue: ${queue}`);
       await channel.purgeQueue(queue);
       debug(`Queue ${queue} has purged ${channelInfo.messageCount} messages`);
 
@@ -69,6 +70,7 @@ export async function createAmqpOperator(amqplib, AMQP_URL) {
    */
   async function countQueue({blobId, status}) {
     const queue = generateQueueId({blobId, status});
+    debug(`Counting queue: ${queue}`);
     try {
       errorUndefinedQueue(queue);
       const channelInfo = await channel.assertQueue(queue, {durable: true});
@@ -138,7 +140,7 @@ export async function createAmqpOperator(amqplib, AMQP_URL) {
         // Do not spam the logs
 
         if (message) {
-          debug(`Got one from queue: ${queue}`);
+          debugDev(`Got one from queue: ${queue}`);
           const headers = getHeaderInfo(message);
           const records = messagesToRecords([message]);
           return {headers, records, messages: [message]};
@@ -160,11 +162,13 @@ export async function createAmqpOperator(amqplib, AMQP_URL) {
    * @param {Array[Object]} messages Array of message objects
    * @returns {void} returns nothing
    */
-  function ackMessages(messages) {
+  async function ackMessages(messages) {
     messages.forEach(message => {
-      debug(`Ack message ${message.properties.correlationId}`);
+      debugDev(`Ack message ${message.properties.correlationId}`);
       channel.ack(message);
     });
+    await setTimeoutPromise(10);
+    return;
   }
 
   // MARK: Nack messages
@@ -174,11 +178,13 @@ export async function createAmqpOperator(amqplib, AMQP_URL) {
    * @param {Array[Object]} messages Array of message objects
    * @returns {void} returns nothing
    */
-  function nackMessages(messages) {
+  async function nackMessages(messages) {
     messages.forEach(message => {
-      debug(`Nack message ${message.properties.correlationId}`);
-      channel.nack(message);
+      debugDev(`Nack message ${message.properties.correlationId}`);
+      channel.nack(message, false, true);
     });
+    await setTimeoutPromise(10);
+    return;
   }
 
   // MARK: Send to queue
@@ -203,10 +209,10 @@ export async function createAmqpOperator(amqplib, AMQP_URL) {
 
       errorUndefinedQueue(queue);
 
-      debug(`Asserting queue: ${queue}`);
+      debugDev(`Asserting queue: ${queue}`);
       await channel.assertQueue(queue, {durable: true});
 
-      debug(`Actually sendToQueue: ${queue}`);
+      debugDev(`Actually sendToQueue: ${queue}`);
       await channel.sendToQueue(
         queue,
         Buffer.from(JSON.stringify({data})),
@@ -215,7 +221,7 @@ export async function createAmqpOperator(amqplib, AMQP_URL) {
           persistent: true
         }
       );
-      debug(`Send message to queue: ${queue}`);
+      debugDev(`Send message to queue: ${queue}`);
 
       return true;
     } catch (error) {
@@ -260,7 +266,7 @@ export async function createAmqpOperator(amqplib, AMQP_URL) {
 
   function generateQueueId({blobId, status}) {
     if (blobId === undefined || status === undefined || blobId.length < 1 || status.length < 1) {
-      throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'invalid operation parametters');
+      throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'invalid operation parameters');
     }
 
     return `${blobId}.${status}`;

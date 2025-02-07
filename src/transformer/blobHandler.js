@@ -69,7 +69,7 @@ export default function (mongoOperator, amqpOperator, processHandler, config) {
                 data: recordPayload.record
               }));
               //recordPayloads.push(payload); // eslint-disable-line functional/immutable-data
-              debugRecordHandling('Adding succes record to blob');
+              debugRecordHandling('Adding success record to blob');
               blobUpdates.push(mongoOperator.updateBlob({ // eslint-disable-line functional/immutable-data
                 id: blobId,
                 payload: {
@@ -133,7 +133,6 @@ export default function (mongoOperator, amqpOperator, processHandler, config) {
 
     async function getEmitter(processHandler, readFrom, nextQueueStatus) {
       debugHandling(`Preparing next queue: ${blobId}.${nextQueueStatus}`);
-      await amqpOperator.countQueue({blobId, status: nextQueueStatus});
       await amqpOperator.purgeQueue({blobId, status: nextQueueStatus});
 
       if (readFrom === 'blobContent') {

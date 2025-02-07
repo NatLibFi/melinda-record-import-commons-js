@@ -1,7 +1,7 @@
 {
-  "count": 9,
+  "count": 0,
   "operationsDone": [
-    "getOneAndAck: OK"
+    "getChunk: FALSE"
   ],
-  "prepared": 10
+  "prepared": false
 }

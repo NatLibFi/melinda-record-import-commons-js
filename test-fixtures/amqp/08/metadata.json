@@ -1,8 +1,8 @@
 {
-  "description": "Prepares 0 records to queue and gets chunk",
+  "description": "Prepares 10 records to queue and gets chunk",
   "only": false,
   "operationParams": {
-    "queueRecords": 0,
+    "queueRecords": 10,
     "operations": [
       "getChunk"
     ]
