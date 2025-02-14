@@ -218,7 +218,7 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
       throw new ApiError(httpStatus.CONFLICT, 'Invalid blob record count');
     }
 
-    const doc = await getUpdateDoc(op, rest);
+    const doc = getUpdateDoc(op, rest);
 
     // debugDev(doc);
     const {modifiedCount} = await operator.findOneAndUpdate({id: sanitizedId}, doc, {projection: {_id: 0}, returnNewDocument: false});
@@ -239,10 +239,10 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
       } = BLOB_UPDATE_OPERATIONS;
 
       debug(`Update blob operation: ${op}`);
+      debugDev(`Update blob payload: ${JSON.stringify(updatePayload)}`);
 
       if (op === updateState) {
         const {state} = updatePayload;
-        debug(`State update to ${state}`);
 
         const validStatesToUpdate = [
           BLOB_STATE.PROCESSED,
@@ -260,7 +260,6 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
       }
 
       if (op === abort) {
-        debug(`case: ${op}`);
         return {
           $set: {
             state: BLOB_STATE.ABORTED,
@@ -270,7 +269,6 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
       }
 
       if (op === resetImportResults) {
-        debug(`case: ${op}`);
         return {
           $set: {
             'processingInfo.importResults': [],
@@ -280,7 +278,6 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
       }
 
       if (op === transformationFailed) {
-        debugDev(`case: ${op}, error: ${updatePayload.error}`);
         return {
           $set: {
             state: BLOB_STATE.TRANSFORMATION_FAILED,
@@ -291,7 +288,6 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
       }
 
       if (op === transformedRecord) {
-        debug(`case: ${op}`);
         if (updatePayload.error) {
           updatePayload.error.timestamp = nowDate; // eslint-disable-line new-cap, functional/immutable-data
           return {
@@ -318,7 +314,6 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
       }
 
       if (op === recordProcessed) {
-        debug(`case: ${op}`);
         return {
           $set: {
             modificationTime: nowDate
@@ -333,7 +328,6 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
       }
 
       if (op === addCorrelationId) {
-        debug(`case: ${op}, CorrelationId: ${updatePayload.correlationId}`);
         return {
           $set: {
             modificationTime: nowDate,
@@ -343,7 +337,6 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
       }
 
       if (op === setCataloger) {
-        debug(`case: ${op}, cataloger: ${updatePayload.cataloger}`);
         return {
           $set: {
             modificationTime: nowDate,
@@ -353,7 +346,6 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
       }
 
       if (op === setNotificationEmail) {
-        debug(`case: ${op}, cataloger: ${updatePayload.notificationEmail}`);
         return {
           $set: {
             modificationTime: nowDate,

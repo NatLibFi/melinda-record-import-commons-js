@@ -1,5 +1,5 @@
 {
-  "description": "Tryes to get one from non existing",
+  "description": "Attempts to get one from non existing",
   "only": false,
   "operationParams": {
     "queueRecords": false,
