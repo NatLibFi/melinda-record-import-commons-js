@@ -260,7 +260,7 @@ export async function createAmqpOperator(amqplib, AMQP_URL) {
       throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'invalid operation parameters');
     }
     const queue = `${blobId}.${status}`;
-    const channelInfo = await channel.assertQueue(queue, {durable: true});
+    const channelInfo = await channel.assertQueue(queue, {durable: true, autoDelete: true});
     return {queue, channelInfo};
   }
 
