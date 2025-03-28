@@ -40,14 +40,14 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
    * @returns {EventEmitter} Emits event on blobs, error and end
    */
   function queryBlob(params, user = false) {
-    debugDev(`Querying: ${JSON.stringify(params)}`);
+    debugDev(`Mongo operator query blob`);
     const emitter = new EventEmitter();
     const limit = parseInt(params.limit || 100, 10);
     const skip = parseInt(params.skip || 0, 10);
     const {getAll = true, ...rest} = params;
 
     const query = generateBlobQuery(rest, user);
-    debug(`Query: ${JSON.stringify(query)}`);
+    debugDev(`Query: ${JSON.stringify(query)}`);
 
     handleBlobQuery(getAll, skip);
 
