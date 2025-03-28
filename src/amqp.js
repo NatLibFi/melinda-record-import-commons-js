@@ -279,10 +279,8 @@ export async function createAmqpOperator(amqplib, AMQP_URL) {
     try {
       const {messageCount} = await channel.checkQueue(queue);
       debug(`There is ${messageCount} messages in queue ${queue}`);
-      const messagesToGet = messageCount >= CHUNK_SIZE ? CHUNK_SIZE : messageCount;
-      debug(`Getting ${messagesToGet} messages from queue ${queue}`);
 
-      const messages = await pump(messagesToGet);
+      const messages = await pump();
 
       debug(`Returning ${messages.length} unique messages`);
 
@@ -291,28 +289,18 @@ export async function createAmqpOperator(amqplib, AMQP_URL) {
       handleAmqpErrors(error);
     }
 
-    async function pump(count, results = [], identifiers = []) {
-      if (count === 0) {
+    async function pump(results = []) {
+      if (results.length === CHUNK_SIZE) {
         return results;
       }
 
       const message = await channel.get(queue);
-      const identifier = {
-        correlationId: message.properties.correlationId,
-        deliveryTag: message.fields.deliveryTag
-      };
-      const isNotUniq = identifiers.some(storedIdentifier => {
-        const correlationId = identifier.correlationId === storedIdentifier.correlationId;
-        const deliveryTag = identifier.deliveryTag === storedIdentifier.deliveryTag;
-        return correlationId && deliveryTag;
-      });
 
-      // Filter not unique messages
-      if (isNotUniq) {
-        return pump(count - 1, results, identifiers);
+      if (!message) {
+        return results;
       }
 
-      return pump(count - 1, results.concat(message), identifiers.concat(identifier));
+      return pump([...results, message]);
     }
   }
 
