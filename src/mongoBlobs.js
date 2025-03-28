@@ -14,7 +14,7 @@ import {generateBlobQuery} from './utils';
 export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
   const logger = createLogger();
   const debug = createDebugLogger('@natlibfi/melinda-record-import-commons:mongoBlobs');
-  const debugDev = createDebugLogger('@natlibfi/melinda-record-import-commons:mongoBlobs:dev');
+  const debugDev = debug.extend('dev');
 
   // Connect to mongo (MONGO)
   const client = await MongoClient.connect(mongoUrl);
@@ -40,7 +40,7 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
    * @returns {EventEmitter} Emits event on blobs, error and end
    */
   function queryBlob(params, user = false) {
-    debug(`Querying: ${JSON.stringify(params)}`);
+    debugDev(`Querying: ${JSON.stringify(params)}`);
     const emitter = new EventEmitter();
     const limit = parseInt(params.limit || 100, 10);
     const skip = parseInt(params.skip || 0, 10);
@@ -68,7 +68,7 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
 
         const resultArray = hasNext ? blobsArray.slice(0, -1) : blobsArray;
         const nextOffset = skip + limit;
-        debug(`Query result: ${resultArray.length > 0 ? 'Found!' : 'Not found!'}`);
+        debugDev(`Query result: ${resultArray.length > 0 ? 'Found!' : 'Not found!'}`);
         // debugDev(`${JSON.stringify(resultArray.slice(0,3))}`);
         emitter.emit('blobs', resultArray);
 

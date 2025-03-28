@@ -12,8 +12,7 @@ export default async function (mongoOperator, amqpOperator, processHandler, conf
   const logger = createLogger();
   const setTimeoutPromise = promisify(setTimeout);
   const debug = createDebugLogger('@natlibfi/melinda-record-import-commons');
-  const debugLogic = debug.extend('logic:dev');
-  const debugCheckBlobInState = debug.extend('checkBlobInState:dev');
+  const debugPolling = debug.extend('poll');
   const blobHandler = createBlobHandler(mongoOperator, amqpOperator, processHandler, config);
   const polltime = config.polltime ? parseInt(config.polltime, 10) : 3000;
 
@@ -21,7 +20,7 @@ export default async function (mongoOperator, amqpOperator, processHandler, conf
 
   async function logic(wait = false, waitSinceLastOp = 0) {
     if (wait) {
-      debugLogic(`Await ${polltime / 1000} sec`);
+      debugPolling(`Await ${polltime / 1000} sec`);
       await setTimeoutPromise(polltime);
       const nowWaited = parseInt(polltime, 10) + parseInt(waitSinceLastOp, 10);
       logWait(nowWaited);
@@ -31,18 +30,18 @@ export default async function (mongoOperator, amqpOperator, processHandler, conf
     const {profileIds} = config;
 
     // Check if blobs
-    debugLogic(`Trying to find blobs for ${profileIds}`);
+    debugPolling(`Trying to find blobs for ${profileIds}`);
     if (await checkBlobInState(BLOB_STATE.TRANSFORMATION_IN_PROGRESS)) {
-      debugLogic(`Handled blob in state ${BLOB_STATE.TRANSFORMATION_IN_PROGRESS}`);
+      debugPolling(`Handled blob in state ${BLOB_STATE.TRANSFORMATION_IN_PROGRESS}`);
       return logic();
     }
 
     if (await checkBlobInState(BLOB_STATE.PENDING_TRANSFORMATION)) {
-      debugLogic(`Handled blob in state ${BLOB_STATE.PENDING_TRANSFORMATION}`);
+      debugPolling(`Handled blob in state ${BLOB_STATE.PENDING_TRANSFORMATION}`);
       return logic();
     }
 
-    debugLogic(`No blobs found`);
+    debugPolling(`No blobs found`);
     return logic(true, waitSinceLastOp);
 
     async function checkBlobInState(state) {
@@ -50,7 +49,7 @@ export default async function (mongoOperator, amqpOperator, processHandler, conf
         const {id, profile} = await getNextBlob(mongoOperator, {profileIds, state});
         if (id) {
           logger.info(`Handling blob ${id} @ state ${state}, for profile: ${profile}`);
-          debugCheckBlobInState(`Handling ${state} blob ${id}, for profile: ${profile}`);
+          debugPolling(`Handling ${state} blob ${id}, for profile: ${profile}`);
 
           if (state === BLOB_STATE.TRANSFORMATION_IN_PROGRESS) {
             await blobHandler(id);
