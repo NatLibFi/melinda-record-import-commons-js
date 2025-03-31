@@ -19,7 +19,7 @@ export async function createAmqpOperator(amqplib, AMQP_URL) {
   debug(`Connection: ${connection}`);
   debug(`Channel: ${channel}`);
 
-  return {purgeQueue, countQueue, getChunk, getOne, ackMessages, nackMessages, sendToQueue, removeQueue, closeChannel, closeConnection};
+  return {deleteQueue, purgeQueue, countQueue, getChunk, getOne, ackMessages, nackMessages, sendToQueue, removeQueue, closeChannel, closeConnection};
 
   async function closeChannel() {
     debug(`Closing channel`);
@@ -31,6 +31,30 @@ export async function createAmqpOperator(amqplib, AMQP_URL) {
     debug(`Closing connection`);
     await connection.close();
     debug(`Connection: ${connection}`);
+  }
+
+  // MARK: Delete queue
+  /**
+   * Purge queue uses blob id and status to form queue id.
+   * E.g. 905e283f-2644-4d26-8432-6634fbbc0161.PENDING_LOOKUPS
+   *
+   * @param {Object} params object: blobId, status
+   * @param {uuid} params.blobId BlobId for blob to be handled
+   * @param {string} params.status Status for queue
+   * @returns {boolean} returns true on succesfull purge
+   */
+  async function deleteQueue({blobId, status}) {
+    try {
+      const {queue, channelInfo} = await generateQueueId({blobId, status});
+      debug(`Deleteting queue: ${queue}`);
+      // The server reply contains a single field, messageCount, with the number of messages deleted or dead-lettered along with the queue.
+      const {messageCount} = await channel.deleteQueue(queue);
+      debug(`Queue ${queue} had ${messageCount} messages when deleted`);
+
+      return true;
+    } catch (error) {
+      handleAmqpErrors(error);
+    }
   }
 
   // MARK: Purge queue
@@ -260,7 +284,7 @@ export async function createAmqpOperator(amqplib, AMQP_URL) {
       throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'invalid operation parameters');
     }
     const queue = `${blobId}.${status}`;
-    const channelInfo = await channel.assertQueue(queue, {durable: true, autoDelete: true});
+    const channelInfo = await channel.assertQueue(queue, {durable: true});
     return {queue, channelInfo};
   }
 
