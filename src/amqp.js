@@ -45,7 +45,7 @@ export async function createAmqpOperator(amqplib, AMQP_URL) {
    */
   async function deleteQueue({blobId, status}) {
     try {
-      const {queue, channelInfo} = await generateQueueId({blobId, status});
+      const {queue} = await generateQueueId({blobId, status});
       debug(`Deleteting queue: ${queue}`);
       // The server reply contains a single field, messageCount, with the number of messages deleted or dead-lettered along with the queue.
       const {messageCount} = await channel.deleteQueue(queue);
