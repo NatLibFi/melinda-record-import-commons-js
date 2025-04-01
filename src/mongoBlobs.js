@@ -250,6 +250,8 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
           BLOB_STATE.PROCESSING_BULK,
           BLOB_STATE.PENDING_TRANSFORMATION,
           BLOB_STATE.TRANSFORMATION_IN_PROGRESS,
+          BLOB_STATE.PENDING_LOOKUP,
+          BLOB_STATE.PROCESSING_LOOKUP,
           BLOB_STATE.TRANSFORMED
         ];
         if (validStatesToUpdate.includes(state)) {
