@@ -248,6 +248,8 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
           BLOB_STATE.PROCESSED,
           BLOB_STATE.PROCESSING,
           BLOB_STATE.PROCESSING_BULK,
+          BLOB_STATE.PROCESSING_LOOKUP,
+          BLOB_STATE.PENDING_LOOKUP,
           BLOB_STATE.PENDING_TRANSFORMATION,
           BLOB_STATE.TRANSFORMATION_IN_PROGRESS,
           BLOB_STATE.TRANSFORMED
