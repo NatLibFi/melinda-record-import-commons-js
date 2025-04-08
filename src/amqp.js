@@ -19,7 +19,7 @@ export async function createAmqpOperator(amqplib, AMQP_URL) {
   debug(`Connection: ${connection}`);
   debug(`Channel: ${channel}`);
 
-  return {deleteQueue, purgeQueue, countQueue, getChunk, getOne, ackMessages, nackMessages, sendToQueue, removeQueue, closeChannel, closeConnection};
+  return {deleteQueue, purgeQueue, countQueue, getChunk, getOne, ackMessages, nackMessages, sendToQueue, closeChannel, closeConnection};
 
   async function closeChannel() {
     debug(`Closing channel`);
@@ -35,21 +35,35 @@ export async function createAmqpOperator(amqplib, AMQP_URL) {
 
   // MARK: Delete queue
   /**
-   * Purge queue uses blob id and status to form queue id.
-   * E.g. 905e283f-2644-4d26-8432-6634fbbc0161.PENDING_LOOKUPS
+   * Delete queue uses blob id and status to form queue id.
+   * E.g. PENDING_LOOKUPS.905e283f-2644-4d26-8432-6634fbbc0161
    *
    * @param {Object} params object: blobId, status
    * @param {uuid} params.blobId BlobId for blob to be handled
    * @param {string} params.status Status for queue
-   * @returns {boolean} returns true on succesfull purge
+   * @param {boolean} allowMessageLoss Allows deleting queue even if queue still has messages
+   * @returns {boolean} returns true on succesful delete
    */
-  async function deleteQueue({blobId, status}) {
+  async function deleteQueue({blobId, status}, allowMessageLoss = false) {
     try {
-      const {queue} = await generateQueueId({blobId, status});
+      const {queue, channelInfo} = await generateQueueId({blobId, status});
+      const tempChannel = await connection.createChannel();
+
+      if (!allowMessageLoss && channelContainsMessages(channelInfo)) {
+        throw new Error('Trying to remove queue that has unhandled messages!');
+      }
+      // deleteQueue borks the channel if the queue does not exist
+      // -> use throwaway tempChannel to avoid killing actual channel in use
+      // this might be doable also with assertQueue before deleteQueue
       debug(`Deleteting queue: ${queue}`);
       // The server reply contains a single field, messageCount, with the number of messages deleted or dead-lettered along with the queue.
-      const {messageCount} = await channel.deleteQueue(queue);
+      const {messageCount} = await tempChannel.deleteQueue(queue);
       debug(`Queue ${queue} had ${messageCount} messages when deleted`);
+
+      if (tempChannel) {
+        await tempChannel.close();
+        return;
+      }
 
       return true;
     } catch (error) {
@@ -60,7 +74,7 @@ export async function createAmqpOperator(amqplib, AMQP_URL) {
   // MARK: Purge queue
   /**
    * Purge queue uses blob id and status to form queue id.
-   * E.g. 905e283f-2644-4d26-8432-6634fbbc0161.PENDING_LOOKUPS
+   * E.g. PENDING_LOOKUPS.905e283f-2644-4d26-8432-6634fbbc0161
    *
    * @param {Object} params object: blobId, status
    * @param {uuid} params.blobId BlobId for blob to be handled
@@ -83,7 +97,7 @@ export async function createAmqpOperator(amqplib, AMQP_URL) {
   // MARK: Count queue
   /**
    * Count queue uses blob id and status to form queue id.
-   * E.g. 905e283f-2644-4d26-8432-6634fbbc0161.PENDING_LOOKUPS
+   * E.g. PENDING_LOOKUPS.905e283f-2644-4d26-8432-6634fbbc0161
    *
    * @param {Object} params object: blobId, status
    * @param {uuid} params.blobId BlobId for blob to be handled
@@ -104,7 +118,7 @@ export async function createAmqpOperator(amqplib, AMQP_URL) {
   /**
    * Gets 100 messages from queue. CHUNK_SIZE set in constants.
    * Get chunk uses blob id and status to form queue id.
-   * E.g. 905e283f-2644-4d26-8432-6634fbbc0161.PENDING_LOOKUPS
+   * E.g. PENDING_LOOKUPS.905e283f-2644-4d26-8432-6634fbbc0161
    *
    * @param {Object} params object: blobId, status
    * @param {uuid} params.blobId BlobId for blob to be handled
@@ -137,7 +151,7 @@ export async function createAmqpOperator(amqplib, AMQP_URL) {
   /**
    * Gets 1 messages from queue.
    * Get one uses blob id and status to form queue id.
-   * E.g. 905e283f-2644-4d26-8432-6634fbbc0161.PENDING_LOOKUPS
+   * E.g. PENDING_LOOKUPS.905e283f-2644-4d26-8432-6634fbbc0161
    *
    * @param {Object} params object: blobId, status
    * @param {uuid} params.blobId BlobId for blob to be handled
@@ -207,7 +221,7 @@ export async function createAmqpOperator(amqplib, AMQP_URL) {
   /**
    * Sends to queue
    * Send to queue uses blob id and status to form queue id.
-   * E.g. 905e283f-2644-4d26-8432-6634fbbc0161.PENDING_LOOKUPS
+   * E.g. PENDING_LOOKUPS.905e283f-2644-4d26-8432-6634fbbc0161
    *
    * @param {Object} params object: blobId, status, data
    * @param {uuid} params.blobId BlobId for blob to be handled
@@ -243,26 +257,6 @@ export async function createAmqpOperator(amqplib, AMQP_URL) {
     }
   }
 
-  async function removeQueue({blobId, status}, allowMessageLoss = false) {
-    const {queue, channelInfo} = await generateQueueId({blobId, status});
-    // deleteQueue borks the channel if the queue does not exist
-    // -> use throwaway tempChannel to avoid killing actual channel in use
-    // this might be doable also with assertQueue before deleteQueue
-    const tempChannel = await connection.createChannel();
-    if (!allowMessageLoss && channelContainsMessages(channelInfo)) {
-      throw new Error('Trying to remove queue that has unhandled messages!');
-    }
-
-    await tempChannel.deleteQueue(queue);
-
-    if (tempChannel) {
-      await tempChannel.close();
-      return;
-    }
-
-    return;
-  }
-
   // ----------------
   // Helper functions
   // ----------------
@@ -283,7 +277,7 @@ export async function createAmqpOperator(amqplib, AMQP_URL) {
     if (isUndefined || notString || isEmpty) {
       throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'invalid operation parameters');
     }
-    const queue = `${blobId}.${status}`;
+    const queue = `${status}.${blobId}`;
     const channelInfo = await channel.assertQueue(queue, {durable: true});
     return {queue, channelInfo};
   }
@@ -298,6 +292,12 @@ export async function createAmqpOperator(amqplib, AMQP_URL) {
     });
   }
 
+  // MARK: Get data
+  /**
+  * Gets array of messages from queue. Max length of array is set in CHUNK_SIZE constant.
+  * @param {queue} Queue
+  * @returns {[message]} returns array of messages
+  */
   async function getData(queue) {
     debug(`Getting queue data from ${queue}`);
     try {
@@ -306,7 +306,7 @@ export async function createAmqpOperator(amqplib, AMQP_URL) {
 
       const messages = await pump();
 
-      debug(`Returning ${messages.length} unique messages`);
+      debug(`Returning ${messages.length} messages`);
 
       return messages;
     } catch (error) {

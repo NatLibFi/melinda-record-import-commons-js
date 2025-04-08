@@ -29,7 +29,7 @@ async function run() {
       },
       afterEach: async () => {
         await amqpOperator.purgeQueue({blobId, status});
-        await amqpOperator.removeQueue({blobId, status}, true);
+        await amqpOperator.deleteQueue({blobId, status}, true);
       },
       after: () => {
         fakeAmqpLib.resetMock();
