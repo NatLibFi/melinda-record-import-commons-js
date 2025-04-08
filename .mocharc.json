@@ -1,0 +1,13 @@
+{
+  "bail": true,
+  "exit": true,
+  "inline-diffs": true,
+  "maxDiffSize": 25000,
+  "require": [
+    "@babel/register"
+  ],
+  "package": "./package.json",
+  "spec": [
+    "tests/*.spec.js"
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "description": "Sends one record to empty queue",
+  "only": false,
+  "operationParams": {
+    "queueRecords": 0,
+    "operations": [
+      "sendToQueue"
+    ]
+  }
+}

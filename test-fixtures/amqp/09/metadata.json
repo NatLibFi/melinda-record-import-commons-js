@@ -1,0 +1,10 @@
+{
+  "description": "Tryes to get chunk from non existing queue",
+  "only": false,
+  "operationParams": {
+    "queueRecords": false,
+    "operations": [
+      "getChunk"
+    ]
+  }
+}

@@ -2,13 +2,13 @@ import {expect} from 'chai';
 import {READERS} from '@natlibfi/fixura';
 import mongoFixturesFactory from '@natlibfi/fixura-mongo';
 import generateTests from '@natlibfi/fixugen';
-import {createMongoBlobsOperator} from './mongoBlobs.js';
+import {createMongoProfilesOperator} from '../src/mongoProfiles.js';
 
 let mongoFixtures; // eslint-disable-line functional/no-let
 
 generateTests({
   callback,
-  path: [__dirname, '..', 'test-fixtures', 'blob', 'update'],
+  path: [__dirname, '..', 'test-fixtures', 'removeProfile'],
   recurse: false,
   useMetadataFile: true,
   fixura: {
@@ -33,8 +33,7 @@ generateTests({
 
 async function initMongofixtures() {
   mongoFixtures = await mongoFixturesFactory({
-    rootPath: [__dirname, '..', 'test-fixtures', 'blob', 'update'],
-    gridFS: {bucketName: 'blobmetadatas'},
+    rootPath: [__dirname, '..', 'test-fixtures', 'removeProfile'],
     useObjectId: true
   });
 }
@@ -48,11 +47,11 @@ async function callback({
 }) {
   const mongoUri = await mongoFixtures.getUri();
   await mongoFixtures.populate(getFixture('dbContents.json'));
-  const mongoOperator = await createMongoBlobsOperator(mongoUri, '');
+  const mongoOperator = await createMongoProfilesOperator(mongoUri, '');
   const expectedResult = await getFixture('expectedResult.json');
   try {
-    await mongoOperator.updateBlob(operationParams);
-    const dump = dumpParser(await mongoFixtures.dump());
+    await mongoOperator.removeProfile(operationParams);
+    const dump = await mongoFixtures.dump();
     expect(dump).to.eql(expectedResult);
   } catch (error) {
     if (!expectedToFail) {
@@ -63,19 +62,5 @@ async function callback({
     expect(error.status).to.eql(expectedErrorStatus);
     expect(error.payload).to.eql(expectedErrorMessage);
     expect(expectedToFail).to.eql(true, 'This test is not suppose to fail!');
-  }
-
-  function dumpParser(dump) {
-    // Drop timestamps
-    const blobmetadatas = dump.blobmetadatas.map(blobmetadata => {
-      const {_id, modificationTime, creationTime, timestamp, processingInfo, ...rest} = blobmetadata; // eslint-disable-line no-unused-vars
-      const {numberOfRecords, failedRecords, importResults} = processingInfo;
-
-      const handledFailedRecords = failedRecords.map(({timestamp, ...rest}) => rest); // eslint-disable-line no-unused-vars
-      const handledImportResults = importResults.map(({timestamp, ...rest}) => rest); // eslint-disable-line no-unused-vars
-      return {...rest, processingInfo: {numberOfRecords, failedRecords: handledFailedRecords, importResults: handledImportResults}};
-    });
-
-    return {blobmetadatas};
   }
 }

@@ -5,7 +5,8 @@ import createDebugLogger from 'debug';
 import sanitize from 'mongo-sanitize';
 
 const debug = createDebugLogger('@natlibfi/melinda-record-import-commons:utils');
-const debugDev = createDebugLogger('@natlibfi/melinda-record-import-commons:utils:dev');
+const debugPolling = debug.extend('poll');
+const debugDev = debug.extend('dev');
 
 export function isOfflinePeriod(importOfflinePeriod, nowTime = false) {
   if (importOfflinePeriod === undefined) {
@@ -173,12 +174,12 @@ export function generateProfileQuery({id, group}) {
 }
 
 export async function getNextBlob(mongoOperator, {profileIds, state, importOfflinePeriod}, nowTime = false) {
-  debug('Get next blob');
+  debugPolling('Get next blob');
 
   if (!isOfflinePeriod(importOfflinePeriod, nowTime)) {
     const queryResult = [];
     await new Promise((resolve, reject) => {
-      debugDev(`Checking blobs for ${profileIds} in ${state}`);
+      debugPolling(`Checking blobs for ${profileIds} in ${state}`);
       const emitter = mongoOperator.queryBlob({
         limit: 1,
         getAll: false,
@@ -196,10 +197,10 @@ export async function getNextBlob(mongoOperator, {profileIds, state, importOffli
       return blobInfo;
     }
 
-    debugDev('No blobs');
+    debugPolling('No blobs');
     return false;
   }
 
-  debugDev('Offline period');
+  debugPolling('Offline period');
   return false;
 }

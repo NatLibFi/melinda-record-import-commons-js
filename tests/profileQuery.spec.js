@@ -2,7 +2,7 @@ import {expect} from 'chai';
 import {READERS} from '@natlibfi/fixura';
 import mongoFixturesFactory from '@natlibfi/fixura-mongo';
 import generateTests from '@natlibfi/fixugen';
-import {createMongoProfilesOperator} from './mongoProfiles.js';
+import {createMongoProfilesOperator} from '../src/mongoProfiles.js';
 
 let mongoFixtures; // eslint-disable-line functional/no-let
 

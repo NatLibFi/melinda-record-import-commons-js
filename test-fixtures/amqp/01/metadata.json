@@ -1,0 +1,8 @@
+{
+  "description": "Prepares empty queue",
+  "only": false,
+  "operationParams": {
+    "queueRecords": 0,
+    "operations": []
+  }
+}

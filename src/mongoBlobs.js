@@ -14,7 +14,7 @@ import {generateBlobQuery} from './utils';
 export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
   const logger = createLogger();
   const debug = createDebugLogger('@natlibfi/melinda-record-import-commons:mongoBlobs');
-  const debugDev = createDebugLogger('@natlibfi/melinda-record-import-commons:mongoBlobs:dev');
+  const debugDev = debug.extend('dev');
 
   // Connect to mongo (MONGO)
   const client = await MongoClient.connect(mongoUrl);
@@ -40,14 +40,14 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
    * @returns {EventEmitter} Emits event on blobs, error and end
    */
   function queryBlob(params, user = false) {
-    debug(`Querying: ${JSON.stringify(params)}`);
+    debugDev(`Mongo operator query blob`);
     const emitter = new EventEmitter();
     const limit = parseInt(params.limit || 100, 10);
     const skip = parseInt(params.skip || 0, 10);
     const {getAll = true, ...rest} = params;
 
     const query = generateBlobQuery(rest, user);
-    debug(`Query: ${JSON.stringify(query)}`);
+    debugDev(`Query: ${JSON.stringify(query)}`);
 
     handleBlobQuery(getAll, skip);
 
@@ -68,7 +68,7 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
 
         const resultArray = hasNext ? blobsArray.slice(0, -1) : blobsArray;
         const nextOffset = skip + limit;
-        debug(`Query result: ${resultArray.length > 0 ? 'Found!' : 'Not found!'}`);
+        debugDev(`Query result: ${resultArray.length > 0 ? 'Found!' : 'Not found!'}`);
         // debugDev(`${JSON.stringify(resultArray.slice(0,3))}`);
         emitter.emit('blobs', resultArray);
 
@@ -208,8 +208,6 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
       throw new ApiError(httpStatus.UNPROCESSABLE_ENTITY, 'Blob update operation error');
     }
 
-    const doc = await getUpdateDoc(op, rest);
-
     const updateIfNotInStates = [BLOB_STATE.TRANSFORMATION_FAILED, BLOB_STATE.ABORTED, BLOB_STATE.PROCESSED];
     if (updateIfNotInStates.includes(blob.state)) {
       throw new ApiError(httpStatus.CONFLICT, 'Not valid blob state for update');
@@ -219,6 +217,8 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
     if (op === BLOB_UPDATE_OPERATIONS.recordProcessed && numberOfRecords < failedRecords.length + importResults.length) {
       throw new ApiError(httpStatus.CONFLICT, 'Invalid blob record count');
     }
+
+    const doc = getUpdateDoc(op, rest);
 
     // debugDev(doc);
     const {modifiedCount} = await operator.findOneAndUpdate({id: sanitizedId}, doc, {projection: {_id: 0}, returnNewDocument: false});
@@ -239,10 +239,10 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
       } = BLOB_UPDATE_OPERATIONS;
 
       debug(`Update blob operation: ${op}`);
+      debugDev(`Update blob payload: ${JSON.stringify(updatePayload)}`);
 
       if (op === updateState) {
         const {state} = updatePayload;
-        debug(`State update to ${state}`);
 
         const validStatesToUpdate = [
           BLOB_STATE.PROCESSED,
@@ -250,6 +250,8 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
           BLOB_STATE.PROCESSING_BULK,
           BLOB_STATE.PENDING_TRANSFORMATION,
           BLOB_STATE.TRANSFORMATION_IN_PROGRESS,
+          BLOB_STATE.PENDING_LOOKUP,
+          BLOB_STATE.PROCESSING_LOOKUP,
           BLOB_STATE.TRANSFORMED
         ];
         if (validStatesToUpdate.includes(state)) {
@@ -278,7 +280,6 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
       }
 
       if (op === transformationFailed) {
-        debugDev(`Error: ${updatePayload.error}`);
         return {
           $set: {
             state: BLOB_STATE.TRANSFORMATION_FAILED,
@@ -329,7 +330,6 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
       }
 
       if (op === addCorrelationId) {
-        debug(`CorrelationId: ${updatePayload.correlationId}`);
         return {
           $set: {
             modificationTime: nowDate,
@@ -339,7 +339,6 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
       }
 
       if (op === setCataloger) {
-        logger.debug(`case: ${op}, cataloger: ${updatePayload.cataloger}`);
         return {
           $set: {
             modificationTime: nowDate,
@@ -349,7 +348,6 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
       }
 
       if (op === setNotificationEmail) {
-        logger.debug(`case: ${op}, cataloger: ${updatePayload.notificationEmail}`);
         return {
           $set: {
             modificationTime: nowDate,

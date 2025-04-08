@@ -1,0 +1,16 @@
+{
+  "count": 0,
+  "operationsDone": [
+    "getChunkAndAck: OK",
+    "getChunkAndAck: OK",
+    "getChunkAndAck: OK",
+    "getChunkAndAck: OK",
+    "getChunkAndAck: OK",
+    "getChunkAndAck: OK",
+    "getChunkAndAck: OK",
+    "getChunkAndAck: OK",
+    "getChunkAndAck: OK",
+    "getChunkAndAck: OK"
+  ],
+  "prepared": 1000
+}

@@ -1,20 +1,19 @@
 import {expect} from 'chai';
 import {READERS} from '@natlibfi/fixura';
-import generateTests from '@natlibfi/fixugen';
-import {isOfflinePeriod, getNextBlob} from './utils.js';
 import mongoFixturesFactory from '@natlibfi/fixura-mongo';
-import {createMongoBlobsOperator} from './mongoBlobs.js';
+import generateTests from '@natlibfi/fixugen';
+import {createMongoBlobsOperator} from '../src/mongoBlobs.js';
 
 let mongoFixtures; // eslint-disable-line functional/no-let
 
 generateTests({
   callback,
-  path: [__dirname, '..', 'test-fixtures', 'utils'],
+  path: [__dirname, '..', 'test-fixtures', 'blob', 'remove'],
   recurse: false,
   useMetadataFile: true,
   fixura: {
-    reader: READERS.JSON,
-    failWhenNotFound: true
+    failWhenNotFound: true,
+    reader: READERS.JSON
   },
   mocha: {
     before: async () => {
@@ -34,43 +33,28 @@ generateTests({
 
 async function initMongofixtures() {
   mongoFixtures = await mongoFixturesFactory({
-    rootPath: [__dirname, '..', 'test-fixtures', 'utils'],
+    rootPath: [__dirname, '..', 'test-fixtures', 'blob', 'remove'],
+    gridFS: {bucketName: 'blobmetadatas'},
     useObjectId: true
   });
 }
 
 async function callback({
   getFixture,
-  method = '',
-  importOfflinePeriod,
-  nowTime,
-  profileIds = false,
-  state = '',
-  expectedResult,
+  operationParams,
   expectedToFail = false,
   expectedErrorStatus = 200,
   expectedErrorMessage = ''
 }) {
+  const mongoUri = await mongoFixtures.getUri();
+  await mongoFixtures.populate(getFixture('dbContents.json'));
+  const mongoOperator = await createMongoBlobsOperator(mongoUri, '');
+  const expectedResult = await getFixture('expectedResult.json');
   try {
-    if (method === 'isOfflinePeriod') {
-      const result = isOfflinePeriod(importOfflinePeriod, nowTime);
-      return expect(result).to.eql(expectedResult);
-    }
-
-    if (method === 'getNextBlob') {
-      const mongoUri = await mongoFixtures.getUri();
-      await mongoFixtures.populate(getFixture('dbContents.json'));
-      const mongoOperator = await createMongoBlobsOperator(mongoUri, '');
-      const result = await getNextBlob(mongoOperator, {profileIds, state, importOfflinePeriod}, nowTime);
-      return expect(result).to.eql(expectedResult);
-    }
-
-    throw new Error('Invalid test method!');
+    await mongoOperator.removeBlob(operationParams);
+    const dump = await mongoFixtures.dump();
+    expect(dump).to.eql(expectedResult);
   } catch (error) {
-    handleError(error);
-  }
-
-  function handleError(error) {
     if (!expectedToFail) {
       throw error;
     }

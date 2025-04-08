@@ -1,0 +1,19 @@
+{
+  "description": "Prepares 1000 records to queue, gets all chunks and acks messages",
+  "only": false,
+  "operationParams": {
+    "queueRecords": 1000,
+    "operations": [
+      "getChunkAndAck",
+      "getChunkAndAck",
+      "getChunkAndAck",
+      "getChunkAndAck",
+      "getChunkAndAck",
+      "getChunkAndAck",
+      "getChunkAndAck",
+      "getChunkAndAck",
+      "getChunkAndAck",
+      "getChunkAndAck"
+    ]
+  }
+}

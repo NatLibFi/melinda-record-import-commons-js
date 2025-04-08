@@ -2,18 +2,17 @@ import {expect} from 'chai';
 import {READERS} from '@natlibfi/fixura';
 import mongoFixturesFactory from '@natlibfi/fixura-mongo';
 import generateTests from '@natlibfi/fixugen';
-import {createMongoBlobsOperator} from './mongoBlobs.js';
+import {createMongoProfilesOperator} from '../src/mongoProfiles.js';
 
 let mongoFixtures; // eslint-disable-line functional/no-let
 
 generateTests({
   callback,
-  path: [__dirname, '..', 'test-fixtures', 'blob', 'create'],
+  path: [__dirname, '..', 'test-fixtures', 'readProfile'],
   recurse: false,
   useMetadataFile: true,
   fixura: {
-    failWhenNotFound: true,
-    reader: READERS.JSON
+    failWhenNotFound: true
   },
   mocha: {
     before: async () => {
@@ -33,8 +32,7 @@ generateTests({
 
 async function initMongofixtures() {
   mongoFixtures = await mongoFixturesFactory({
-    rootPath: [__dirname, '..', 'test-fixtures', 'blob', 'create'],
-    gridFS: {bucketName: 'blobmetadatas'},
+    rootPath: [__dirname, '..', 'test-fixtures', 'readProfile'],
     useObjectId: true
   });
 }
@@ -47,14 +45,12 @@ async function callback({
   expectedErrorMessage = ''
 }) {
   const mongoUri = await mongoFixtures.getUri();
-  await mongoFixtures.populate(getFixture('dbContents.json'));
-  const mongoOperator = await createMongoBlobsOperator(mongoUri, '');
-  const expectedResult = await getFixture('expectedResult.json');
+  await mongoFixtures.populate(getFixture({components: ['dbContents.json'], reader: READERS.JSON}));
+  const mongoOperator = await createMongoProfilesOperator(mongoUri, '');
+  const expectedResult = await getFixture({components: ['expectedResult.json'], reader: READERS.JSON});
   try {
-    const blobContentStream = getFixture({components: ['blobContent'], reader: READERS.STREAM});
-    await mongoOperator.createBlob(operationParams, blobContentStream);
-    const dump = dumpParser(await mongoFixtures.dump());
-    expect(dump).to.eql(expectedResult);
+    const result = await mongoOperator.readProfile(operationParams);
+    expect(result).to.eql(expectedResult);
   } catch (error) {
     if (!expectedToFail) {
       throw error;
@@ -64,12 +60,5 @@ async function callback({
     expect(error.status).to.eql(expectedErrorStatus);
     expect(error.payload).to.eql(expectedErrorMessage);
     expect(expectedToFail).to.eql(true, 'This test is not suppose to fail!');
-  }
-
-  function dumpParser(dump) {
-    return {
-      blobmetadatas: dump.blobmetadatas,
-      'blobmetadatas.files': dump['blobmetadatas.files'].map(({filename}) => ({filename}))
-    };
   }
 }

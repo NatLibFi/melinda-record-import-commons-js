@@ -1,42 +1,36 @@
 import createDebugLogger from 'debug';
-import {v4 as uuid} from 'uuid';
+import {BLOB_UPDATE_OPERATIONS} from '../constants';
 
-import {BLOB_STATE, BLOB_UPDATE_OPERATIONS} from '../constants';
-
-export default function (mongoOperator, transformHandler, amqplib, config) {
+export default function (mongoOperator, amqpOperator, processHandler, config) {
   const debug = createDebugLogger('@natlibfi/melinda-record-import-commons');
   const debugHandling = debug.extend('blobHandling');
   const debugRecordHandling = debug.extend('recordHandling');
-  const {amqpUrl, abortOnInvalidRecords} = config;
+  const {abortOnInvalidRecords, readFrom = 'blobContent', nextQueueStatus} = config;
 
   return startHandling;
 
   async function startHandling(blobId) {
-    let connection; // eslint-disable-line functional/no-let
-    let channel; // eslint-disable-line functional/no-let
-    const recordPayloads = [];
+    const recordPayloadQueuings = [];
+    const blobUpdates = [];
+    let hasFailed = false; // eslint-disable-line functional/no-let
 
-    debugHandling(`Starting transformation for blob ${blobId}`);
+    debugHandling(`Starting process for blob ${blobId}`);
 
     try {
-      const readStream = await mongoOperator.readBlobContent({id: blobId});
-
-      connection = await amqplib.connect(amqpUrl);
-      channel = await connection.createChannel();
-      await channel.assertQueue(blobId, {durable: true});
-      await channel.purgeQueue(blobId);
-
-      const TransformEmitter = transformHandler(readStream);
+      const handlerEmitter = await getEmitter(processHandler, readFrom, nextQueueStatus);
 
       await new Promise((resolve, reject) => {
-        TransformEmitter
-          .on('end', () => {
-            debugHandling(`Transformer has collected all records. ${recordPayloads.length} records`);
-            debugHandling(`All records are transformed`);
+        handlerEmitter
+          .on('end', async () => {
+            debugHandling(`Process has collected all records. ${recordPayloadQueuings.length} records`);
+            await Promise.all(recordPayloadQueuings);
+            debugHandling(`All records are Processed`);
+            await Promise.all(blobUpdates);
+            debugHandling(`All blob updates are Processed`);
             resolve(true);
           })
           .on('error', async err => {
-            debugHandling('Transformation failed');
+            debugHandling('Process has failed');
             await mongoOperator.updateBlob({
               id: blobId,
               payload: {
@@ -46,60 +40,82 @@ export default function (mongoOperator, transformHandler, amqplib, config) {
             });
             reject(err);
           })
-          .on('cataloger', async cataloger => {
+          .on('cataloger', cataloger => {
             debugHandling('Setting cataloger for blob');
-            await mongoOperator.updateBlob({
+            blobUpdates.push(mongoOperator.updateBlob({ // eslint-disable-line functional/immutable-data
               id: blobId,
               payload: {
                 op: BLOB_UPDATE_OPERATIONS.setCataloger,
                 cataloger
               }
-            });
+            }));
           })
-          .on('notificationEmail', async notificationEmail => {
+          .on('notificationEmail', notificationEmail => {
             debugHandling('Setting notification email for blob');
-            await mongoOperator.updateBlob({
+            blobUpdates.push(mongoOperator.updateBlob({ // eslint-disable-line functional/immutable-data
               id: blobId,
               payload: {
                 op: BLOB_UPDATE_OPERATIONS.setNotificationEmail,
                 notificationEmail
               }
-            });
+            }));
           })
-          .on('record', payload => {
-            recordPayloads.push(payload); // eslint-disable-line functional/immutable-data
+          .on('record', recordPayload => {
+            if (!recordPayload.failed) {
+              debugRecordHandling(`Sending record to queue`);
+              recordPayloadQueuings.push(amqpOperator.sendToQueue({ // eslint-disable-line functional/immutable-data
+                blobId,
+                status: nextQueueStatus,
+                data: recordPayload.record
+              }));
+              //recordPayloads.push(payload); // eslint-disable-line functional/immutable-data
+              debugRecordHandling('Adding success record to blob');
+              blobUpdates.push(mongoOperator.updateBlob({ // eslint-disable-line functional/immutable-data
+                id: blobId,
+                payload: {
+                  op: BLOB_UPDATE_OPERATIONS.transformedRecord
+                }
+              }));
+              return;
+            }
+            debugRecordHandling(`Record failed, skip queuing!`);
+            debugRecordHandling('Adding failed record to blob');
+            blobUpdates.push(mongoOperator.updateBlob({ // eslint-disable-line functional/immutable-data
+              id: blobId,
+              payload: {
+                op: BLOB_UPDATE_OPERATIONS.transformedRecord,
+                error: recordPayload
+              }
+            }));
+            // Setting fail check value trigger
+            hasFailed = true;
+            return;
           });
       });
 
-      if (abortOnInvalidRecords && recordPayloads.some(recordPayload => recordPayload.failed === true)) {
-        debug('Not sending records to queue because some records failed and abortOnInvalidRecords is true');
+      if (abortOnInvalidRecords && hasFailed) {
+        debug('Purge records from queue because some records failed and abortOnInvalidRecords is true');
+        await amqpOperator.purgeQueue({blobId, status: nextQueueStatus});
         await mongoOperator.updateBlob({
           id: blobId,
           payload: {
             op: BLOB_UPDATE_OPERATIONS.transformationFailed,
-            error: {message: 'Some records have failed'}
+            error: {message: 'Abort on record failure'}
           }
         });
 
-        debug(`Closing AMQP resources!`);
-        await connection.close();
         return;
       }
 
-      debug(`Abort on invalid records was false or all records were okay. Queuing records...`);
-      await handleRecords(recordPayloads);
-
-      debug(`Setting blob state ${BLOB_STATE.TRANSFORMED}...`);
+      debug(`Setting blob state ${nextQueueStatus}...`);
       await mongoOperator.updateBlob({
         id: blobId,
         payload: {
           op: BLOB_UPDATE_OPERATIONS.updateState,
-          state: BLOB_STATE.TRANSFORMED
+          state: nextQueueStatus
         }
       });
 
-      debug(`Closing AMQP resources!`);
-      await connection.close();
       return;
     } catch (err) {
       const error = getError(err);
@@ -112,67 +128,25 @@ export default function (mongoOperator, transformHandler, amqplib, config) {
         }
       });
 
-      debugHandling(`Closing AMQP resources!`);
-      await connection.close();
       return;
+    }
+
+    async function getEmitter(processHandler, readFrom, nextQueueStatus) {
+      debugHandling(`Preparing next queue: ${blobId}.${nextQueueStatus}`);
+      await amqpOperator.purgeQueue({blobId, status: nextQueueStatus});
+
+      if (readFrom === 'blobContent') {
+        debugHandling(`Streaming blob content: ${blobId}`);
+        const readStream = await mongoOperator.readBlobContent({id: blobId});
+        return processHandler(readStream);
+      }
+
+      debugHandling(`Passing read source ${readFrom} to process handler`);
+      return processHandler(readFrom);
     }
 
     function getError(err) {
       return JSON.stringify(err.stack || err.message || err);
-    }
-
-    async function handleRecords(recordPayloads) {
-      const [recordPayload, ...rest] = recordPayloads;
-
-      if (recordPayload === undefined) {
-        debugHandling(`All records queued`);
-        return;
-      }
-
-      await sendRecordToQueue(recordPayload);
-      await updateBlob(recordPayload);
-      return handleRecords(rest);
-
-      async function sendRecordToQueue(recordPayload) {
-        try {
-          if (!recordPayload.failed) {
-            const message = Buffer.from(JSON.stringify(recordPayload.record));
-            await channel.sendToQueue(blobId, message, {persistent: true, messageId: uuid()});
-            debugRecordHandling(`Record send to queue`);
-            return;
-          }
-
-          debugRecordHandling(`Record failed, skip queuing!`);
-          return;
-        } catch (err) {
-          throw new Error(`Error while sending record to queue: ${getError(err)}`);
-        }
-      }
-
-      function updateBlob(payload) {
-        try {
-          if (payload.failed) {
-            debugRecordHandling('Adding failed record to blob');
-            return mongoOperator.updateBlob({
-              id: blobId,
-              payload: {
-                op: BLOB_UPDATE_OPERATIONS.transformedRecord,
-                error: payload
-              }
-            });
-          }
-
-          debugRecordHandling('Adding succes record to blob');
-          return mongoOperator.updateBlob({
-            id: blobId,
-            payload: {
-              op: BLOB_UPDATE_OPERATIONS.transformedRecord
-            }
-          });
-        } catch (err) {
-          throw new Error(`Error while updating blob: ${getError(err)}`);
-        }
-      }
     }
   }
 }

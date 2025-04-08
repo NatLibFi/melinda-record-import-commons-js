@@ -2,18 +2,17 @@ import {expect} from 'chai';
 import {READERS} from '@natlibfi/fixura';
 import mongoFixturesFactory from '@natlibfi/fixura-mongo';
 import generateTests from '@natlibfi/fixugen';
-import {createMongoBlobsOperator} from './mongoBlobs.js';
+import {createMongoProfilesOperator} from '../src/mongoProfiles.js';
 
 let mongoFixtures; // eslint-disable-line functional/no-let
 
 generateTests({
   callback,
-  path: [__dirname, '..', 'test-fixtures', 'blob', 'remove'],
+  path: [__dirname, '..', 'test-fixtures', 'createOrModifyProfile'],
   recurse: false,
   useMetadataFile: true,
   fixura: {
-    failWhenNotFound: true,
-    reader: READERS.JSON
+    failWhenNotFound: true
   },
   mocha: {
     before: async () => {
@@ -33,8 +32,7 @@ generateTests({
 
 async function initMongofixtures() {
   mongoFixtures = await mongoFixturesFactory({
-    rootPath: [__dirname, '..', 'test-fixtures', 'blob', 'remove'],
-    gridFS: {bucketName: 'blobmetadatas'},
+    rootPath: [__dirname, '..', 'test-fixtures', 'createOrModifyProfile'],
     useObjectId: true
   });
 }
@@ -47,11 +45,11 @@ async function callback({
   expectedErrorMessage = ''
 }) {
   const mongoUri = await mongoFixtures.getUri();
-  await mongoFixtures.populate(getFixture('dbContents.json'));
-  const mongoOperator = await createMongoBlobsOperator(mongoUri, '');
-  const expectedResult = await getFixture('expectedResult.json');
+  await mongoFixtures.populate(getFixture({components: ['dbContents.json'], reader: READERS.JSON}));
+  const mongoOperator = await createMongoProfilesOperator(mongoUri, '');
+  const expectedResult = await getFixture({components: ['expectedResult.json'], reader: READERS.JSON});
   try {
-    await mongoOperator.removeBlob(operationParams);
+    await mongoOperator.createOrModifyProfile(operationParams);
     const dump = await mongoFixtures.dump();
     expect(dump).to.eql(expectedResult);
   } catch (error) {

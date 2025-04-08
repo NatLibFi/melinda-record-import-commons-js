@@ -1,26 +1,26 @@
 /* eslint-disable no-unused-vars */
-
+/*
 import {expect} from 'chai';
 import {READERS} from '@natlibfi/fixura';
 import generateTests from '@natlibfi/fixugen-http-client';
 import createDebugLogger from 'debug';
-import {createApiClient} from './api-client';
+import {createApiClient} from '../src/api-client';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
 
 const debug = createDebugLogger('@natlibfi/melinda-record-import-commons/api-client:test');
-
 const config = {
   keycloakOptions: {test: true},
   recordImportApiOptions: {
-    recordImportApiUrl: 'http://foo.bar',
+    recordImportApiUrl: 'http://example.com',
     userAgent: 'test',
     allowSelfSignedApiCert: true
   }
 };
 
+
 generateTests({
   callback,
-  path: [__dirname, '..', 'test-fixtures', 'api-client', 'blobs'],
+  path: [__dirname, '..', 'test-fixtures', 'api-client', 'records'],
   useMetadataFile: true,
   recurse: false,
   fixura: {
@@ -37,63 +37,19 @@ async function callback({getFixture, method, expectedError = false, expectedErro
   const output = getFixture('output.json');
 
   try {
-    if (method === 'getBlobs') {
-      const {query} = input;
-      const {expectedResult} = output;
-      const emitter = client.getBlobs(query);
-      const blobsArray = [];
-      const emitterResult = new Promise((resolve, reject) => {
-        emitter
-          .on('error', reject)
-          .on('end', resolve)
-          .on('blobs', blobs => {
-            // Use console.log coz logger starts print with date and type
-            // eslint-disable-next-line no-console
-            // console.log(blobs);
-            blobsArray.push(blobs); //eslint-disable-line functional/immutable-data
-          });
-      });
-      await emitterResult;
-      debug(blobsArray);
-      return expect(blobsArray).to.eql(expectedResult);
-    }
-
-    if (method === 'createBlob') {
+    if (method === 'setTransformationFailed') {
 
       return;
     }
 
-    if (method === 'getBlobMetadata') {
+
+    if (method === 'setRecordProcessed') {
 
       return;
     }
 
-    if (method === 'deleteBlob') {
+    if (method === 'transformedRecord') {
 
-      return;
-    }
-
-    if (method === 'getBlobContent') {
-
-      return;
-    }
-
-    if (method === 'deleteBlobContent') {
-
-      return;
-    }
-
-    if (method === 'setCorrelationId') {
-
-      return;
-    }
-
-    if (method === 'setAborted') {
-      return;
-
-    }
-
-    if (method === 'updateState') {
       return;
     }
 
@@ -101,7 +57,6 @@ async function callback({getFixture, method, expectedError = false, expectedErro
   } catch (error) {
     if (expectedError) {
       // Error match check here
-      debug('Error handling');
       expect(error).to.be.an('error');
 
       if (error instanceof ApiError) { // specified error
@@ -118,3 +73,4 @@ async function callback({getFixture, method, expectedError = false, expectedErro
     throw error;
   }
 }
+*/

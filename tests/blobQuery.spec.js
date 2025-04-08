@@ -2,17 +2,18 @@ import {expect} from 'chai';
 import {READERS} from '@natlibfi/fixura';
 import mongoFixturesFactory from '@natlibfi/fixura-mongo';
 import generateTests from '@natlibfi/fixugen';
-import {createMongoProfilesOperator} from './mongoProfiles.js';
+import {createMongoBlobsOperator} from '../src/mongoBlobs.js';
 
 let mongoFixtures; // eslint-disable-line functional/no-let
 
 generateTests({
   callback,
-  path: [__dirname, '..', 'test-fixtures', 'readProfile'],
+  path: [__dirname, '..', 'test-fixtures', 'blob', 'query'],
   recurse: false,
   useMetadataFile: true,
   fixura: {
-    failWhenNotFound: true
+    failWhenNotFound: true,
+    reader: READERS.JSON
   },
   mocha: {
     before: async () => {
@@ -32,7 +33,8 @@ generateTests({
 
 async function initMongofixtures() {
   mongoFixtures = await mongoFixturesFactory({
-    rootPath: [__dirname, '..', 'test-fixtures', 'readProfile'],
+    rootPath: [__dirname, '..', 'test-fixtures', 'blob', 'query'],
+    gridFS: {bucketName: 'blobmetadatas'},
     useObjectId: true
   });
 }
@@ -40,17 +42,31 @@ async function initMongofixtures() {
 async function callback({
   getFixture,
   operationParams,
+  expectedNextOffset = false,
+  user = false,
   expectedToFail = false,
   expectedErrorStatus = 200,
   expectedErrorMessage = ''
 }) {
   const mongoUri = await mongoFixtures.getUri();
-  await mongoFixtures.populate(getFixture({components: ['dbContents.json'], reader: READERS.JSON}));
-  const mongoOperator = await createMongoProfilesOperator(mongoUri, '');
-  const expectedResult = await getFixture({components: ['expectedResult.json'], reader: READERS.JSON});
+  await mongoFixtures.populate(getFixture('dbContents.json'));
+  const mongoOperator = await createMongoBlobsOperator(mongoUri, '');
+  const expectedResult = await getFixture('expectedResult.json');
   try {
-    const result = await mongoOperator.readProfile(operationParams);
-    expect(result).to.eql(expectedResult);
+    const blobsArray = [];
+    const nextOffset = await new Promise((resolve, reject) => {
+      const emitter = mongoOperator.queryBlob(operationParams, user);
+      emitter.on('blobs', blobs => blobs.forEach(blob => blobsArray.push(blob))) // eslint-disable-line functional/immutable-data
+        .on('error', error => reject(error))
+        .on('end', nextOffset => resolve(nextOffset));
+    });
+
+    // console.log(nextOffset); // eslint-disable-line
+    // console.log(expectedNextOffset); // eslint-disable-line
+    // console.log(result); // eslint-disable-line
+    // console.log(expectedResult); // eslint-disable-line
+    expect(nextOffset).to.eql(expectedNextOffset);
+    expect(blobsArray).to.eql(expectedResult);
   } catch (error) {
     if (!expectedToFail) {
       throw error;

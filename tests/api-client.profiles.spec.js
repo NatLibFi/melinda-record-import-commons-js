@@ -3,7 +3,7 @@ import {expect} from 'chai';
 import {READERS} from '@natlibfi/fixura';
 import generateTests from '@natlibfi/fixugen-http-client';
 import createDebugLogger from 'debug';
-import {createApiClient} from './api-client';
+import {createApiClient} from '../src/api-client';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
 
 const debug = createDebugLogger('@natlibfi/melinda-record-import-commons/api-client:test');
