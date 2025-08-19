@@ -2,11 +2,10 @@ import {EventEmitter} from 'events';
 import createDebugLogger from 'debug';
 import https from 'https';
 import httpStatus from 'http-status';
-import fetch from 'node-fetch';
 import {URL} from 'url';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
-import {BLOB_UPDATE_OPERATIONS} from './constants';
-import {createServiceAuthoperator} from './keycloakAuthOperator';
+import {BLOB_UPDATE_OPERATIONS} from './constants.js';
+import {createServiceAuthoperator} from './keycloakAuthOperator.js';
 
 export async function createApiClient({recordImportApiUrl, userAgent = 'Record import API client / Javascript', allowSelfSignedApiCert}, keycloakOptions) {
   const debug = createDebugLogger('@natlibfi/melinda-record-import-commons:api-client');
@@ -107,7 +106,7 @@ export async function createApiClient({recordImportApiUrl, userAgent = 'Record i
       headers: {}
     });
 
-    if (response.status !== httpStatus.NO_CONTENT) { // eslint-disable-line functional/no-conditional-statements
+    if (response.status !== httpStatus.NO_CONTENT) {
       const errorMessage = await response.text();
       throw new ApiError(response.status, errorMessage);
     }
@@ -141,7 +140,7 @@ export async function createApiClient({recordImportApiUrl, userAgent = 'Record i
       }
     });
 
-    if (![httpStatus.CREATED, httpStatus.NO_CONTENT].includes(response.status)) { // eslint-disable-line functional/no-conditional-statements
+    if (![httpStatus.CREATED, httpStatus.NO_CONTENT].includes(response.status)) {
       const errorMessage = await response.text();
       throw new ApiError(response.status, errorMessage);
     }
@@ -347,7 +346,7 @@ export async function createApiClient({recordImportApiUrl, userAgent = 'Record i
         };
 
         if (offset) {
-          options.headers.QueryOffset = offset; // eslint-disable-line functional/immutable-data
+          options.headers.QueryOffset = offset;
           return options;
         }
 
@@ -373,7 +372,7 @@ export async function createApiClient({recordImportApiUrl, userAgent = 'Record i
         throw new ApiError(response.status, '');
       }
 
-      if (response.status !== httpStatus.NO_CONTENT) { // eslint-disable-line functional/no-conditional-statements
+      if (response.status !== httpStatus.NO_CONTENT) {
         debug(`Update blob got unexpected response status: ${response.status}`);
         throw new ApiError(response.status);
       }
@@ -390,9 +389,9 @@ export async function createApiClient({recordImportApiUrl, userAgent = 'Record i
 
     try {
       const options = {headers: {}, ...reqOptions};
-      options.headers['User-Agent'] = userAgent; // eslint-disable-line functional/immutable-data
-      options.headers.Authorization = await serviceTokenOperator.getServiceAuthToken(); // eslint-disable-line functional/immutable-data
-      options.agent = `${reqUrl}`.indexOf('https') >= 0 ? new https.Agent({rejectUnauthorized: !allowSelfSignedApiCert}) : undefined; // eslint-disable-line functional/immutable-data
+      options.headers['User-Agent'] = userAgent;
+      options.headers.Authorization = await serviceTokenOperator.getServiceAuthToken();
+      options.agent = `${reqUrl}`.indexOf('https') >= 0 ? new https.Agent({rejectUnauthorized: !allowSelfSignedApiCert}) : undefined;
 
       const response = await fetch(reqUrl, options);
       debug(`doRequest response status: ${response.status}`);

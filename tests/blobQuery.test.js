@@ -1,4 +1,4 @@
-import {expect} from 'chai';
+import assert from 'node:assert';
 import {READERS} from '@natlibfi/fixura';
 import mongoFixturesFactory from '@natlibfi/fixura-mongo';
 import generateTests from '@natlibfi/fixugen';
@@ -8,14 +8,14 @@ let mongoFixtures; // eslint-disable-line functional/no-let
 
 generateTests({
   callback,
-  path: [__dirname, '..', 'test-fixtures', 'blob', 'query'],
+  path: [import.meta.dirname, '..', 'test-fixtures', 'blob', 'query'],
   recurse: false,
   useMetadataFile: true,
   fixura: {
     failWhenNotFound: true,
     reader: READERS.JSON
   },
-  mocha: {
+  hooks: {
     before: async () => {
       await initMongofixtures();
     },
@@ -33,7 +33,7 @@ generateTests({
 
 async function initMongofixtures() {
   mongoFixtures = await mongoFixturesFactory({
-    rootPath: [__dirname, '..', 'test-fixtures', 'blob', 'query'],
+    rootPath: [import.meta.dirname, '..', 'test-fixtures', 'blob', 'query'],
     gridFS: {bucketName: 'blobmetadatas'},
     useObjectId: true
   });
@@ -56,7 +56,7 @@ async function callback({
     const blobsArray = [];
     const nextOffset = await new Promise((resolve, reject) => {
       const emitter = mongoOperator.queryBlob(operationParams, user);
-      emitter.on('blobs', blobs => blobs.forEach(blob => blobsArray.push(blob))) // eslint-disable-line functional/immutable-data
+      emitter.on('blobs', blobs => blobs.forEach(blob => blobsArray.push(blob)))
         .on('error', error => reject(error))
         .on('end', nextOffset => resolve(nextOffset));
     });
@@ -65,16 +65,16 @@ async function callback({
     // console.log(expectedNextOffset); // eslint-disable-line
     // console.log(result); // eslint-disable-line
     // console.log(expectedResult); // eslint-disable-line
-    expect(nextOffset).to.eql(expectedNextOffset);
-    expect(blobsArray).to.eql(expectedResult);
+    assert.equal(nextOffset, expectedNextOffset);
+    assert.deepEqual(blobsArray, expectedResult);
   } catch (error) {
     if (!expectedToFail) {
       throw error;
     }
 
     // console.log(error); // eslint-disable-line
-    expect(error.status).to.eql(expectedErrorStatus);
-    expect(error.payload).to.eql(expectedErrorMessage);
-    expect(expectedToFail).to.eql(true, 'This test is not suppose to fail!');
+    assert.equal(error.status, expectedErrorStatus);
+    assert.equal(error.payload, expectedErrorMessage);
+    assert.equal(expectedToFail, true, 'This is expected to fail');
   }
 }

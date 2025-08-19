@@ -4,9 +4,9 @@ import {promisify} from 'util';
 
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 
-import {getNextBlob} from '../utils';
-import {BLOB_STATE, BLOB_UPDATE_OPERATIONS} from '../constants';
-import createBlobHandler from './blobHandler';
+import {getNextBlob} from '../utils.js';
+import {BLOB_STATE, BLOB_UPDATE_OPERATIONS} from '../constants.js';
+import createBlobHandler from './blobHandler.js';
 
 export default async function (mongoOperator, amqpOperator, processHandler, config) {
   const logger = createLogger();

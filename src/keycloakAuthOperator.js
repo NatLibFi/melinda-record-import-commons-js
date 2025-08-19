@@ -1,4 +1,4 @@
-/* eslint-disable camelcase */
+
 import {Issuer} from 'openid-client';
 import {promisify} from 'util';
 import createDebugLogger from 'debug';
@@ -18,7 +18,7 @@ export async function createServiceAuthoperator(keycloakOptions) {
     };
   }
 
-  let serviceTokenSet; // eslint-disable-line functional/no-let
+  let serviceTokenSet;
 
   const keycloakIssuer = await getIssuer(keycloakOptions.issuerBaseURL);
 
@@ -49,7 +49,7 @@ export async function createServiceAuthoperator(keycloakOptions) {
       }
 
       const {expires_at} = serviceTokenSet;
-      const secondsToExpiration = expires_at - (Date.now() / 1000); // eslint-disable-line no-extra-parens
+      const secondsToExpiration = expires_at - (Date.now() / 1000);
       return secondsToExpiration < 60;
     }
 

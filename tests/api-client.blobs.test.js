@@ -1,10 +1,8 @@
-/* eslint-disable no-unused-vars */
-
-import {expect} from 'chai';
+import assert from 'node:assert';
 import {READERS} from '@natlibfi/fixura';
 import generateTests from '@natlibfi/fixugen-http-client';
 import createDebugLogger from 'debug';
-import {createApiClient} from '../src/api-client';
+import {createApiClient} from '../src/api-client.js';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
 
 const debug = createDebugLogger('@natlibfi/melinda-record-import-commons/api-client:test');
@@ -20,7 +18,7 @@ const config = {
 
 generateTests({
   callback,
-  path: [__dirname, '..', 'test-fixtures', 'api-client', 'blobs'],
+  path: [import.meta.dirname, '..', 'test-fixtures', 'api-client', 'blobs'],
   useMetadataFile: true,
   recurse: false,
   fixura: {
@@ -55,7 +53,7 @@ async function callback({getFixture, method, expectedError = false, expectedErro
       });
       await emitterResult;
       debug(blobsArray);
-      return expect(blobsArray).to.eql(expectedResult);
+      return assert.deepEqual(blobsArray, expectedResult);
     }
 
     if (method === 'createBlob') {
@@ -102,16 +100,16 @@ async function callback({getFixture, method, expectedError = false, expectedErro
     if (expectedError) {
       // Error match check here
       debug('Error handling');
-      expect(error).to.be.an('error');
+      assert(error instanceof Error);
 
       if (error instanceof ApiError) { // specified error
-        expect(error.payload).to.match(new RegExp(expectedError, 'u'));
-        expect(error.status).to.match(new RegExp(expectedErrorStatus, 'u'));
+        assert.match(error.payload, new RegExp(expectedError, 'u'));
+        assert.match(error.status, new RegExp(expectedErrorStatus, 'u'));
         return;
       }
 
       // common error
-      expect(error.message).to.match(new RegExp(expectedError, 'u'));
+      assert.match(error.message, new RegExp(expectedError, 'u'));
       return;
     }
 

@@ -1,21 +1,21 @@
-import {expect} from 'chai';
+import assert from 'node:assert';
 import {READERS} from '@natlibfi/fixura';
 import mongoFixturesFactory from '@natlibfi/fixura-mongo';
 import generateTests from '@natlibfi/fixugen';
-import {createMongoBlobsOperator} from '../src/mongoBlobs.js';
+import {createMongoProfilesOperator} from '../src/mongoProfiles.js';
 
-let mongoFixtures; // eslint-disable-line functional/no-let
+let mongoFixtures;
 
 generateTests({
   callback,
-  path: [__dirname, '..', 'test-fixtures', 'blob', 'removeContent'],
+  path: [import.meta.dirname, '..', 'test-fixtures', 'removeProfile'],
   recurse: false,
   useMetadataFile: true,
   fixura: {
     failWhenNotFound: true,
     reader: READERS.JSON
   },
-  mocha: {
+  hooks: {
     before: async () => {
       await initMongofixtures();
     },
@@ -33,8 +33,7 @@ generateTests({
 
 async function initMongofixtures() {
   mongoFixtures = await mongoFixturesFactory({
-    rootPath: [__dirname, '..', 'test-fixtures', 'blob', 'removeContent'],
-    gridFS: {bucketName: 'blobmetadatas'},
+    rootPath: [import.meta.dirname, '..', 'test-fixtures', 'removeProfile'],
     useObjectId: true
   });
 }
@@ -48,28 +47,20 @@ async function callback({
 }) {
   const mongoUri = await mongoFixtures.getUri();
   await mongoFixtures.populate(getFixture('dbContents.json'));
-  await mongoFixtures.populateFiles(getFixture('dbFiles.json'));
+  const mongoOperator = await createMongoProfilesOperator(mongoUri, '');
   const expectedResult = await getFixture('expectedResult.json');
-  const mongoOperator = await createMongoBlobsOperator(mongoUri, '');
   try {
-    await mongoOperator.removeBlobContent(operationParams);
-    const dump = dumpParser(await mongoFixtures.dump());
-    expect(dump).to.eql(expectedResult);
+    await mongoOperator.removeProfile(operationParams);
+    const dump = await mongoFixtures.dump();
+    assert.deepStrictEqual(dump, expectedResult);
   } catch (error) {
     if (!expectedToFail) {
       throw error;
     }
 
     // console.log(error); // eslint-disable-line
-    expect(error.status).to.eql(expectedErrorStatus);
-    expect(error.payload).to.eql(expectedErrorMessage);
-    expect(expectedToFail).to.eql(true, 'This test is not suppose to fail!');
-  }
-
-  function dumpParser(dump) {
-    return {
-      blobmetadatas: dump.blobmetadatas,
-      'blobmetadatas.files': dump['blobmetadatas.files'].map(({filename}) => ({filename}))
-    };
+    assert.equal(error.status, expectedErrorStatus);
+    assert.equal(error.payload, expectedErrorMessage);
+    assert.equal(expectedToFail, true, 'This is expected to fail');
   }
 }

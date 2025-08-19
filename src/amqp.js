@@ -2,9 +2,9 @@
 import {MarcRecord} from '@natlibfi/marc-record';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
 import createDebugLogger from 'debug';
-import {CHUNK_SIZE} from './constants';
 import httpStatus from 'http-status';
 import {promisify} from 'util';
+import {CHUNK_SIZE} from './constants.js';
 
 export async function createAmqpOperator(amqplib, AMQP_URL) {
   const debug = createDebugLogger('@natlibfi/melinda-record-import-commons:amqp');
@@ -231,7 +231,7 @@ export async function createAmqpOperator(amqplib, AMQP_URL) {
    */
   async function sendToQueue({blobId, status, data}) {
     debug(`sendToQueue`);
-    // eslint-disable-next-line no-useless-catch
+
     try {
       const {queue} = await generateQueueId({blobId, status});
       debug(`Queue ${queue}`);

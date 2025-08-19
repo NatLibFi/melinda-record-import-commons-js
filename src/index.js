@@ -1,11 +1,11 @@
-import transformerBlobLogic from './transformer/index';
-import transformerCliLogic from './transformer/cli';
-import {createAmqpOperator} from './amqp';
-import {createMongoBlobsOperator} from './mongoBlobs';
-import {createMongoProfilesOperator} from './mongoProfiles';
+import transformerBlobLogic from './transformer/index.js';
+import transformerCliLogic from './transformer/cli.js';
+import {createAmqpOperator} from './amqp.js';
+import {createMongoBlobsOperator} from './mongoBlobs.js';
+import {createMongoProfilesOperator} from './mongoProfiles.js';
 
-export * from './constants';
-export * from './api-client';
-export * from './utils';
+export * from './constants.js';
+export * from './api-client.js';
+export * from './utils.js';
 
 export {transformerBlobLogic, transformerCliLogic, createAmqpOperator, createMongoBlobsOperator, createMongoProfilesOperator};

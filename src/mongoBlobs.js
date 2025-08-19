@@ -1,4 +1,4 @@
-/* eslint-disable max-lines */
+
 import createDebugLogger from 'debug';
 import httpStatus from 'http-status';
 import sanitize from 'mongo-sanitize';
@@ -8,8 +8,8 @@ import {EventEmitter} from 'events';
 import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
 
-import {BLOB_STATE, BLOB_UPDATE_OPERATIONS} from './constants';
-import {generateBlobQuery} from './utils';
+import {BLOB_STATE, BLOB_UPDATE_OPERATIONS} from './constants.js';
+import {generateBlobQuery} from './utils.js';
 
 export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
   const logger = createLogger();
@@ -56,7 +56,7 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
     async function handleBlobQuery(getAll, skip) {
       try {
         // .find(<query>, <projection>, <options>)
-        const blobsArray = await operator.find(query, {projection: {_id: 0}}) // eslint-disable-line functional/immutable-data
+        const blobsArray = await operator.find(query, {projection: {_id: 0}})
           .skip(skip)
           .limit(limit + 1)
           .toArray();
@@ -291,7 +291,7 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
 
       if (op === transformedRecord) {
         if (updatePayload.error) {
-          updatePayload.error.timestamp = nowDate; // eslint-disable-line new-cap, functional/immutable-data
+          updatePayload.error.timestamp = nowDate;
           return {
             $set: {
               modificationTime: nowDate
