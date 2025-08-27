@@ -25,7 +25,7 @@
 	},
 	"scripts": {
 		"prepare": "npm run build",
-		"build": "esbuild src/**/*.js --sourcemap --platform=node --main-fields=main --outdir=dist --allow-overwrite --analyze",
+		"build": "esbuild \"src/**/*.js\" --sourcemap --platform=node --outdir=dist",
 		"lint": "eslint ./src",
 		"lint:dev": "eslint --fix ./src",
 		"test:base": "node --test --test-force-exit --experimental-test-coverage --test-reporter=spec './tests/*.test.js'",
