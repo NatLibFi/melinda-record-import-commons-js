@@ -3,6 +3,7 @@ import createDebugLogger from 'debug';
 import https from 'https';
 import httpStatus from 'http-status';
 import {URL} from 'url';
+import {Readable} from 'stream';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
 import {BLOB_UPDATE_OPERATIONS} from './constants.js';
 import {createServiceAuthoperator} from './keycloakAuthOperator.js';
@@ -22,7 +23,7 @@ export async function createApiClient({recordImportApiUrl, userAgent = 'Record i
   };
 
   // MARK: createBLob
-  async function createBlob({blob, type, profile}) {
+  async function createBlob({blob, type, profile, duplex = undefined}) {
     debug('createBlob');
 
     const response = await doRequest(`${recordImportApiUrl}/blobs`, {
@@ -31,7 +32,7 @@ export async function createApiClient({recordImportApiUrl, userAgent = 'Record i
       headers: {
         'content-type': type,
         'Import-Profile': profile
-      }
+      }, duplex
     });
 
     if (response.status === httpStatus.CREATED) {
@@ -73,7 +74,7 @@ export async function createApiClient({recordImportApiUrl, userAgent = 'Record i
     if (response.status === httpStatus.OK) {
       return {
         contentType: response.headers.get('content-type'),
-        readStream: response.body
+        readStream: Readable.fromWeb(response.body)
       };
     }
 

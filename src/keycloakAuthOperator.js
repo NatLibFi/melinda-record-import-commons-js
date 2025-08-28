@@ -1,5 +1,5 @@
 
-import {Issuer} from 'openid-client';
+import * as client from 'openid-client';
 import {promisify} from 'util';
 import createDebugLogger from 'debug';
 
@@ -19,19 +19,10 @@ export async function createServiceAuthoperator(keycloakOptions) {
   }
 
   let serviceTokenSet;
-
-  const keycloakIssuer = await getIssuer(keycloakOptions.issuerBaseURL);
-
-  const serviceClient = new keycloakIssuer.Client({
-    client_id: keycloakOptions.serviceClientID,
-    client_secret: keycloakOptions.serviceClientSecret
-  });
+  const server = new URL(keycloakOptions.issuerBaseURL);
+  const config = await client.discovery(server, keycloakOptions.serviceClientID, keycloakOptions.serviceClientSecret);
 
   return {getServiceAuthToken};
-
-  function getIssuer(uri) {
-    return Issuer.discover(uri);
-  }
 
   async function getServiceAuthToken() {
     if (!serviceTokenSet || serviceTokensRequireRefresh()) {
@@ -55,7 +46,10 @@ export async function createServiceAuthoperator(keycloakOptions) {
 
     async function refreshServiceTokenSet() {
       debug('Auth serviceTokenSet refreshed');
-      serviceTokenSet = await serviceClient.grant({grant_type: 'client_credentials'});
+      serviceTokenSet = await client.clientCredentialsGrant(
+        config,
+        {scope: 'melinda', resource: 'melinda'},
+      );
     }
   }
 }

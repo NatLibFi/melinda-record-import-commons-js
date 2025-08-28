@@ -185,9 +185,8 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
   function readBlobContent({id}) {
     debug(`Forming stream from blob ${id}`);
     const sanitizedId = sanitize(id);
-    const stream = gridFSBucket.openDownloadStreamByName(sanitizedId);
     // Return content stream
-    return stream;
+    return gridFSBucket.openDownloadStreamByName(sanitizedId);
   }
 
   // MARK: Update Blob
