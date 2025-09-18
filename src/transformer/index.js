@@ -1,8 +1,8 @@
 import createDebugLogger from 'debug';
-import prettyPrint from 'pretty-print-ms';
 import {promisify} from 'util';
+import {millisecondsToString} from '../prettyPrintMs.js';
 
-import {createLogger} from '@natlibfi/melinda-backend-commons';
+import {createLogger, millisecondsToString} from '@natlibfi/melinda-backend-commons';
 
 import {getNextBlob} from '../utils.js';
 import {BLOB_STATE, BLOB_UPDATE_OPERATIONS} from '../constants.js';
@@ -76,7 +76,7 @@ export default async function (mongoOperator, amqpOperator, processHandler, conf
     function logWait(waitTime) {
       // 60000ms = 1min
       if (waitTime % 60000 === 0) {
-        return logger.info(`Total wait: ${prettyPrint(waitTime)}`);
+        return logger.info(`Total wait: ${millisecondsToString(waitTime)}`);
       }
     }
   }
