@@ -1,6 +1,5 @@
 import createDebugLogger from 'debug';
 import {promisify} from 'util';
-import {millisecondsToString} from '../prettyPrintMs.js';
 
 import {createLogger, millisecondsToString} from '@natlibfi/melinda-backend-commons';
 
