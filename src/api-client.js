@@ -8,7 +8,7 @@ import {Error as ApiError} from '@natlibfi/melinda-commons';
 import {BLOB_UPDATE_OPERATIONS} from './constants.js';
 import {createServiceAuthoperator} from './keycloakAuthOperator.js';
 
-export async function createApiClient({recordImportApiUrl, userAgent = 'Record import API client / Javascript', allowSelfSignedApiCert}, keycloakOptions) {
+export async function createApiClient({recordImportApiUrl, cfHeader, userAgent = 'Record import API client / Javascript', allowSelfSignedApiCert}, keycloakOptions) {
   const debug = createDebugLogger('@natlibfi/melinda-record-import-commons:api-client');
   if (!keycloakOptions) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Keycloak options missing on record import api client creation');
@@ -31,7 +31,8 @@ export async function createApiClient({recordImportApiUrl, userAgent = 'Record i
       body: blob,
       headers: {
         'content-type': type,
-        'Import-Profile': profile
+        'Import-Profile': profile,
+        'cf-connecting-ip': cfHeader
       }, duplex
     });
 
