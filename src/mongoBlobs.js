@@ -289,7 +289,7 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
       }
 
       if (op === transformedRecord) {
-        const incNumberOfRecords = updatePayload.incNumberOfRecords || true;
+        const incNumberOfRecords = updatePayload.incNumberOfRecords ?? true;
         if (updatePayload.error) {
           updatePayload.error.timestamp = nowDate;
           return {
