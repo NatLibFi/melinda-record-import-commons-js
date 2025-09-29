@@ -80,11 +80,12 @@ export default function (mongoOperator, amqpOperator, processHandler, config) {
             }
             debugRecordHandling(`Record failed, skip queuing!`);
             debugRecordHandling('Adding failed record to blob');
+            const {failed, ...restForPayload} = recordPayload;
             blobUpdates.push(mongoOperator.updateBlob({
               id: blobId,
               payload: {
                 op: BLOB_UPDATE_OPERATIONS.transformedRecord,
-                error: recordPayload
+                error: restForPayload
               }
             }));
             // Setting fail check value trigger
