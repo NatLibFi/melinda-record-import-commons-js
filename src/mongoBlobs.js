@@ -289,6 +289,7 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
       }
 
       if (op === transformedRecord) {
+        const incNumberOfRecords = updatePayload.incNumberOfRecords || true;
         if (updatePayload.error) {
           updatePayload.error.timestamp = nowDate;
           return {
@@ -299,7 +300,7 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
               'processingInfo.failedRecords': updatePayload.error
             },
             $inc: {
-              'processingInfo.numberOfRecords': 1
+              'processingInfo.numberOfRecords': incNumberOfRecords ? 1 : 0
             }
           };
         }
@@ -309,7 +310,7 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
             modificationTime: nowDate
           },
           $inc: {
-            'processingInfo.numberOfRecords': 1
+            'processingInfo.numberOfRecords': incNumberOfRecords ? 1 : 0
           }
         };
       }
