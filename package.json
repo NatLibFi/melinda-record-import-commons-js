@@ -10,8 +10,7 @@
 		"url": "https://github.com/natlibfi/melinda-record-import-commons-js/issues"
 	},
 	"repository": {
-		"type": "git",
-		"url": "git+ssh://git@github.com/natlibfi/melinda-record-import-commons-js.git"
+		"url": "https://github.com/NatLibFi/melinda-record-import-commons-js"
 	},
 	"license": "MIT",
 	"version": "13.0.0-alpha.21",
