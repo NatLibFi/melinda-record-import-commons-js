@@ -77,9 +77,13 @@ jobs:
         run: npm install -g npm@latest
       - run: npm ci
       - run: npm run build --if-present
-      - name: Publish to latest
-        if: ${{contains(github.ref, 'alpha') != false}}
-        run: npm publish --tag=latest
-      - name: Publish to next
-        if: ${{contains(github.ref, 'alpha') != true}}
-        run: npm publish --tag=next
+      - name: Publish
+        run: |
+          TAG_NAME="${GITHUB_REF#refs/tags/}"
+          if [[ "$TAG_NAME" == *-alpha.* ]]; then
+            echo "Pre-release detected: $TAG_NAME"
+            npm publish --tag=next
+          else
+            echo "Stable release detected: $TAG_NAME"
+            npm publish --tag=latest
+          fi
