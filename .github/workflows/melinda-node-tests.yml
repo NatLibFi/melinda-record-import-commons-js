@@ -4,6 +4,10 @@ name: Melinda-node-tests
 
 on: push
 
+permissions:
+  id-token: write  # Required for OIDC
+  contents: read
+
 jobs:
   build-node-versions:
     name: Node version matrix
