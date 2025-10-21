@@ -80,10 +80,9 @@ jobs:
       # Publish stable release with --tag latest
       - name: Publish stable release
         if: ${{!contains(github.ref, '-')}}
-        run: npm publish --tag latest
-
+        run: npm publish --tag=latest
       # Publish pre-release without --tag latest
       - name: Publish pre-release
         if: contains(github.ref, '-')
-        run: npm publish
+        run: npm publish --tag=next
 
