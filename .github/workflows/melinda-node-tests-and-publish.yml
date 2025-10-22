@@ -1,6 +1,6 @@
 # Melinda node tests
 
-name: Melinda-node-tests
+name: Melinda-node-tests-and-publish
 
 on: push
 
@@ -83,10 +83,10 @@ jobs:
       - run: npm run build --if-present
       # Publish stable release with --tag latest
       - name: Publish stable release
-        if: ${{!contains(github.ref, '-')}}
+        if: ${{!contains(github.ref, '-alpha')}}
         run: npm publish --tag=latest
       # Publish pre-release without --tag latest
       - name: Publish pre-release
-        if: contains(github.ref, '-')
+        if: contains(github.ref, '-alpha')
         run: npm publish --tag=next
 
