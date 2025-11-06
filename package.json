@@ -34,23 +34,23 @@
 		"dev:debug": "cross-env LOG_LEVEL=debug DEBUG=@natlibfi/* NODE_ENV=test npm run watch:test"
 	},
 	"dependencies": {
-		"@natlibfi/melinda-backend-commons": "^3.0.0-alpha.7",
-		"@natlibfi/melinda-commons": "^14.0.0-alpha.3",
+		"@natlibfi/melinda-backend-commons": "^3.0.0",
+		"@natlibfi/melinda-commons": "^14.0.0",
 		"date-fns": "^4.1.0",
-		"debug": "^4.3.4",
+		"debug": "^4.4.3",
 		"http-status": "^2.1.0",
 		"mongo-sanitize": "^1.1.0",
-		"mongodb": "^6.18.0",
-		"openid-client": "^6.7.0",
-		"uuid": "^11.1.0"
+		"mongodb": "^6.20.0",
+		"openid-client": "^6.8.1",
+		"uuid": "^13.0.0"
 	},
 	"devDependencies": {
-		"@natlibfi/fixugen-http-client": "^4.0.0-alpha.1",
-		"@natlibfi/fixura": "^4.0.0-alpha.12",
-		"@natlibfi/fixura-mongo": "^3.0.0-alpha.5",
+		"@natlibfi/fixugen-http-client": "^4.0.0",
+		"@natlibfi/fixura": "^4.0.0",
+		"@natlibfi/fixura-mongo": "^3.0.0",
 		"@onify/fake-amqplib": "^3.2.0",
-		"cross-env": "^10.0.0",
-		"esbuild": "^0.25.9",
-		"eslint": "^9.33.0"
+		"cross-env": "^10.1.0",
+		"esbuild": "^0.25.12",
+		"eslint": "^9.39.1"
 	}
 }
