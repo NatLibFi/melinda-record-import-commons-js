@@ -1,5 +1,5 @@
 import createDebugLogger from 'debug';
-import {BLOB_UPDATE_OPERATIONS} from '../constants';
+import {BLOB_UPDATE_OPERATIONS} from '../constants.js';
 
 export default function (mongoOperator, amqpOperator, processHandler, config) {
   const debug = createDebugLogger('@natlibfi/melinda-record-import-commons');
@@ -12,7 +12,7 @@ export default function (mongoOperator, amqpOperator, processHandler, config) {
   async function startHandling(blobId) {
     const recordPayloadQueuings = [];
     const blobUpdates = [];
-    let hasFailed = false; // eslint-disable-line functional/no-let
+    let hasFailed = false;
 
     debugHandling(`Starting process for blob ${blobId}`);
 
@@ -42,7 +42,7 @@ export default function (mongoOperator, amqpOperator, processHandler, config) {
           })
           .on('cataloger', cataloger => {
             debugHandling('Setting cataloger for blob');
-            blobUpdates.push(mongoOperator.updateBlob({ // eslint-disable-line functional/immutable-data
+            blobUpdates.push(mongoOperator.updateBlob({
               id: blobId,
               payload: {
                 op: BLOB_UPDATE_OPERATIONS.setCataloger,
@@ -52,7 +52,7 @@ export default function (mongoOperator, amqpOperator, processHandler, config) {
           })
           .on('notificationEmail', notificationEmail => {
             debugHandling('Setting notification email for blob');
-            blobUpdates.push(mongoOperator.updateBlob({ // eslint-disable-line functional/immutable-data
+            blobUpdates.push(mongoOperator.updateBlob({
               id: blobId,
               payload: {
                 op: BLOB_UPDATE_OPERATIONS.setNotificationEmail,
@@ -63,14 +63,14 @@ export default function (mongoOperator, amqpOperator, processHandler, config) {
           .on('record', recordPayload => {
             if (!recordPayload.failed) {
               debugRecordHandling(`Sending record to queue`);
-              recordPayloadQueuings.push(amqpOperator.sendToQueue({ // eslint-disable-line functional/immutable-data
+              recordPayloadQueuings.push(amqpOperator.sendToQueue({
                 blobId,
                 status: nextQueueStatus,
                 data: recordPayload.record
               }));
-              //recordPayloads.push(payload); // eslint-disable-line functional/immutable-data
+              //recordPayloads.push(payload);
               debugRecordHandling('Adding success record to blob');
-              blobUpdates.push(mongoOperator.updateBlob({ // eslint-disable-line functional/immutable-data
+              blobUpdates.push(mongoOperator.updateBlob({
                 id: blobId,
                 payload: {
                   op: BLOB_UPDATE_OPERATIONS.transformedRecord
@@ -80,11 +80,12 @@ export default function (mongoOperator, amqpOperator, processHandler, config) {
             }
             debugRecordHandling(`Record failed, skip queuing!`);
             debugRecordHandling('Adding failed record to blob');
-            blobUpdates.push(mongoOperator.updateBlob({ // eslint-disable-line functional/immutable-data
+            const {failed, ...restForPayload} = recordPayload;
+            blobUpdates.push(mongoOperator.updateBlob({
               id: blobId,
               payload: {
                 op: BLOB_UPDATE_OPERATIONS.transformedRecord,
-                error: recordPayload
+                error: restForPayload
               }
             }));
             // Setting fail check value trigger

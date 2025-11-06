@@ -1,4 +1,4 @@
-import {expect} from 'chai';
+import assert from 'node:assert';
 import {READERS} from '@natlibfi/fixura';
 import mongoFixturesFactory from '@natlibfi/fixura-mongo';
 import generateTests from '@natlibfi/fixugen';
@@ -8,14 +8,14 @@ let mongoFixtures; // eslint-disable-line functional/no-let
 
 generateTests({
   callback,
-  path: [__dirname, '..', 'test-fixtures', 'blob', 'remove'],
+  path: [import.meta.dirname, '..', 'test-fixtures', 'blob', 'read'],
   recurse: false,
   useMetadataFile: true,
   fixura: {
     failWhenNotFound: true,
     reader: READERS.JSON
   },
-  mocha: {
+  hooks: {
     before: async () => {
       await initMongofixtures();
     },
@@ -33,7 +33,7 @@ generateTests({
 
 async function initMongofixtures() {
   mongoFixtures = await mongoFixturesFactory({
-    rootPath: [__dirname, '..', 'test-fixtures', 'blob', 'remove'],
+    rootPath: [import.meta.dirname, '..', 'test-fixtures', 'blob', 'read'],
     gridFS: {bucketName: 'blobmetadatas'},
     useObjectId: true
   });
@@ -51,17 +51,16 @@ async function callback({
   const mongoOperator = await createMongoBlobsOperator(mongoUri, '');
   const expectedResult = await getFixture('expectedResult.json');
   try {
-    await mongoOperator.removeBlob(operationParams);
-    const dump = await mongoFixtures.dump();
-    expect(dump).to.eql(expectedResult);
+    const result = await mongoOperator.readBlob(operationParams);
+    assert.deepEqual(result, expectedResult);
   } catch (error) {
     if (!expectedToFail) {
       throw error;
     }
 
     // console.log(error); // eslint-disable-line
-    expect(error.status).to.eql(expectedErrorStatus);
-    expect(error.payload).to.eql(expectedErrorMessage);
-    expect(expectedToFail).to.eql(true, 'This test is not suppose to fail!');
+    assert.equal(error.status, expectedErrorStatus);
+    assert.equal(error.payload, expectedErrorMessage);
+    assert.equal(expectedToFail, true, 'This is expected to fail');
   }
 }

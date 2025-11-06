@@ -1,4 +1,4 @@
-import {expect} from 'chai';
+import assert from 'node:assert';
 import {READERS} from '@natlibfi/fixura';
 import mongoFixturesFactory from '@natlibfi/fixura-mongo';
 import generateTests from '@natlibfi/fixugen';
@@ -8,13 +8,13 @@ let mongoFixtures; // eslint-disable-line functional/no-let
 
 generateTests({
   callback,
-  path: [__dirname, '..', 'test-fixtures', 'createOrModifyProfile'],
+  path: [import.meta.dirname, '..', 'test-fixtures', 'readProfile'],
   recurse: false,
   useMetadataFile: true,
   fixura: {
     failWhenNotFound: true
   },
-  mocha: {
+  hooks: {
     before: async () => {
       await initMongofixtures();
     },
@@ -32,7 +32,7 @@ generateTests({
 
 async function initMongofixtures() {
   mongoFixtures = await mongoFixturesFactory({
-    rootPath: [__dirname, '..', 'test-fixtures', 'createOrModifyProfile'],
+    rootPath: [import.meta.dirname, '..', 'test-fixtures', 'readProfile'],
     useObjectId: true
   });
 }
@@ -49,17 +49,16 @@ async function callback({
   const mongoOperator = await createMongoProfilesOperator(mongoUri, '');
   const expectedResult = await getFixture({components: ['expectedResult.json'], reader: READERS.JSON});
   try {
-    await mongoOperator.createOrModifyProfile(operationParams);
-    const dump = await mongoFixtures.dump();
-    expect(dump).to.eql(expectedResult);
+    const result = await mongoOperator.readProfile(operationParams);
+    assert.deepStrictEqual(result, expectedResult);
   } catch (error) {
     if (!expectedToFail) {
       throw error;
     }
 
     // console.log(error); // eslint-disable-line
-    expect(error.status).to.eql(expectedErrorStatus);
-    expect(error.payload).to.eql(expectedErrorMessage);
-    expect(expectedToFail).to.eql(true, 'This test is not suppose to fail!');
+    assert.equal(error.status, expectedErrorStatus);
+    assert.equal(error.payload, expectedErrorMessage);
+    assert.equal(expectedToFail, true, 'This is expected to fail');
   }
 }

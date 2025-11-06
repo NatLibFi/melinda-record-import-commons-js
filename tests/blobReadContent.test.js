@@ -1,21 +1,21 @@
-import {expect} from 'chai';
+import assert from 'node:assert';
 import {READERS} from '@natlibfi/fixura';
 import mongoFixturesFactory from '@natlibfi/fixura-mongo';
 import generateTests from '@natlibfi/fixugen';
-import {createMongoProfilesOperator} from '../src/mongoProfiles.js';
+import {createMongoBlobsOperator} from '../src/mongoBlobs.js';
 
 let mongoFixtures; // eslint-disable-line functional/no-let
 
 generateTests({
   callback,
-  path: [__dirname, '..', 'test-fixtures', 'removeProfile'],
+  path: [import.meta.dirname, '..', 'test-fixtures', 'blob', 'readContent'],
   recurse: false,
   useMetadataFile: true,
   fixura: {
     failWhenNotFound: true,
     reader: READERS.JSON
   },
-  mocha: {
+  hooks: {
     before: async () => {
       await initMongofixtures();
     },
@@ -33,7 +33,8 @@ generateTests({
 
 async function initMongofixtures() {
   mongoFixtures = await mongoFixturesFactory({
-    rootPath: [__dirname, '..', 'test-fixtures', 'removeProfile'],
+    rootPath: [import.meta.dirname, '..', 'test-fixtures', 'blob', 'readContent'],
+    gridFS: {bucketName: 'blobmetadatas'},
     useObjectId: true
   });
 }
@@ -42,25 +43,39 @@ async function callback({
   getFixture,
   operationParams,
   expectedToFail = false,
-  expectedErrorStatus = 200,
   expectedErrorMessage = ''
 }) {
   const mongoUri = await mongoFixtures.getUri();
   await mongoFixtures.populate(getFixture('dbContents.json'));
-  const mongoOperator = await createMongoProfilesOperator(mongoUri, '');
+  await mongoFixtures.populateFiles(getFixture('dbFiles.json'));
   const expectedResult = await getFixture('expectedResult.json');
+
   try {
-    await mongoOperator.removeProfile(operationParams);
-    const dump = await mongoFixtures.dump();
-    expect(dump).to.eql(expectedResult);
+    const mongoOperator = await createMongoBlobsOperator(mongoUri, '');
+    const readStream = await mongoOperator.readBlobContent(operationParams);
+    const fileContentText = await getData(readStream);
+    const result = JSON.parse(fileContentText);
+    assert.deepEqual(result, expectedResult);
+    assert.equal(expectedToFail, false, 'This is expected to succes');
+
   } catch (error) {
     if (!expectedToFail) {
       throw error;
     }
-
     // console.log(error); // eslint-disable-line
-    expect(error.status).to.eql(expectedErrorStatus);
-    expect(error.payload).to.eql(expectedErrorMessage);
-    expect(expectedToFail).to.eql(true, 'This test is not suppose to fail!');
+    assert.equal(error.message, expectedErrorMessage);
+    assert.equal(expectedToFail, true, 'This is expected to fail');
+  }
+
+  function getData(stream) {
+    return new Promise((resolve, reject) => {
+      const chunks = [];
+
+      stream
+        .setEncoding('utf8')
+        .on('error', reject)
+        .on('data', chunk => chunks.push(chunk))
+        .on('end', () => resolve(chunks.join('')));
+    });
   }
 }

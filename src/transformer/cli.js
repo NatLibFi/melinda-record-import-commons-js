@@ -14,11 +14,11 @@ export default async function (args, transform) {
 
   try {
     await new Promise((resolve, reject) => {
-      let counter = 0; // eslint-disable-line functional/no-let
+      let counter = 0;
       logger.info(`Transforming${args.validate ? ' and validating' : ''}${args.fix ? ' and fixing' : ''} records`);
       logger.info('This will take a moment');
       const stream = fs.createReadStream(file);
-      const TransformEmitter = transform(stream, args); // eslint-disable-line callback-return
+      const TransformEmitter = transform(stream, args);
       const pendingPromises = [];
 
       TransformEmitter
@@ -32,7 +32,7 @@ export default async function (args, transform) {
           reject(err);
         })
         .on('record', payload => {
-          pendingPromises.push(recordEvent(payload)); // eslint-disable-line functional/immutable-data
+          pendingPromises.push(recordEvent(payload));
 
           function recordEvent(payload) {
             if (payload.failed) {
@@ -66,7 +66,7 @@ export default async function (args, transform) {
               return;
             }
 
-            console.log(JSON.stringify(payload, undefined, 2)); // eslint-disable-line no-console
+            console.log(JSON.stringify(payload, undefined, 2));
             counter += 1;
 
             function initOutputDirectory() {
@@ -80,6 +80,6 @@ export default async function (args, transform) {
     });
   } catch (err) {
     logger.error(typeof err === 'object' && 'stack' in err ? err.stack : err);
-    process.exit(-1); // eslint-disable-line no-process-exit
+    process.exit(-1);
   }
 }

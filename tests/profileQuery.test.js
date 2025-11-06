@@ -1,4 +1,4 @@
-import {expect} from 'chai';
+import assert from 'node:assert';
 import {READERS} from '@natlibfi/fixura';
 import mongoFixturesFactory from '@natlibfi/fixura-mongo';
 import generateTests from '@natlibfi/fixugen';
@@ -8,13 +8,13 @@ let mongoFixtures; // eslint-disable-line functional/no-let
 
 generateTests({
   callback,
-  path: [__dirname, '..', 'test-fixtures', 'readProfile'],
+  path: [import.meta.dirname, '..', 'test-fixtures', 'queryProfile'],
   recurse: false,
   useMetadataFile: true,
   fixura: {
     failWhenNotFound: true
   },
-  mocha: {
+  hooks: {
     before: async () => {
       await initMongofixtures();
     },
@@ -32,7 +32,7 @@ generateTests({
 
 async function initMongofixtures() {
   mongoFixtures = await mongoFixturesFactory({
-    rootPath: [__dirname, '..', 'test-fixtures', 'readProfile'],
+    rootPath: [import.meta.dirname, '..', 'test-fixtures', 'queryProfile'],
     useObjectId: true
   });
 }
@@ -40,6 +40,7 @@ async function initMongofixtures() {
 async function callback({
   getFixture,
   operationParams,
+  expectedNextOffset = false,
   expectedToFail = false,
   expectedErrorStatus = 200,
   expectedErrorMessage = ''
@@ -49,16 +50,28 @@ async function callback({
   const mongoOperator = await createMongoProfilesOperator(mongoUri, '');
   const expectedResult = await getFixture({components: ['expectedResult.json'], reader: READERS.JSON});
   try {
-    const result = await mongoOperator.readProfile(operationParams);
-    expect(result).to.eql(expectedResult);
+    const profilesArray = [];
+    const nextOffset = await new Promise((resolve, reject) => {
+      const emitter = mongoOperator.queryProfile(operationParams);
+      emitter.on('profiles', profiles => profiles.forEach(profile => profilesArray.push(profile)))
+        .on('error', error => reject(error))
+        .on('end', nextOffset => resolve(nextOffset));
+    });
+
+    // console.log(nextOffset); // eslint-disable-line
+    // console.log(expectedNextOffset); // eslint-disable-line
+    // console.log(result); // eslint-disable-line
+    // console.log(expectedResult); // eslint-disable-line
+    assert.equal(nextOffset, expectedNextOffset);
+    assert.deepStrictEqual(profilesArray, expectedResult);
   } catch (error) {
     if (!expectedToFail) {
       throw error;
     }
 
     // console.log(error); // eslint-disable-line
-    expect(error.status).to.eql(expectedErrorStatus);
-    expect(error.payload).to.eql(expectedErrorMessage);
-    expect(expectedToFail).to.eql(true, 'This test is not suppose to fail!');
+    assert.equal(error.status, expectedErrorStatus);
+    assert.equal(error.payload, expectedErrorMessage);
+    assert.equal(expectedToFail, true, 'This is expected to fail');
   }
 }

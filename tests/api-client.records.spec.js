@@ -1,6 +1,6 @@
 /* eslint-disable no-unused-vars */
 /*
-import {expect} from 'chai';
+import assert from 'node:assert';
 import {READERS} from '@natlibfi/fixura';
 import generateTests from '@natlibfi/fixugen-http-client';
 import createDebugLogger from 'debug';
@@ -20,7 +20,7 @@ const config = {
 
 generateTests({
   callback,
-  path: [__dirname, '..', 'test-fixtures', 'api-client', 'records'],
+  path: [import.meta.dirname, '..', 'test-fixtures', 'api-client', 'records'],
   useMetadataFile: true,
   recurse: false,
   fixura: {

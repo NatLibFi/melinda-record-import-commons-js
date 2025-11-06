@@ -1,4 +1,4 @@
-import {expect} from 'chai';
+import assert from 'node:assert';
 import {READERS} from '@natlibfi/fixura';
 import generateTests from '@natlibfi/fixugen';
 import {isOfflinePeriod, getNextBlob} from '../src/utils.js';
@@ -9,14 +9,14 @@ let mongoFixtures; // eslint-disable-line functional/no-let
 
 generateTests({
   callback,
-  path: [__dirname, '..', 'test-fixtures', 'utils'],
+  path: [import.meta.dirname, '..', 'test-fixtures', 'utils'],
   recurse: false,
   useMetadataFile: true,
   fixura: {
     reader: READERS.JSON,
     failWhenNotFound: true
   },
-  mocha: {
+  hooks: {
     before: async () => {
       await initMongofixtures();
     },
@@ -34,7 +34,7 @@ generateTests({
 
 async function initMongofixtures() {
   mongoFixtures = await mongoFixturesFactory({
-    rootPath: [__dirname, '..', 'test-fixtures', 'utils'],
+    rootPath: [import.meta.dirname, '..', 'test-fixtures', 'utils'],
     useObjectId: true
   });
 }
@@ -54,7 +54,7 @@ async function callback({
   try {
     if (method === 'isOfflinePeriod') {
       const result = isOfflinePeriod(importOfflinePeriod, nowTime);
-      return expect(result).to.eql(expectedResult);
+      return assert.equal(result, expectedResult);
     }
 
     if (method === 'getNextBlob') {
@@ -62,7 +62,7 @@ async function callback({
       await mongoFixtures.populate(getFixture('dbContents.json'));
       const mongoOperator = await createMongoBlobsOperator(mongoUri, '');
       const result = await getNextBlob(mongoOperator, {profileIds, state, importOfflinePeriod}, nowTime);
-      return expect(result).to.eql(expectedResult);
+      return assert.deepEqual(result, expectedResult);
     }
 
     throw new Error('Invalid test method!');

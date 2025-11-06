@@ -1,4 +1,4 @@
-import {expect} from 'chai';
+import assert from 'node:assert';
 import {READERS} from '@natlibfi/fixura';
 import generateTests from '@natlibfi/fixugen';
 import * as fakeAmqpLib from '@onify/fake-amqplib';
@@ -13,14 +13,14 @@ async function run() {
 
   generateTests({
     callback,
-    path: [__dirname, '..', 'test-fixtures', 'amqp'],
+    path: [import.meta.dirname, '..', 'test-fixtures', 'amqp'],
     recurse: false,
     useMetadataFile: true,
     fixura: {
       failWhenNotFound: true,
       reader: READERS.JSON
     },
-    mocha: {
+    hooks: {
       beforeEach: async () => {
         const count = await amqpOperator.countQueue({blobId, status});
         if (count > 0) {
@@ -55,16 +55,17 @@ async function run() {
       const count = await amqpOperator.countQueue({blobId, status, ...operationParams});
 
       const expectedResult = await getFixture('expectedResult.json');
-      expect({prepared, operationsDone, count}).to.eql(expectedResult);
+      assert.deepEqual({prepared, operationsDone, count}, expectedResult);
+      assert.equal(expectedToFail, false, 'This is expected to succes');
     } catch (error) {
       if (!expectedToFail) {
         throw error;
       }
 
       // console.log(error); // eslint-disable-line
-      expect(error.status).to.eql(expectedErrorStatus);
-      expect(error.payload).to.eql(expectedErrorMessage);
-      expect(expectedToFail).to.eql(true, 'This test is not suppose to fail!');
+      assert.equal(error.status, expectedErrorStatus);
+      assert.equal(error.payload, expectedErrorMessage);
+      assert.equal(expectedToFail, true, 'This is expected to fail');
     }
 
     async function prepareQueues({queueRecords}) {
@@ -114,14 +115,14 @@ async function run() {
 
         if (count > 0) {
           //console.log(result);
-          expect(result.records).to.have.lengthOf(1);
-          expect(result.messages).to.have.lengthOf(1);
+          assert.equal(result.records.length, 1);
+          assert.equal(result.messages.length, 1);
 
           return runOperations({blobId, status, operations: rest, operationsDone: [...operationsDone, `${operation}: OK`]});
         }
         // console.log(result);
 
-        expect(result).to.eql(false);
+        assert.equal(result, false);
         return runOperations({blobId, status, operations: rest, operationsDone: [...operationsDone, `${operation}: FALSE`]});
       }
 
@@ -131,13 +132,13 @@ async function run() {
         //console.log(result);
 
         if (count === 0) {
-          expect(result).to.eql(false);
+          assert.equal(result, false);
           return runOperations({blobId, status, operations: rest, operationsDone: [...operationsDone, `${operation}: FALSE`]});
         }
 
         //console.log(result);
-        expect(result.records).to.have.lengthOf(1);
-        expect(result.messages).to.have.lengthOf(1);
+        assert.equal(result.records.length, 1);
+        assert.equal(result.messages.length, 1);
         await amqpOperator.ackMessages(result.messages);
 
         return runOperations({blobId, status, operations: rest, operationsDone: [...operationsDone, `${operation}: OK`]});
@@ -149,14 +150,14 @@ async function run() {
 
         if (count > 0) {
           //console.log(result);
-          expect(result.records).to.have.lengthOf(count <= 100 ? count : 100);
-          expect(result.messages).to.have.lengthOf(count <= 100 ? count : 100);
+          assert.equal(result.records.length, count <= 100 ? count : 100);
+          assert.equal(result.messages.length, count <= 100 ? count : 100);
 
           return runOperations({blobId, status, operations: rest, operationsDone: [...operationsDone, `${operation}: OK`]});
         }
         // console.log(result);
 
-        expect(result).to.eql(false);
+        assert.equal(result, false);
         return runOperations({blobId, status, operations: rest, operationsDone: [...operationsDone, `${operation}: FALSE`]});
       }
 
@@ -166,15 +167,15 @@ async function run() {
 
         if (count > 0) {
           //console.log(result);
-          expect(result.records).to.have.lengthOf(count <= 100 ? count : 100);
-          expect(result.messages).to.have.lengthOf(count <= 100 ? count : 100);
+          assert.equal(result.records.length, count <= 100 ? count : 100);
+          assert.equal(result.messages.length, count <= 100 ? count : 100);
           await amqpOperator.ackMessages(result.messages);
 
           return runOperations({blobId, status, operations: rest, operationsDone: [...operationsDone, `${operation}: OK`]});
         }
         // console.log(result);
 
-        expect(result).to.eql(false);
+        assert.equal(result, false);
         return runOperations({blobId, status, operations: rest, operationsDone: [...operationsDone, `${operation}: FALSE`]});
       }
 
@@ -184,15 +185,15 @@ async function run() {
 
         if (count > 0) {
           //console.log(result);
-          expect(result.records).to.have.lengthOf(count <= 100 ? count : 100);
-          expect(result.messages).to.have.lengthOf(count <= 100 ? count : 100);
+          assert.equal(result.records.length, count <= 100 ? count : 100);
+          assert.equal(result.messages.length, count <= 100 ? count : 100);
           await amqpOperator.nackMessages(result.messages);
 
           return runOperations({blobId, status, operations: rest, operationsDone: [...operationsDone, `${operation}: OK`]});
         }
         // console.log(result);
 
-        expect(result).to.eql(false);
+        assert.equal(result, false);
         return runOperations({blobId, status, operations: rest, operationsDone: [...operationsDone, `${operation}: FALSE`]});
       }
     }

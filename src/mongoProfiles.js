@@ -1,4 +1,4 @@
-/* eslint-disable max-lines */
+
 import createDebugLogger from 'debug';
 import httpStatus from 'http-status';
 import sanitize from 'mongo-sanitize';
@@ -8,7 +8,7 @@ import {EventEmitter} from 'events';
 // import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
 
-import {generateProfileQuery} from './utils';
+import {generateProfileQuery} from './utils.js';
 
 export async function createMongoProfilesOperator(mongoUrl, db = 'db') {
   // const logger = createLogger();
@@ -39,7 +39,7 @@ export async function createMongoProfilesOperator(mongoUrl, db = 'db') {
     async function handleProfileQuery(getAll, skip) {
       try {
         // .find(<query>, <projection>, <options>)
-        const profilesArray = await operator.find(query, {projection: {_id: 0}}) // eslint-disable-line functional/immutable-data
+        const profilesArray = await operator.find(query, {projection: {_id: 0}})
           .skip(skip)
           .limit(limit + 1) // +1 is used to check if there is more results
           .toArray();
