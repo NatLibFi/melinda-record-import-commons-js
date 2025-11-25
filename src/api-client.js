@@ -25,23 +25,26 @@ export async function createApiClient({recordImportApiUrl, cfHeader, userAgent =
   // MARK: createBLob
   async function createBlob({blob, type, profile, duplex = undefined}) {
     debug('createBlob');
+    const headers = {
+      'content-type': type,
+      'Import-Profile': profile,
+      'cf-connecting-ip': cfHeader
+    };
+
+    Object.keys(headers).forEach(header => headers[header] === undefined && delete headers[header]);
 
     const response = await doRequest(`${recordImportApiUrl}/blobs`, {
       method: 'POST',
       body: blob,
-      headers: {
-        'content-type': type,
-        'Import-Profile': profile,
-        'cf-connecting-ip': cfHeader
-      }, duplex
+      headers,
+      duplex
     });
 
     if (response.status === httpStatus.CREATED) {
       return parseBlobId();
     }
 
-    const errorMessage = await response.text();
-    throw new ApiError(response.status, errorMessage);
+    throw new ApiError(response.status, response.message);
 
     function parseBlobId() {
       return (/\/(?<def>.[^/]*)$/u).exec(response.headers.get('location'))[1];
@@ -61,8 +64,7 @@ export async function createApiClient({recordImportApiUrl, cfHeader, userAgent =
       return response.json();
     }
 
-    const errorMessage = await response.text();
-    throw new ApiError(response.status, errorMessage);
+    throw new ApiError(response.status, response.message);
   }
 
   // MARK: getBlobContent
@@ -399,7 +401,8 @@ export async function createApiClient({recordImportApiUrl, cfHeader, userAgent =
       debug(`doRequest response status: ${response.status}`);
 
       if (![httpStatus.OK, httpStatus.CREATED, httpStatus.NO_CONTENT].includes(response.status)) {
-        const errorMessage = await response.text();
+        const errorMessage = await response?.text() || httpStatus[`${response.status}_MESSAGE`];
+        // debug(`doRequest response non ok message: ${errorMessage}`);
         return {status: response.status, message: errorMessage};
       }
 
