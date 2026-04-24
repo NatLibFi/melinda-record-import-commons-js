@@ -34,7 +34,6 @@
 		"dev:debug": "cross-env LOG_LEVEL=debug DEBUG=@natlibfi/* NODE_ENV=test npm run watch:test"
 	},
 	"dependencies": {
-		"@natlibfi/fixugen": "^3.0.0",
 		"@natlibfi/marc-record": "^10.0.1",
 		"@natlibfi/melinda-backend-commons": "^3.0.4",
 		"@natlibfi/melinda-commons": "^14.0.2",
@@ -42,11 +41,12 @@
 		"debug": "^4.4.3",
 		"http-status": "^2.1.0",
 		"mongo-sanitize": "^1.1.0",
-		"mongodb": "^6.21.0",
+		"mongodb": "^7.2.0",
 		"openid-client": "^6.8.1",
-		"uuid": "^13.0.0"
+		"uuid": "^14.0.0"
 	},
 	"devDependencies": {
+		"@natlibfi/fixugen": "^3.0.0",
 		"@natlibfi/fixugen-http-client": "^4.0.2",
 		"@natlibfi/fixura": "^4.0.0",
 		"@natlibfi/fixura-mongo": "^3.0.2",
