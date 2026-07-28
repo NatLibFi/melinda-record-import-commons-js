@@ -37,6 +37,7 @@
 		"@natlibfi/marc-record": "^11.0.0-alpha.1",
 		"@natlibfi/melinda-backend-commons": "^3.0.4",
 		"@natlibfi/melinda-commons": "^14.0.2",
+		"amqplib": "^2.0.1",
 		"debug": "^4.4.3",
 		"http-status": "^2.1.0",
 		"luxon": "^3.7.2",

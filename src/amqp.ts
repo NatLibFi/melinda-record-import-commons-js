@@ -29,14 +29,6 @@ export interface GetResult {
   messages: Message[];
 }
 
-export interface RecoveryConfig {
-  initialDelay?: number;
-  maxDelay?: number;
-  factor?: number;
-  jitter?: number;
-  maxRetries?: number;
-}
-
 export interface AmqpOperator {
   deleteQueue(params: QueueParams, allowMessageLoss?: boolean): Promise<true | void>;
   purgeQueue(params: QueueParams): Promise<true | void>;
@@ -53,41 +45,25 @@ export interface AmqpOperator {
 export async function createAmqpOperator(
   amqplib,
   AMQP_URL: string,
-  recoveryConfig: RecoveryConfig = {
-    initialDelay: 1000,
-    maxDelay: 30000,
-    factor: 2,
-    jitter: 0.2,
-    maxRetries: 5
-  }
 ): Promise<AmqpOperator> {
   const debug = createDebugLogger('@natlibfi/melinda-record-import-commons:amqp');
   const debugDev = debug.extend('dev');
   const debugData = debug.extend('data');
 
-  // Track asserted queues for recovery
-  const assertedQueues: string[] = [];
   let channel: Channel | undefined;
-
-  // Build recovery config
-  // always ensuring we create the channel and assert tracked queues
-  const fullRecovery = {
-    initialDelay: recoveryConfig.initialDelay,
-    maxDelay: recoveryConfig.maxDelay,
-    factor: recoveryConfig.factor,
-    jitter: recoveryConfig.jitter,
-    maxRetries: recoveryConfig.maxRetries,
-    setup: async (connection: ChannelModel) => {
-      channel = await connection.createChannel();
-      for (const queue of assertedQueues) {
-        await channel.assertQueue(queue, {durable: true});
-      }
-    }
-  };
 
   debug(`Creating an AMQP operator to ${AMQP_URL}`);
   const connection: ChannelModel = await amqplib.connect(AMQP_URL, {
-    recovery: fullRecovery
+    recovery: {
+      initialDelay: 200,
+      maxDelay: 30000,
+      factor: 2,
+      jitter: 0.2,
+      maxRetries: 5,
+      setup: async (connection: ChannelModel) => {
+        channel = await connection.createChannel();
+      }
+    }
   });
   channel = await connection!.createChannel();
 
