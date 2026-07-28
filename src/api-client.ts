@@ -5,25 +5,139 @@ import httpStatus from 'http-status';
 import {URL} from 'url';
 import {Readable} from 'stream';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
-import {BLOB_UPDATE_OPERATIONS} from './constants.js';
-import {createServiceAuthoperator} from './keycloakAuthOperator.js';
+import {BLOB_UPDATE_OPERATIONS, BLOB_STATE, RECORD_IMPORT_STATE} from './constants.ts';
+import {createServiceAuthoperator} from './keycloakAuthOperator.ts';
 
-export async function createApiClient({recordImportApiUrl, cfHeader, userAgent = 'Record import API client / Javascript', allowSelfSignedApiCert}, keycloakOptions) {
+import type {KeycloakOptions, ServiceTokenOperator} from './keycloakAuthOperator.ts';
+
+export interface ApiClientOptions {
+  recordImportApiUrl: string;
+  cfHeader?: string;
+  userAgent?: string;
+  allowSelfSignedApiCert?: boolean;
+}
+
+interface CreateBlobParams {
+  blob: string;
+  type: string;
+  profile: string;
+  duplex?: 'half' | undefined;
+}
+
+interface BlobContent {
+  contentType: string;
+  readStream: Readable;
+}
+
+interface CreateOrModifyProfileParams {
+  id: string;
+  payload: {
+    groups: string[]
+  };
+}
+
+interface SetCatalogerParams {
+  id: string;
+  cataloger: string;
+}
+
+interface SetNotificationEmailParams {
+  id: string;
+  notificationEmail: string;
+}
+
+interface SetTransformationFailedParams {
+  id: string;
+  error?: string;
+}
+
+interface SetCorrelationIdParams {
+  id: string;
+  correlationId: string;
+}
+
+interface SetRecordProcessedParams {
+  id: string;
+  status: keyof typeof RECORD_IMPORT_STATE;
+  metadata: {
+    id: string,
+    title: string,
+    standardIdentifiers?: string[],
+    sourceIds?: string[],
+    message: string,
+    recordStatusNote: string
+  }
+}
+
+interface SetTransformedRecordParams {
+  id: string;
+  error?: {
+    failed: boolean,
+    title: string,
+    standardIdentifiers?: string[],
+    sourceIds?: string[],
+    message: string,
+    timestamp: string
+  };
+}
+
+interface UpdateStateParams {
+  id: string;
+  state: keyof typeof BLOB_STATE;
+}
+
+/* eslint-disable no-unused-vars,@typescript-eslint/no-explicit-any */
+export interface ApiClient {
+  getBlobs: (query?: {getAll: boolean;}) => EventEmitter;
+  createBlob: (params: CreateBlobParams) => Promise<string>;
+  getBlobMetadata: (params: {id: string}) => Promise<unknown>;
+  getBlobContent: (params: {id: string}) => Promise<BlobContent>;
+  deleteBlob: (params: {id: string}) => Promise<ReadableStream<any> | null>;
+  deleteBlobContent: (params: {id: string}) => Promise<ReadableStream<any> | null>;
+  getProfile: (params: {id: string}) => Promise<unknown>;
+  deleteProfile: (params: {id: string}) => Promise<void>;
+  createOrModifyProfile: (params: CreateOrModifyProfileParams) => Promise<void>;
+  queryProfiles: () => Promise<unknown>;
+  setCataloger: (params: SetCatalogerParams) => Promise<void>;
+  setNotificationEmail: (params: SetNotificationEmailParams) => Promise<void>;
+  setTransformationFailed: (params: SetTransformationFailedParams) => Promise<void>;
+  setCorrelationId: (params: SetCorrelationIdParams) => Promise<void>;
+  setRecordProcessed: (params: SetRecordProcessedParams) => Promise<void>;
+  setTransformedRecord: (params: SetTransformedRecordParams) => Promise<void>;
+  setAborted: (params: {id: string}) => Promise<void>;
+  updateState: (params: UpdateStateParams) => Promise<void>;
+};
+/* eslint-enable no-unused-vars,@typescript-eslint/no-explicit-any */
+
+export async function createApiClient(options: ApiClientOptions, keycloakOptions: KeycloakOptions): Promise<ApiClient> {
   const debug = createDebugLogger('@natlibfi/melinda-record-import-commons:api-client');
   if (!keycloakOptions) {
     throw new ApiError(httpStatus.BAD_REQUEST, 'Keycloak options missing on record import api client creation');
   }
-
-  const serviceTokenOperator = await createServiceAuthoperator(keycloakOptions);
+  const {recordImportApiUrl, cfHeader, userAgent = 'Record import API client / Javascript', allowSelfSignedApiCert} = options;
+  const serviceTokenOperator: ServiceTokenOperator = await createServiceAuthoperator(keycloakOptions);
   return {
-    getBlobs, createBlob, getBlobMetadata, deleteBlob, deleteProfile, deleteBlobContent,
-    getBlobContent, getProfile, createOrModifyProfile, queryProfiles,
-    setCataloger, setNotificationEmail, setTransformationFailed, setCorrelationId,
-    setRecordProcessed, setTransformedRecord, setAborted, updateState
+    getBlobs,
+    createBlob,
+    getBlobMetadata,
+    deleteBlob,
+    deleteProfile,
+    deleteBlobContent,
+    getBlobContent,
+    getProfile,
+    createOrModifyProfile,
+    queryProfiles,
+    setCataloger,
+    setNotificationEmail,
+    setTransformationFailed,
+    setCorrelationId,
+    setRecordProcessed,
+    setTransformedRecord,
+    setAborted, updateState
   };
 
   // MARK: createBLob
-  async function createBlob({blob, type, profile, duplex = undefined}) {
+  async function createBlob({blob, type, profile, duplex}: CreateBlobParams) {
     debug('createBlob');
     const headers = {
       'content-type': type,
@@ -31,7 +145,11 @@ export async function createApiClient({recordImportApiUrl, cfHeader, userAgent =
       'cf-connecting-ip': cfHeader
     };
 
-    Object.keys(headers).forEach(header => headers[header] === undefined && delete headers[header]);
+    Object.keys(headers).forEach(header => {
+      if (headers[header] === undefined) {
+        delete headers[header];
+      }
+    });
 
     const response = await doRequest(`${recordImportApiUrl}/blobs`, {
       method: 'POST',
@@ -41,13 +159,19 @@ export async function createApiClient({recordImportApiUrl, cfHeader, userAgent =
     });
 
     if (response.status === httpStatus.CREATED) {
-      return parseBlobId();
+      return parseBlobId(response);
     }
 
-    throw new ApiError(response.status, response.message);
+    const errorMessage = await response?.text() ?? httpStatus[`${response.status}_MESSAGE`];
+    throw new ApiError(response.status, errorMessage);
 
-    function parseBlobId() {
-      return (/\/(?<def>.[^/]*)$/u).exec(response.headers.get('location'))[1];
+    function parseBlobId(response): string {
+      const location = response.headers.get('location');
+      if (!location) {
+        throw new ApiError(response.status, 'Missing location header');
+      }
+      const [match] = (/\/(?<def>.[^/]*)$/u).exec(location) ?? [];
+      return match ?? '';
     }
   }
 
@@ -64,7 +188,8 @@ export async function createApiClient({recordImportApiUrl, cfHeader, userAgent =
       return response.json();
     }
 
-    throw new ApiError(response.status, response.message);
+    const errorMessage = await response?.text() ?? httpStatus[`${response.status}_MESSAGE`];
+    throw new ApiError(response.status, errorMessage);
   }
 
   // MARK: getBlobContent
@@ -74,14 +199,14 @@ export async function createApiClient({recordImportApiUrl, cfHeader, userAgent =
       headers: {}
     });
 
-    if (response.status === httpStatus.OK) {
+    if (response.status === httpStatus.OK && response.body) {
       return {
-        contentType: response.headers.get('content-type'),
+        contentType: response.headers.get('content-type') ?? '',
         readStream: Readable.fromWeb(response.body)
       };
     }
 
-    const errorMessage = await response.text();
+    const errorMessage = await response?.text() ?? httpStatus[`${response.status}_MESSAGE`];
     throw new ApiError(response.status, errorMessage);
   }
 
@@ -98,12 +223,12 @@ export async function createApiClient({recordImportApiUrl, cfHeader, userAgent =
       return response.json();
     }
 
-    const errorMessage = await response.text();
+    const errorMessage = await response?.text() ?? httpStatus[`${response.status}_MESSAGE`];
     throw new ApiError(response.status, errorMessage);
   }
 
   // MARK: deleteProfile
-  async function deleteProfile({id}) {
+  async function deleteProfile({id}): Promise<void> {
     debug('deleteProfile');
     const response = await doRequest(`${recordImportApiUrl}/profiles/${id}`, {
       method: 'DELETE',
@@ -111,7 +236,7 @@ export async function createApiClient({recordImportApiUrl, cfHeader, userAgent =
     });
 
     if (response.status !== httpStatus.NO_CONTENT) {
-      const errorMessage = await response.text();
+      const errorMessage = await response?.text() ?? httpStatus[`${response.status}_MESSAGE`];
       throw new ApiError(response.status, errorMessage);
     }
   }
@@ -129,12 +254,12 @@ export async function createApiClient({recordImportApiUrl, cfHeader, userAgent =
       return response.json();
     }
 
-    const errorMessage = await response.text();
+    const errorMessage = await response?.text() ?? httpStatus[`${response.status}_MESSAGE`];
     throw new ApiError(response.status, errorMessage);
   }
 
   // MARK: modifyProfile
-  async function createOrModifyProfile({id, payload}) {
+  async function createOrModifyProfile({id, payload}: CreateOrModifyProfileParams): Promise<void> {
     debug('modifyProfile');
     const response = await doRequest(`${recordImportApiUrl}/profiles/${id}`, {
       method: 'POST',
@@ -145,7 +270,7 @@ export async function createApiClient({recordImportApiUrl, cfHeader, userAgent =
     });
 
     if (![httpStatus.CREATED, httpStatus.NO_CONTENT].includes(response.status)) {
-      const errorMessage = await response.text();
+      const errorMessage = await response?.text() ?? httpStatus[`${response.status}_MESSAGE`];
       throw new ApiError(response.status, errorMessage);
     }
   }
@@ -162,7 +287,7 @@ export async function createApiClient({recordImportApiUrl, cfHeader, userAgent =
       return response.body;
     }
 
-    const errorMessage = await response.text();
+    const errorMessage = await response?.text() ?? httpStatus[`${response.status}_MESSAGE`];
     throw new ApiError(response.status, errorMessage);
   }
 
@@ -178,12 +303,12 @@ export async function createApiClient({recordImportApiUrl, cfHeader, userAgent =
       return response.body;
     }
 
-    const errorMessage = await response.text();
+    const errorMessage = await response?.text() ?? httpStatus[`${response.status}_MESSAGE`];
     throw new ApiError(response.status, errorMessage);
   }
 
   // MARK: transformedRecord
-  async function setTransformedRecord({id, error = undefined}) {
+  async function setTransformedRecord({id, error}: SetTransformedRecordParams): Promise<void> {
     debug('transformedRecord');
     const conf = {
       id,
@@ -197,7 +322,7 @@ export async function createApiClient({recordImportApiUrl, cfHeader, userAgent =
   }
 
   // MARK: setAborted
-  async function setAborted({id}) {
+  async function setAborted({id}): Promise<void> {
     debug('blob setAborted');
     const conf = {
       id,
@@ -210,7 +335,7 @@ export async function createApiClient({recordImportApiUrl, cfHeader, userAgent =
   }
 
   // MARK: setTransformationFailed
-  async function setTransformationFailed({id, error}) {
+  async function setTransformationFailed({id, error}: SetTransformationFailedParams): Promise<void> {
     debug('setTransformationFailed');
     await updateBlobMetadata({
       id,
@@ -222,7 +347,7 @@ export async function createApiClient({recordImportApiUrl, cfHeader, userAgent =
   }
 
   // MARK: setRecordProcessed
-  async function setRecordProcessed({id, status, metadata}) {
+  async function setRecordProcessed({id, status, metadata}: SetRecordProcessedParams): Promise<void> {
     debug('setRecordProcessed');
     const conf = {
       id,
@@ -236,7 +361,7 @@ export async function createApiClient({recordImportApiUrl, cfHeader, userAgent =
   }
 
   // MARK: setNotificationEmail
-  async function setNotificationEmail({id, notificationEmail}) {
+  async function setNotificationEmail({id, notificationEmail}: SetNotificationEmailParams): Promise<void> {
     debug('setNotificationEmail');
     const conf = {
       id,
@@ -250,7 +375,7 @@ export async function createApiClient({recordImportApiUrl, cfHeader, userAgent =
   }
 
   // MARK: setCataloger
-  async function setCataloger({id, cataloger}) {
+  async function setCataloger({id, cataloger}: SetCatalogerParams): Promise<void> {
     debug('setCataloger');
     const conf = {
       id,
@@ -264,7 +389,7 @@ export async function createApiClient({recordImportApiUrl, cfHeader, userAgent =
   }
 
   // MARK: setCorrelationId
-  async function setCorrelationId({id, correlationId}) {
+  async function setCorrelationId({id, correlationId}: SetCorrelationIdParams): Promise<void> {
     debug('setCorrelationId');
     const conf = {
       id,
@@ -278,7 +403,7 @@ export async function createApiClient({recordImportApiUrl, cfHeader, userAgent =
   }
 
   // MARK: updateState
-  async function updateState({id, state}) {
+  async function updateState({id, state}: UpdateStateParams) {
     debug('updateState');
     await updateBlobMetadata({
       id,
@@ -290,18 +415,32 @@ export async function createApiClient({recordImportApiUrl, cfHeader, userAgent =
   }
 
   // MARK: getBlobs
-  function getBlobs(query = {}) {
+  interface query {
+    id?: string,
+    correlationId?: string,
+    profile?: string,
+    cataloger?: string,
+    notificationEmail?: string,
+    contentType?: string,
+    state?: keyof typeof BLOB_STATE,
+    creationTime?: string,
+    modificationTime?: string,
+    getAll?: boolean,
+    offset?: string,
+    limit?: string
+  }
+
+  function getBlobs(query: query = {getAll: true}) {
     debug('getBlobs');
-    const blobsUrl = createURL();
-    const getAll = query.getAll || true;
+    const blobsUrl = createURL(query);
     debug(`Blob url: ${blobsUrl}`);
     const emitter = new EventEmitter();
 
-    pump();
+    pump(query.getAll);
 
     return emitter;
 
-    function createURL() {
+    function createURL(query) {
       const blobsUrl = new URL(`${recordImportApiUrl}/blobs`);
 
       Object.keys(query).forEach(k => {
@@ -318,7 +457,7 @@ export async function createApiClient({recordImportApiUrl, cfHeader, userAgent =
       return blobsUrl;
     }
 
-    async function pump(offset = false) {
+    async function pump(getAll = true, offset?: string) {
       try {
         const response = await doRequest(blobsUrl, getOptions(offset));
         debug(`getBlobs response status: ${response.status}`);
@@ -329,7 +468,7 @@ export async function createApiClient({recordImportApiUrl, cfHeader, userAgent =
           emitter.emit('blobs', blobs);
 
           if (getAll && nextOffset) {
-            pump(nextOffset);
+            pump(getAll, nextOffset);
             return;
           }
 
@@ -342,19 +481,21 @@ export async function createApiClient({recordImportApiUrl, cfHeader, userAgent =
         emitter.emit('error', error);
       }
 
-      function getOptions(offset) {
-        const options = {
+      function getOptions(offset?: string) {
+        if (offset) {
+          return {
+            headers: {
+              'Accept': 'application/json',
+              'QueryOffset': offset
+            }
+          };
+        }
+
+        return {
           headers: {
             'Accept': 'application/json'
           }
         };
-
-        if (offset) {
-          options.headers.QueryOffset = offset;
-          return options;
-        }
-
-        return options;
       }
     }
   }
@@ -399,12 +540,6 @@ export async function createApiClient({recordImportApiUrl, cfHeader, userAgent =
 
       const response = await fetch(reqUrl, options);
       debug(`doRequest response status: ${response.status}`);
-
-      if (![httpStatus.OK, httpStatus.CREATED, httpStatus.NO_CONTENT].includes(response.status)) {
-        const errorMessage = await response?.text() || httpStatus[`${response.status}_MESSAGE`];
-        // debug(`doRequest response non ok message: ${errorMessage}`);
-        return {status: response.status, message: errorMessage};
-      }
 
       return response;
     } catch (error) {

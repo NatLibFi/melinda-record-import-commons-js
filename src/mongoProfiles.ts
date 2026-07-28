@@ -8,9 +8,52 @@ import {EventEmitter} from 'events';
 // import {createLogger} from '@natlibfi/melinda-backend-commons';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
 
-import {generateProfileQuery} from './utils.js';
+import {generateProfileQuery} from './utils.ts';
+import type {ProfileQuery, UserInfo} from './utils.ts';
 
-export async function createMongoProfilesOperator(mongoUrl, db = 'db') {
+// MARK: Type definitions
+
+export interface ProfileDocument {
+  id: string;
+  [key: string]: unknown;
+}
+
+export interface QueryProfileParams {
+  limit?: number;
+  skip?: number;
+  getAll?: boolean;
+  id?: string;
+  group?: string;
+}
+
+export interface CreateOrModifyProfileParams {
+  id: string;
+  payload: UserInfo;
+}
+
+export interface ReadProfileParams {
+  id: string;
+}
+
+export interface RemoveProfileParams {
+  id: string;
+}
+
+export interface QueryProfileEmitter extends EventEmitter {
+  on(event: 'profiles', listener: (profiles: Record<string, unknown>[]) => void): this;
+  on(event: 'error', listener: (error: Error) => void): this;
+  on(event: 'end', listener: (hasNext: false) => void): this;
+}
+
+export interface MongoProfilesOperator {
+  queryProfile(params: QueryProfileParams): QueryProfileEmitter;
+  createOrModifyProfile(params: CreateOrModifyProfileParams): Promise<{status: number}>;
+  readProfile(params: ReadProfileParams): Promise<Record<string, unknown>>;
+  removeProfile(params: RemoveProfileParams): Promise<boolean>;
+  closeClient(): Promise<void>;
+}
+
+export async function createMongoProfilesOperator(mongoUrl: string, db = 'db'): Promise<MongoProfilesOperator> {
   // const logger = createLogger();
   const debug = createDebugLogger('@natlibfi/melinda-record-import-commons:mongoProfiles');
   const debugDev = createDebugLogger('@natlibfi/melinda-record-import-commons:mongoProfiles:dev');
@@ -18,36 +61,31 @@ export async function createMongoProfilesOperator(mongoUrl, db = 'db') {
   // Connect to mongo (MONGO)
   const client = await MongoClient.connect(mongoUrl);
   const dbConnection = client.db(db);
-  const operator = dbConnection.collection('profiles');
+  const operator = dbConnection.collection<ProfileDocument>('profiles');
 
   return {queryProfile, createOrModifyProfile, readProfile, removeProfile, closeClient};
 
   // MARK: Query Profile
-  function queryProfile(params = {}) {
+  function queryProfile(params: QueryProfileParams = {}): QueryProfileEmitter {
     debug(`Querying: ${JSON.stringify(params)}`);
-    const emitter = new EventEmitter();
+    const emitter = new EventEmitter() as QueryProfileEmitter;
     const {limit = 100, skip = 0, getAll = true, ...rest} = params;
-    //logger.debug(`getAll: ${getAll}`);
-    //logger.debug(`rest: ${rest}`);
 
-    const query = generateProfileQuery(rest);
+    const query = generateProfileQuery(rest) as ProfileQuery;
 
     handleProfileQuery(getAll, skip);
 
     return emitter;
 
-    async function handleProfileQuery(getAll, skip) {
+    async function handleProfileQuery(getAll: boolean, skip: number): Promise<void> {
       try {
         // .find(<query>, <projection>, <options>)
-        const profilesArray = await operator.find(query, {projection: {_id: 0}})
+        const profilesArray = await operator.find(query as ProfileDocument, {projection: {_id: 0}})
           .skip(skip)
           .limit(limit + 1) // +1 is used to check if there is more results
           .toArray();
 
-        // logger.debug(`profilesArray: ${profilesArray.length}`);
-        // logger.debug(`limit: ${limit}`);
         const hasNext = profilesArray.length > limit;
-        // logger.debug(`hasNext: ${hasNext}`);
 
         const resultArray = hasNext ? profilesArray.slice(0, -1) : profilesArray;
         const nextOffset = skip + limit;
@@ -56,14 +94,17 @@ export async function createMongoProfilesOperator(mongoUrl, db = 'db') {
         emitter.emit('profiles', resultArray);
 
         if (hasNext && getAll) {
-          return handleProfileQuery(getAll, nextOffset);
+          await handleProfileQuery(getAll, nextOffset);
+          return;
         }
 
         if (hasNext && !getAll) {
-          return emitter.emit('end', nextOffset);
+          await emitter.emit('end', false);
+          return;
         }
 
-        return emitter.emit('end', false);
+        emitter.emit('end', false);
+        return;
       } catch (error) {
         emitter.emit('error', error);
       }
@@ -71,20 +112,20 @@ export async function createMongoProfilesOperator(mongoUrl, db = 'db') {
   }
 
   // MARK: Create or Modify Profile
-  async function createOrModifyProfile({id, payload}) {
+  async function createOrModifyProfile({id, payload}: CreateOrModifyProfileParams) {
     try {
       const clean = sanitize(id);
       const profile = await operator.findOne({id: clean});
 
       if (profile) {
         debug('Updating profile');
-        await operator.findOneAndUpdate({id}, {$set: {...payload, id}});
-        return {status: httpStatus.NO_CONTENT};
+        await operator.findOneAndUpdate({id: clean}, {$set: {...payload, id: clean}});
+        return {status: httpStatus['NO_CONTENT'] as number};
       }
 
       debug('Creating profile');
-      await operator.insertOne({...payload, id});
-      return {status: httpStatus.CREATED};
+      await operator.insertOne({...payload, id: clean});
+      return {status: httpStatus['CREATED'] as number};
     } catch (error) {
       debug('Profile handling error');
       throw error;
@@ -92,7 +133,7 @@ export async function createMongoProfilesOperator(mongoUrl, db = 'db') {
   }
 
   // MARK: Read Profile
-  async function readProfile({id}) {
+  async function readProfile({id}: ReadProfileParams) {
     const clean = sanitize(id);
     debug(`Read profile: ${clean}`);
     const doc = await operator.findOne({id: clean}, {projection: {_id: 0}});
@@ -101,20 +142,16 @@ export async function createMongoProfilesOperator(mongoUrl, db = 'db') {
       return doc;
     }
 
-    throw new ApiError(httpStatus.NOT_FOUND, 'Profile not found');
+    throw new ApiError(httpStatus['NOT_FOUND'] as number, 'Profile not found');
   }
 
   // MARK: Remove Profile
-  async function removeProfile({id}) {
+  async function removeProfile({id}: RemoveProfileParams): Promise<boolean> {
     const clean = sanitize(id);
     debug(`Preparing to remove profile @ id: ${clean}`);
     const result = await operator.deleteOne({id: clean});
-    // logger.debug(JSON.stringify(result));
 
     const {acknowledged, deletedCount} = result;
-    // logger.debug(`acknowledged: ${acknowledged === true}`);
-    // logger.debug(`deletedCount 1: ${deletedCount === 1}`);
-    // logger.debug(`deletedCount 0: ${deletedCount === 0}`);
 
     if (acknowledged === true && deletedCount === 1) {
       debugDev(`Profile removed`);
@@ -123,14 +160,14 @@ export async function createMongoProfilesOperator(mongoUrl, db = 'db') {
 
     if (acknowledged === true && deletedCount === 0) {
       debugDev(`Profile for remove not found `);
-      throw new ApiError(httpStatus.NOT_FOUND, 'Profile not found');
+      throw new ApiError(httpStatus['NOT_FOUND'] as number, 'Profile not found');
     }
 
     debugDev(`Removing profile mongo error`);
-    throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Error while removing profile');
+    throw new ApiError(httpStatus['INTERNAL_SERVER_ERROR'] as number, 'Error while removing profile');
   }
 
-  async function closeClient() {
+  async function closeClient(): Promise<void> {
     debug(`Closing client`);
     await client.close();
   }
