@@ -1,7 +1,7 @@
 import path from 'path';
 import fs from 'fs';
 import createDebugLogger from 'debug';
-import {createLogger} from '@natlibfi/melinda-backend-commons';
+import {createLogger} from '@natlibfi/melinda-commons';
 
 import type {EventEmitter, Readable} from 'stream';
 

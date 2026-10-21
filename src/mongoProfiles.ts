@@ -5,7 +5,7 @@ import sanitize from 'mongo-sanitize';
 import {MongoClient} from 'mongodb';
 import {EventEmitter} from 'events';
 
-// import {createLogger} from '@natlibfi/melinda-backend-commons';
+// import {createLogger} from '@natlibfi/melinda-commons';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
 
 import {generateProfileQuery} from './utils.ts';

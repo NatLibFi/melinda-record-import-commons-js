@@ -5,7 +5,7 @@ import sanitize from 'mongo-sanitize';
 import {MongoClient, GridFSBucket} from 'mongodb';
 import {EventEmitter} from 'events';
 
-import {createLogger} from '@natlibfi/melinda-backend-commons';
+import {createLogger} from '@natlibfi/melinda-commons';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
 
 import {BLOB_STATE, BLOB_UPDATE_OPERATIONS} from './constants.ts';
@@ -206,8 +206,8 @@ export async function createMongoBlobsOperator(mongoUrl: string, db = 'db'): Pro
       }
 
       throw new ApiError(httpStatus['INTERNAL_SERVER_ERROR'] as number, 'Blob creation error!');
-    } catch (error: ApiError) {
-      const errorMessage = error.payload || error.message || '';
+    } catch (error: unknown) {
+      const errorMessage = (error instanceof ApiError && (error.payload || error.message)) || (error instanceof Error ? error.message : '') || '';
       logger.error(error);
       throw new ApiError(httpStatus['INTERNAL_SERVER_ERROR'] as number, `Mongo errored: ${errorMessage}`);
     }

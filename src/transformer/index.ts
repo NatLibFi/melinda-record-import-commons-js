@@ -1,7 +1,7 @@
 import createDebugLogger from 'debug';
 import {setTimeout} from 'node:timers/promises';
 
-import {createLogger, millisecondsToString} from '@natlibfi/melinda-backend-commons';
+import {createLogger, millisecondsToString} from '@natlibfi/melinda-commons';
 
 import {getNextBlob} from '../utils.ts';
 import {BLOB_STATE, BLOB_UPDATE_OPERATIONS} from '../constants.ts';
@@ -99,6 +99,7 @@ export default async function (
       if (waitTime % 60000 === 0) {
         return logger.info(`Total wait: ${millisecondsToString(waitTime)}`);
       }
+      return;
     }
   }
 }

@@ -476,7 +476,7 @@ export async function createApiClient(options: ApiClientOptions, keycloakOptions
           return;
         }
 
-        emitter.emit('error', new ApiError(response.status));
+        emitter.emit('error', new ApiError(response.status, ''));
       } catch (error) {
         emitter.emit('error', error);
       }
@@ -519,7 +519,7 @@ export async function createApiClient(options: ApiClientOptions, keycloakOptions
 
       if (response.status !== httpStatus.NO_CONTENT) {
         debug(`Update blob got unexpected response status: ${response.status}`);
-        throw new ApiError(response.status);
+        throw new ApiError(response.status, '');
       }
     } catch (error) {
       console.log(error); // eslint-disable-line
