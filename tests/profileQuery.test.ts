@@ -2,7 +2,7 @@ import assert from 'node:assert';
 import {READERS} from '@natlibfi/fixura';
 import mongoFixturesFactory from '@natlibfi/fixura-mongo';
 import generateTests from '@natlibfi/fixugen';
-import {createMongoProfilesOperator} from '../src/mongoProfiles.js';
+import {createMongoProfilesOperator} from '../src/mongoProfiles.ts';
 
 let mongoFixtures; // eslint-disable-line functional/no-let
 

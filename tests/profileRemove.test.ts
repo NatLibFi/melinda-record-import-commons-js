@@ -2,13 +2,13 @@ import assert from 'node:assert';
 import {READERS} from '@natlibfi/fixura';
 import mongoFixturesFactory from '@natlibfi/fixura-mongo';
 import generateTests from '@natlibfi/fixugen';
-import {createMongoBlobsOperator} from '../src/mongoBlobs.js';
+import {createMongoProfilesOperator} from '../src/mongoProfiles.ts';
 
-let mongoFixtures; // eslint-disable-line functional/no-let
+let mongoFixtures;
 
 generateTests({
   callback,
-  path: [import.meta.dirname, '..', 'test-fixtures', 'blob', 'removeContent'],
+  path: [import.meta.dirname, '..', 'test-fixtures', 'removeProfile'],
   recurse: false,
   useMetadataFile: true,
   fixura: {
@@ -33,8 +33,7 @@ generateTests({
 
 async function initMongofixtures() {
   mongoFixtures = await mongoFixturesFactory({
-    rootPath: [import.meta.dirname, '..', 'test-fixtures', 'blob', 'removeContent'],
-    gridFS: {bucketName: 'blobmetadatas'},
+    rootPath: [import.meta.dirname, '..', 'test-fixtures', 'removeProfile'],
     useObjectId: true
   });
 }
@@ -48,12 +47,11 @@ async function callback({
 }) {
   const mongoUri = await mongoFixtures.getUri();
   await mongoFixtures.populate(getFixture('dbContents.json'));
-  await mongoFixtures.populateFiles(getFixture('dbFiles.json'));
+  const mongoOperator = await createMongoProfilesOperator(mongoUri, '');
   const expectedResult = await getFixture('expectedResult.json');
-  const mongoOperator = await createMongoBlobsOperator(mongoUri, '');
   try {
-    await mongoOperator.removeBlobContent(operationParams);
-    const dump = dumpParser(await mongoFixtures.dump());
+    await mongoOperator.removeProfile(operationParams);
+    const dump = await mongoFixtures.dump();
     assert.deepStrictEqual(dump, expectedResult);
   } catch (error) {
     if (!expectedToFail) {
@@ -64,12 +62,5 @@ async function callback({
     assert.equal(error.status, expectedErrorStatus);
     assert.equal(error.payload, expectedErrorMessage);
     assert.equal(expectedToFail, true, 'This is expected to fail');
-  }
-
-  function dumpParser(dump) {
-    return {
-      blobmetadatas: dump.blobmetadatas,
-      'blobmetadatas.files': dump['blobmetadatas.files'].map(({filename}) => ({filename}))
-    };
   }
 }

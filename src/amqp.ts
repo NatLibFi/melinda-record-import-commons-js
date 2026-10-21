@@ -3,33 +3,84 @@ import {MarcRecord} from '@natlibfi/marc-record';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
 import createDebugLogger from 'debug';
 import httpStatus from 'http-status';
-import {promisify} from 'util';
-import {CHUNK_SIZE} from './constants.js';
+import {setTimeout} from 'node:timers/promises';
+import {CHUNK_SIZE} from './constants.ts';
+import type {ChannelModel, Channel, Message, Replies, MessagePropertyHeaders} from 'amqplib'
 
-export async function createAmqpOperator(amqplib, AMQP_URL) {
+export interface QueueParams {
+  blobId: string;
+  status: string;
+}
+
+export interface GenerateQueueIdResult {
+  queue: string;
+  channelInfo: {messageCount: number};
+}
+
+export interface SendDataParams {
+  blobId: string;
+  status: string;
+  data: string;
+}
+
+export interface GetResult {
+  headers: MessagePropertyHeaders;
+  records: MarcRecord[];
+  messages: Message[];
+}
+
+export interface AmqpOperator {
+  deleteQueue(params: QueueParams, allowMessageLoss?: boolean): Promise<true | void>;
+  purgeQueue(params: QueueParams): Promise<true | void>;
+  countQueue(params: QueueParams): Promise<number | void>;
+  getChunk(params: QueueParams): Promise<GetResult | false | void>;
+  getOne(params: QueueParams): Promise<GetResult | false | void>;
+  ackMessages(messages: Message[]): void;
+  nackMessages(messages: Message[]): void;
+  sendToQueue(params: SendDataParams): Promise<boolean | void>;
+  closeChannel(): Promise<void>;
+  closeConnection(): Promise<void>;
+}
+
+export async function createAmqpOperator(
+  amqplib,
+  AMQP_URL: string,
+): Promise<AmqpOperator> {
   const debug = createDebugLogger('@natlibfi/melinda-record-import-commons:amqp');
   const debugDev = debug.extend('dev');
   const debugData = debug.extend('data');
-  const setTimeoutPromise = promisify(setTimeout);
+
+  let channel: Channel | undefined;
 
   debug(`Creating an AMQP operator to ${AMQP_URL}`);
-  const connection = await amqplib.connect(AMQP_URL);
-  const channel = await connection.createChannel();
+  const connection: ChannelModel = await amqplib.connect(AMQP_URL, {
+    recovery: {
+      initialDelay: 200,
+      maxDelay: 30000,
+      factor: 2,
+      jitter: 0.2,
+      maxRetries: 5,
+      setup: async (connection: ChannelModel) => {
+        channel = await connection.createChannel();
+      }
+    }
+  });
+  channel = await connection!.createChannel();
 
   debug(`Connection: ${connection}`);
   debug(`Channel: ${channel}`);
 
   return {deleteQueue, purgeQueue, countQueue, getChunk, getOne, ackMessages, nackMessages, sendToQueue, closeChannel, closeConnection};
 
-  async function closeChannel() {
+  async function closeChannel(): Promise<void> {
     debug(`Closing channel`);
-    await channel.close();
+    await channel?.close();
     debug(`Channel: ${channel}`);
   }
 
-  async function closeConnection() {
+  async function closeConnection(): Promise<void> {
     debug(`Closing connection`);
-    await connection.close();
+    await connection?.close();
     debug(`Connection: ${connection}`);
   }
 
@@ -44,10 +95,10 @@ export async function createAmqpOperator(amqplib, AMQP_URL) {
    * @param {boolean} allowMessageLoss Allows deleting queue even if queue still has messages
    * @returns {boolean} returns true on succesful delete
    */
-  async function deleteQueue({blobId, status}, allowMessageLoss = false) {
+  async function deleteQueue(params: QueueParams, allowMessageLoss = false): Promise<true | void> {
     try {
-      const {queue, channelInfo} = await generateQueueId({blobId, status});
-      const tempChannel = await connection.createChannel();
+      const {queue, channelInfo} = await generateQueueId(params);
+      const tempChannel = await connection!.createChannel();
 
       if (!allowMessageLoss && channelContainsMessages(channelInfo)) {
         throw new Error('Trying to remove queue that has unhandled messages!');
@@ -57,12 +108,12 @@ export async function createAmqpOperator(amqplib, AMQP_URL) {
       // this might be doable also with assertQueue before deleteQueue
       debug(`Deleteting queue: ${queue}`);
       // The server reply contains a single field, messageCount, with the number of messages deleted or dead-lettered along with the queue.
-      const {messageCount} = await tempChannel.deleteQueue(queue);
+      const {messageCount}: Replies.DeleteQueue = await tempChannel.deleteQueue(queue);
       debug(`Queue ${queue} had ${messageCount} messages when deleted`);
 
       if (tempChannel) {
         await tempChannel.close();
-        return;
+        return true;
       }
 
       return true;
@@ -81,11 +132,11 @@ export async function createAmqpOperator(amqplib, AMQP_URL) {
    * @param {string} params.status Status for queue
    * @returns {boolean} returns true on succesfull purge
    */
-  async function purgeQueue({blobId, status}) {
+  async function purgeQueue(params: QueueParams): Promise<true | void> {
     try {
-      const {queue, channelInfo} = await generateQueueId({blobId, status});
+      const {queue, channelInfo} = await generateQueueId(params);
       debug(`Purging queue: ${queue}`);
-      await channel.purgeQueue(queue);
+      await channel!.purgeQueue(queue);
       debug(`Queue ${queue} has purged ${channelInfo.messageCount} messages`);
 
       return true;
@@ -104,9 +155,9 @@ export async function createAmqpOperator(amqplib, AMQP_URL) {
    * @param {string} params.status Status for queue
    * @returns {number} returns number of messages in queue
    */
-  async function countQueue({blobId, status}) {
+  async function countQueue(params: QueueParams): Promise<number | void> {
     try {
-      const {queue, channelInfo} = await generateQueueId({blobId, status});
+      const {queue, channelInfo} = await generateQueueId(params);
       debug(`Counting queue: ${queue}`);
       return channelInfo.messageCount;
     } catch (error) {
@@ -125,13 +176,13 @@ export async function createAmqpOperator(amqplib, AMQP_URL) {
    * @param {string} params.status Status for queue
    * @returns {object|boolean} returns {headers, records, messages} or false
    */
-  async function getChunk({blobId, status}) {
+  async function getChunk(params: QueueParams): Promise<false | GetResult | void> {
     try {
-      const {queue, channelInfo} = await generateQueueId({blobId, status});
+      const {queue, channelInfo} = await generateQueueId(params);
       if (channelContainsMessages(channelInfo)) {
         debug(`Prepared to getChunk from queue: ${queue}`);
         // getData: next chunk (100) messages
-        const messages = await getData(queue);
+        const messages: Message[] = await getData(queue) ?? [];
 
         // Note: headers are from the first message of the chunk
         debug(`getChunk (${messages ? messages.length : '0'} from queue ${queue}) to records`);
@@ -158,13 +209,13 @@ export async function createAmqpOperator(amqplib, AMQP_URL) {
    * @param {string} params.status Status for queue
    * @returns {object|boolean} returns {headers, records, messages} or false
    */
-  async function getOne({blobId, status}) {
+  async function getOne(params: QueueParams): Promise<false | GetResult | void> {
     try {
-      const {queue, channelInfo} = await generateQueueId({blobId, status});
+      const {queue, channelInfo} = await generateQueueId(params);
       if (channelContainsMessages(channelInfo)) {
         debug(`Prepared to getOne from queue: ${queue}`);
         // Returns false if 0 items in queue
-        const message = await channel.get(queue);
+        const message: Message | boolean = await channel!.get(queue);
 
         // debugData(`Message: ${inspect(message, {colors: true, maxArrayLength: 3, depth: 3})}`);
         // Do not spam the logs
@@ -192,12 +243,12 @@ export async function createAmqpOperator(amqplib, AMQP_URL) {
    * @param {Array[Object]} messages Array of message objects
    * @returns {void} returns nothing
    */
-  async function ackMessages(messages) {
+  async function ackMessages(messages: Message[]) {
     messages.forEach(message => {
       debugDev(`Ack message ${message.properties.correlationId}`);
-      channel.ack(message);
+      channel!.ack(message);
     });
-    await setTimeoutPromise(10);
+    await setTimeout(10);
     return;
   }
 
@@ -208,12 +259,12 @@ export async function createAmqpOperator(amqplib, AMQP_URL) {
    * @param {Array[Object]} messages Array of message objects
    * @returns {void} returns nothing
    */
-  async function nackMessages(messages) {
+  async function nackMessages(messages: Message[]) {
     messages.forEach(message => {
       debugDev(`Nack message ${message.properties.correlationId}`);
-      channel.nack(message, false, true);
+      channel!.nack(message, false, true);
     });
-    await setTimeoutPromise(10);
+    await setTimeout(10);
     return;
   }
 
@@ -229,22 +280,22 @@ export async function createAmqpOperator(amqplib, AMQP_URL) {
    * @param {object} params.data Data object sent to queue
    * @returns {boolean} returns true on success
    */
-  async function sendToQueue({blobId, status, data}) {
+  async function sendToQueue(params: SendDataParams): Promise<true | void> {
     debug(`sendToQueue`);
 
     try {
-      const {queue} = await generateQueueId({blobId, status});
+      const {queue} = await generateQueueId(params);
       debug(`Queue ${queue}`);
       debugDev(`Queue Asserted: ${queue}`);
 
-      debugData(`Data ${JSON.stringify(data)}`);
+      debugData(`Data ${JSON.stringify(params.data)}`);
 
       debugDev(`Actually sendToQueue: ${queue}`);
-      await channel.sendToQueue(
+      await channel!.sendToQueue(
         queue,
-        Buffer.from(JSON.stringify({data})),
+        Buffer.from(JSON.stringify({data: params.data})),
         {
-          correlationId: blobId,
+          correlationId: params.blobId,
           persistent: true
         }
       );
@@ -261,7 +312,7 @@ export async function createAmqpOperator(amqplib, AMQP_URL) {
   // Helper functions
   // ----------------
 
-  function channelContainsMessages(channelInfo) {
+  function channelContainsMessages(channelInfo: {messageCount: number}): boolean {
     if (channelInfo.messageCount < 1) {
       debug(`checkQueue: ${channelInfo.messageCount} - queue is empty`);
       return false;
@@ -270,19 +321,22 @@ export async function createAmqpOperator(amqplib, AMQP_URL) {
     return true;
   }
 
-  async function generateQueueId({blobId, status}) {
+  async function generateQueueId(params: QueueParams): Promise<GenerateQueueIdResult> {
+    const {blobId, status} = params;
     const isUndefined = blobId === undefined || status === undefined;
     const notString = typeof blobId !== 'string' || typeof status !== 'string';
     const isEmpty = blobId.length < 1 || status.length < 1;
+
     if (isUndefined || notString || isEmpty) {
-      throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'invalid operation parameters');
+      throw new ApiError(httpStatus['INTERNAL_SERVER_ERROR'] as number, 'invalid operation parameters');
     }
+
     const queue = `${status}.${blobId}`;
-    const channelInfo = await channel.assertQueue(queue, {durable: true});
+    const channelInfo: Replies.AssertQueue = await channel!.assertQueue(queue, {durable: true});
     return {queue, channelInfo};
   }
 
-  function transformMessagesToRecords(messages) {
+  function transformMessagesToRecords(messages: Message[]): MarcRecord[] {
     debug(`Parsing messages (${messages.length}) to records`);
 
     return messages.map(message => {
@@ -298,10 +352,10 @@ export async function createAmqpOperator(amqplib, AMQP_URL) {
   * @param {queue} Queue
   * @returns {[message]} returns array of messages
   */
-  async function getData(queue) {
+  async function getData(queue): Promise<Message[] | void> {
     debug(`Getting queue data from ${queue}`);
     try {
-      const {messageCount} = await channel.checkQueue(queue);
+      const {messageCount}: Replies.AssertQueue = await channel!.assertQueue(queue);
       debug(`There is ${messageCount} messages in queue ${queue}`);
 
       const messages = await pump();
@@ -313,12 +367,12 @@ export async function createAmqpOperator(amqplib, AMQP_URL) {
       handleAmqpErrors(error);
     }
 
-    async function pump(results = []) {
+    async function pump(results: Message[] = []) {
       if (results.length === CHUNK_SIZE) {
         return results;
       }
 
-      const message = await channel.get(queue);
+      const message: Message | false = await channel!.get(queue);
 
       if (!message) {
         return results;
@@ -328,7 +382,7 @@ export async function createAmqpOperator(amqplib, AMQP_URL) {
     }
   }
 
-  function getHeaderInfo(data) {
+  function getHeaderInfo(data): MessagePropertyHeaders {
     return data.properties.headers;
   }
 
