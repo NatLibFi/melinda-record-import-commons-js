@@ -3,6 +3,7 @@ import createDebugLogger from 'debug';
 import httpStatus from 'http-status';
 import sanitize from 'mongo-sanitize';
 import {MongoClient, GridFSBucket} from 'mongodb';
+import type {Document} from 'mongodb';
 import {EventEmitter} from 'events';
 
 import {createLogger} from '@natlibfi/melinda-commons';
@@ -136,7 +137,7 @@ export async function createMongoBlobsOperator(mongoUrl: string, db = 'db'): Pro
 
     return emitter;
 
-    async function handleBlobQuery(query, getAll: boolean, skip: number): Promise<void> {
+    async function handleBlobQuery(query: Document, getAll: boolean, skip: number): Promise<void> {
       try {
         // .find(<query>, <projection>, <options>)
         const blobsArray = await operator.find(query, {projection: {_id: 0}})
@@ -234,7 +235,7 @@ export async function createMongoBlobsOperator(mongoUrl: string, db = 'db'): Pro
   }
 
   // MARK: Read Blob
-  async function readBlob({id}): Promise<BlobDocument | void> {
+  async function readBlob({id}: ReadBlobParams): Promise<BlobDocument | void> {
     const sanitizedId = sanitize(id);
     debug(`Read blob: ${sanitizedId}`);
     const doc = await operator.findOne({id: sanitizedId});
@@ -246,14 +247,12 @@ export async function createMongoBlobsOperator(mongoUrl: string, db = 'db'): Pro
     throw new ApiError(httpStatus['NOT_FOUND'] as number, 'Blob not found');
 
     function formatBlobDocument(doc: BlobDocument) {
-      const formatted: Partial<BlobDocument> = {};
-      for (const key of Object.keys(doc)) {
+      const formatted: Partial<BlobDocument> & Record<string, unknown> = {};
+      for (const [key, value] of Object.entries(doc)) {
         if (/^_/.test(key)) continue;
 
-        const value = doc[key];
-
         if ((key === 'creationTime' || key === 'modificationTime') && value !== null) {
-          formatted[key] = new Date(doc[key]).toISOString();
+          formatted[key] = new Date(value).toISOString();
         } else {
           formatted[key] = value;
         }
@@ -264,7 +263,7 @@ export async function createMongoBlobsOperator(mongoUrl: string, db = 'db'): Pro
   }
 
   // MARK: Read Blob Content
-  function readBlobContent({id}) {
+  function readBlobContent({id}: ReadBlobParams) {
     debug(`Forming stream from blob ${id}`);
     const sanitizedId = sanitize(id);
     // Return content stream
@@ -272,7 +271,7 @@ export async function createMongoBlobsOperator(mongoUrl: string, db = 'db'): Pro
   }
 
   // MARK: Update Blob
-  async function updateBlob({id, payload}) {
+  async function updateBlob({id, payload}: UpdateBlobParams) {
     const sanitizedId = sanitize(id);
     debug(`Update blob: ${sanitizedId}`);
 
@@ -311,7 +310,7 @@ export async function createMongoBlobsOperator(mongoUrl: string, db = 'db'): Pro
     return;
 
     // MARK: Update - Get update doc
-    function getUpdateDoc(op, updatePayload) {
+    function getUpdateDoc(op: keyof typeof BLOB_UPDATE_OPERATIONS, updatePayload: Omit<UpdateBlobPayload, 'op'>) {
       const nowDate = new Date().toISOString();
 
       debug(`Update blob operation: ${op}`);
@@ -320,7 +319,7 @@ export async function createMongoBlobsOperator(mongoUrl: string, db = 'db'): Pro
       if (op === BLOB_UPDATE_OPERATIONS.updateState) {
         const {state} = updatePayload;
 
-        const validStatesToUpdate = [
+        const validStatesToUpdate: (keyof typeof BLOB_STATE | undefined)[] = [
           BLOB_STATE.PROCESSED,
           BLOB_STATE.PROCESSING,
           BLOB_STATE.PROCESSING_BULK,
@@ -438,7 +437,7 @@ export async function createMongoBlobsOperator(mongoUrl: string, db = 'db'): Pro
   }
 
   // MARK: Remove Blob
-  async function removeBlob({id}) {
+  async function removeBlob({id}: RemoveBlobParams) {
     const sanitizedId = sanitize(id);
     debug(`Preparing to remove blob @ id: ${sanitizedId}`);
 
@@ -457,7 +456,7 @@ export async function createMongoBlobsOperator(mongoUrl: string, db = 'db'): Pro
   }
 
   // MARK: Remove Blob Content
-  async function removeBlobContent({id}) {
+  async function removeBlobContent({id}: RemoveBlobParams) {
     debug(`Checkking blob content, id: ${id}`);
     const sanitizedId = sanitize(id);
 

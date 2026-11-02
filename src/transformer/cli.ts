@@ -4,6 +4,7 @@ import createDebugLogger from 'debug';
 import {createLogger} from '@natlibfi/melinda-commons';
 
 import type {EventEmitter, Readable} from 'stream';
+import type {RecordPayload} from './blobHandler.ts';
 
 // MARK: Type definitions
 
@@ -53,7 +54,7 @@ export default async function (
         .on('record', recordEvent);
 
 
-      function recordEvent(payload) {
+      function recordEvent(payload: RecordPayload) {
         if (args.recordsOnly) {
           handleOutput(payload.record);
           return;
@@ -62,12 +63,13 @@ export default async function (
         handleOutput(payload);
       }
 
-      function handleOutput(payload) {
+      function handleOutput(payload: RecordPayload | string) {
         debugCli('Got transformed record');
         if (args.outputDirectory) {
           initOutputDirectory();
 
-          const file = path.join(args.outputDirectory, `${counter}${payload.failed ? '-failed' : ''}.json`);
+          const failedSuffix = typeof payload === 'string' ? '' : payload.failed ? '-failed' : '';
+          const file = path.join(args.outputDirectory, `${counter}${failedSuffix}.json`);
           debugCli(`Creating new file ${file}`);
           fs.writeFileSync(file, JSON.stringify(payload, undefined, 2));
           counter += 1;

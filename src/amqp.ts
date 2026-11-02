@@ -5,7 +5,7 @@ import createDebugLogger from 'debug';
 import httpStatus from 'http-status';
 import {setTimeout} from 'node:timers/promises';
 import {CHUNK_SIZE} from './constants.ts';
-import type {ChannelModel, Channel, Message, Replies, MessagePropertyHeaders} from 'amqplib'
+import type {ChannelModel, Channel, Message, Replies, MessagePropertyHeaders, RecoveringChannelModel} from 'amqplib'
 
 export interface QueueParams {
   blobId: string;
@@ -24,7 +24,7 @@ export interface SendDataParams {
 }
 
 export interface GetResult {
-  headers: MessagePropertyHeaders;
+  headers: MessagePropertyHeaders | undefined;
   records: MarcRecord[];
   messages: Message[];
 }
@@ -43,7 +43,7 @@ export interface AmqpOperator {
 }
 
 export async function createAmqpOperator(
-  amqplib,
+  amqplib: typeof import('amqplib'),
   AMQP_URL: string,
 ): Promise<AmqpOperator> {
   const debug = createDebugLogger('@natlibfi/melinda-record-import-commons:amqp');
@@ -53,7 +53,7 @@ export async function createAmqpOperator(
   let channel: Channel | undefined;
 
   debug(`Creating an AMQP operator to ${AMQP_URL}`);
-  const connection: ChannelModel = await amqplib.connect(AMQP_URL, {
+  const connection: RecoveringChannelModel = await amqplib.connect(AMQP_URL, {
     recovery: {
       initialDelay: 200,
       maxDelay: 30000,
@@ -352,7 +352,7 @@ export async function createAmqpOperator(
   * @param {queue} Queue
   * @returns {[message]} returns array of messages
   */
-  async function getData(queue): Promise<Message[] | void> {
+  async function getData(queue: string): Promise<Message[] | void> {
     debug(`Getting queue data from ${queue}`);
     try {
       const {messageCount}: Replies.AssertQueue = await channel!.assertQueue(queue);
@@ -382,11 +382,11 @@ export async function createAmqpOperator(
     }
   }
 
-  function getHeaderInfo(data): MessagePropertyHeaders {
-    return data.properties.headers;
+  function getHeaderInfo(data: Message | undefined): MessagePropertyHeaders | undefined {
+    return data?.properties.headers;
   }
 
-  function handleAmqpErrors(error) {
+  function handleAmqpErrors(error: unknown) {
     debug(`HandleAmqpErrors got an error: ${JSON.stringify(error)}`);
     if (error instanceof ApiError) {
       debug(`We have an ApiError`);

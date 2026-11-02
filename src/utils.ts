@@ -220,9 +220,9 @@ export async function getNextBlob(mongoOperator: MongoBlobsOperator, params: Nex
   debugPolling('Get next blob');
 
   if (!isOfflinePeriod(params.importOfflinePeriod, nowTime)) {
-    const nextBlob = await new Promise<BlobDocument>((resolve, reject) => {
+    const nextBlob = await new Promise<BlobDocument | undefined>((resolve, reject) => {
       debugPolling(`Checking blobs for ${params.profileIds} in ${params.state}`);
-      let nextBlob;
+      let nextBlob: BlobDocument | undefined;
       const emitter = mongoOperator.queryBlob({
         limit: 1,
         getAll: false,

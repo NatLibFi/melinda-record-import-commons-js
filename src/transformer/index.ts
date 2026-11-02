@@ -94,7 +94,7 @@ export default async function (
       }
     }
 
-    function logWait(waitTime) {
+    function logWait(waitTime: number) {
       // 60000ms = 1min
       if (waitTime % 60000 === 0) {
         return logger.info(`Total wait: ${millisecondsToString(waitTime)}`);

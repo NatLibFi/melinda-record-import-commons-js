@@ -5,6 +5,7 @@ import httpStatus from 'http-status';
 import {URL} from 'url';
 import {Readable} from 'stream';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
+import type {UpdateBlobParams} from './mongoBlobs.ts';
 import {BLOB_UPDATE_OPERATIONS, BLOB_STATE, RECORD_IMPORT_STATE} from './constants.ts';
 import {createServiceAuthoperator} from './keycloakAuthOperator.ts';
 
@@ -34,6 +35,19 @@ interface CreateOrModifyProfileParams {
   payload: {
     groups: string[]
   };
+}
+
+interface RequestHeaders {
+  Authorization?: string;
+  [key: string]: string | undefined;
+}
+
+interface DoRequestOptions {
+  method?: string;
+  body?: string;
+  headers?: RequestHeaders;
+  duplex?: 'half' | undefined;
+  agent?: https.Agent;
 }
 
 interface SetCatalogerParams {
@@ -139,7 +153,7 @@ export async function createApiClient(options: ApiClientOptions, keycloakOptions
   // MARK: createBLob
   async function createBlob({blob, type, profile, duplex}: CreateBlobParams) {
     debug('createBlob');
-    const headers = {
+    const headers: Record<string, string | undefined> = {
       'content-type': type,
       'Import-Profile': profile,
       'cf-connecting-ip': cfHeader
@@ -165,7 +179,7 @@ export async function createApiClient(options: ApiClientOptions, keycloakOptions
     const errorMessage = await response?.text() ?? httpStatus[`${response.status}_MESSAGE`];
     throw new ApiError(response.status, errorMessage);
 
-    function parseBlobId(response): string {
+    function parseBlobId(response: Response): string {
       const location = response.headers.get('location');
       if (!location) {
         throw new ApiError(response.status, 'Missing location header');
@@ -176,7 +190,7 @@ export async function createApiClient(options: ApiClientOptions, keycloakOptions
   }
 
   // MARK: getBlobMetadata
-  async function getBlobMetadata({id}) {
+  async function getBlobMetadata({id}: {id: string}) {
     debug('getBlobMetadata');
     const response = await doRequest(`${recordImportApiUrl}/blobs/${id}`, {
       headers: {
@@ -193,7 +207,7 @@ export async function createApiClient(options: ApiClientOptions, keycloakOptions
   }
 
   // MARK: getBlobContent
-  async function getBlobContent({id}) {
+  async function getBlobContent({id}: {id: string}) {
     debug('getBlobContent');
     const response = await doRequest(`${recordImportApiUrl}/blobs/${id}/content`, {
       headers: {}
@@ -211,7 +225,7 @@ export async function createApiClient(options: ApiClientOptions, keycloakOptions
   }
 
   // MARK: getProfile
-  async function getProfile({id}) {
+  async function getProfile({id}: {id: string}) {
     debug('getProfile');
     const response = await doRequest(`${recordImportApiUrl}/profiles/${id}`, {
       headers: {
@@ -228,7 +242,7 @@ export async function createApiClient(options: ApiClientOptions, keycloakOptions
   }
 
   // MARK: deleteProfile
-  async function deleteProfile({id}): Promise<void> {
+  async function deleteProfile({id}: {id: string}): Promise<void> {
     debug('deleteProfile');
     const response = await doRequest(`${recordImportApiUrl}/profiles/${id}`, {
       method: 'DELETE',
@@ -276,7 +290,7 @@ export async function createApiClient(options: ApiClientOptions, keycloakOptions
   }
 
   // MARK: deleteBlob
-  async function deleteBlob({id}) {
+  async function deleteBlob({id}: {id: string}) {
     debug('deleteBlob');
     const response = await doRequest(`${recordImportApiUrl}/blobs/${id}`, {
       method: 'DELETE',
@@ -292,7 +306,7 @@ export async function createApiClient(options: ApiClientOptions, keycloakOptions
   }
 
   // MARK: deleteBlobContent
-  async function deleteBlobContent({id}) {
+  async function deleteBlobContent({id}: {id: string}) {
     debug('deleteBlobContent');
     const response = await doRequest(`${recordImportApiUrl}/blobs/${id}/content`, {
       method: 'DELETE',
@@ -322,7 +336,7 @@ export async function createApiClient(options: ApiClientOptions, keycloakOptions
   }
 
   // MARK: setAborted
-  async function setAborted({id}): Promise<void> {
+  async function setAborted({id}: {id: string}): Promise<void> {
     debug('blob setAborted');
     const conf = {
       id,
@@ -440,18 +454,20 @@ export async function createApiClient(options: ApiClientOptions, keycloakOptions
 
     return emitter;
 
-    function createURL(query) {
+    function createURL(query: query) {
       const blobsUrl = new URL(`${recordImportApiUrl}/blobs`);
 
-      Object.keys(query).forEach(k => {
-        if (Array.isArray(query[k])) {
-          query[k].forEach(value => {
+      Object.entries(query).forEach(([k, v]) => {
+        if (Array.isArray(v)) {
+          v.forEach(value => {
             blobsUrl.searchParams.append(`${k}[]`, value);
           });
           return;
         }
 
-        blobsUrl.searchParams.set(k, query[k]);
+        if (v !== undefined) {
+          blobsUrl.searchParams.set(k, String(v));
+        }
       });
 
       return blobsUrl;
@@ -501,7 +517,7 @@ export async function createApiClient(options: ApiClientOptions, keycloakOptions
   }
 
   // MARK: updateBlobMetadata
-  async function updateBlobMetadata({id, payload}) {
+  async function updateBlobMetadata({id, payload}: UpdateBlobParams) {
     debug(`updateBlobMetadata: ${payload.op}`);
     try {
       const response = await doRequest(`${recordImportApiUrl}/blobs/${id}`, {
@@ -528,7 +544,7 @@ export async function createApiClient(options: ApiClientOptions, keycloakOptions
 
   // Requests a new token once
   // MARK: doRequest
-  async function doRequest(reqUrl, reqOptions) {
+  async function doRequest(reqUrl: string | URL, reqOptions: DoRequestOptions) {
     debug('doRequest');
     debug(`Request url: ${reqUrl}`);
 

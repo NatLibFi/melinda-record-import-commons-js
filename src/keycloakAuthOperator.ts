@@ -51,7 +51,7 @@ export async function createServiceAuthoperator(keycloakOptions: KeycloakOptions
         return true;
       }
 
-      if (serviceTokenSet['expires_at'] === undefined && serviceTokenSet['expires_at'] === null) {
+      if (serviceTokenSet['expires_at'] === undefined || serviceTokenSet['expires_at'] === null) {
         debug('Invalid serviceTokenSet');
         return true;
       }
