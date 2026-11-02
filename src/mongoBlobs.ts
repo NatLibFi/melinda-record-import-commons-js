@@ -3,15 +3,99 @@ import createDebugLogger from 'debug';
 import httpStatus from 'http-status';
 import sanitize from 'mongo-sanitize';
 import {MongoClient, GridFSBucket} from 'mongodb';
+import type {Document} from 'mongodb';
 import {EventEmitter} from 'events';
 
-import {createLogger} from '@natlibfi/melinda-backend-commons';
+import {createLogger} from '@natlibfi/melinda-commons';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
 
-import {BLOB_STATE, BLOB_UPDATE_OPERATIONS} from './constants.js';
-import {generateBlobQuery} from './utils.js';
+import {BLOB_STATE, BLOB_UPDATE_OPERATIONS} from './constants.ts';
+import {generateBlobQuery} from './utils.ts';
+import type {UserInfo} from './utils.ts';
+import type {Readable} from 'stream';
 
-export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
+// MARK: Type definitions
+
+export interface BlobDocument {
+  id: string;
+  correlationId: string;
+  profile: string;
+  cataloger: string;
+  notificationEmail: string;
+  contentType: string;
+  state: keyof typeof BLOB_STATE;
+  creationTime: string;
+  modificationTime: string;
+  processingInfo: {
+    transformationError: Record<string, unknown>;
+    numberOfRecords: number;
+    failedRecords: unknown[];
+    importResults: unknown[];
+  };
+}
+
+export interface QueryBlobParams {
+  limit?: string | number;
+  skip?: string | number;
+  getAll?: boolean;
+  profile?: string;
+  contentType?: string;
+  state?: keyof typeof BLOB_STATE;
+  creationTime?: string;
+  modificationTime?: string;
+}
+
+export interface CreateBlobParams {
+  id: string;
+  profile: string;
+  contentType: string;
+  date: string;
+}
+
+export interface ReadBlobParams {
+  id: string;
+}
+
+export interface UpdateBlobPayload {
+  op: keyof typeof BLOB_UPDATE_OPERATIONS;
+  state?: keyof typeof BLOB_STATE;
+  error?: string | Record<string, unknown>;
+  incNumberOfRecords?: boolean;
+  status?: string;
+  metadata?: Record<string, unknown>;
+  correlationId?: string;
+  cataloger?: string;
+  notificationEmail?: string;
+}
+
+export interface UpdateBlobParams {
+  id: string;
+  payload: UpdateBlobPayload;
+}
+
+export interface RemoveBlobParams {
+  id: string;
+}
+
+
+export interface QueryBlobEmitter extends EventEmitter {
+  on(event: 'blobs', listener: (blobs: BlobDocument[]) => void): this;
+  on(event: 'error', listener: (error: Error) => void): this;
+  on(event: 'end', listener: (nextOffset: string | false) => void): this;
+}
+
+export interface MongoBlobsOperator {
+  queryBlob(params: QueryBlobParams, user?: UserInfo): QueryBlobEmitter;
+  createBlob(params: CreateBlobParams, stream: Readable): Promise<string>;
+  readBlob(params: ReadBlobParams): Promise<BlobDocument | void>;
+  readBlobContent(params: ReadBlobParams): Readable;
+  updateBlob(params: UpdateBlobParams): Promise<void>;
+  removeBlob(params: RemoveBlobParams): Promise<void>;
+  removeBlobContent(params: RemoveBlobParams): Promise<void>;
+  closeClient(): Promise<void>;
+}
+
+export async function createMongoBlobsOperator(mongoUrl: string, db = 'db'): Promise<MongoBlobsOperator> {
   const logger = createLogger();
   const debug = createDebugLogger('@natlibfi/melinda-record-import-commons:mongoBlobs');
   const debugDev = debug.extend('dev');
@@ -19,7 +103,7 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
   // Connect to mongo (MONGO)
   const client = await MongoClient.connect(mongoUrl);
   const dbConnection = client.db(db);
-  const operator = dbConnection.collection('blobmetadatas');
+  const operator = dbConnection.collection<BlobDocument>('blobmetadatas');
   const gridFSBucket = new GridFSBucket(dbConnection, {bucketName: 'blobmetadatas'});
 
   return {queryBlob, createBlob, readBlob, readBlobContent, updateBlob, removeBlob, removeBlobContent, closeClient};
@@ -28,7 +112,7 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
   /**
    * Query blobs
    *
-   * @param {Object} params object: limit, skip, sort, profiles, id, correlationId, state, cretionTime, modificationTime
+   * @param {Object} params object: limit, skip, getAll, sort, profile, id, correlationId, state, cretionTime, modificationTime
    * @param {string|integer} params.limit Mongo limit results to n results
    * @param {string|integer} params.skip Mongo skip n query results
    * @param {boolean} params.getAll Mongo get all query results
@@ -39,21 +123,21 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
    * @param {string} params.modificationTime format '2024-08-30' or '2024-08-30T12:00:00.000Z' or '2024-08-30,2024-09-01'
    * @returns {EventEmitter} Emits event on blobs, error and end
    */
-  function queryBlob(params, user = false) {
+  function queryBlob(params: QueryBlobParams, user?: UserInfo): QueryBlobEmitter {
     debugDev(`Mongo operator query blob`);
-    const emitter = new EventEmitter();
-    const limit = parseInt(params.limit || 100, 10);
-    const skip = parseInt(params.skip || 0, 10);
+    const emitter = new EventEmitter() as QueryBlobEmitter;
+    const limit = parseInt(String(params.limit ?? 100), 10);
+    const skip = parseInt(String(params.skip ?? 0), 10);
     const {getAll = true, ...rest} = params;
 
     const query = generateBlobQuery(rest, user);
     debugDev(`Query: ${JSON.stringify(query)}`);
 
-    handleBlobQuery(getAll, skip);
+    handleBlobQuery(query, getAll, skip);
 
     return emitter;
 
-    async function handleBlobQuery(getAll, skip) {
+    async function handleBlobQuery(query: Document, getAll: boolean, skip: number): Promise<void> {
       try {
         // .find(<query>, <projection>, <options>)
         const blobsArray = await operator.find(query, {projection: {_id: 0}})
@@ -73,14 +157,17 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
         emitter.emit('blobs', resultArray);
 
         if (hasNext && getAll) {
-          return handleBlobQuery(getAll, nextOffset);
+          await handleBlobQuery(query, getAll, nextOffset);
+          return;
         }
 
         if (hasNext && !getAll) {
-          return emitter.emit('end', nextOffset);
+          emitter.emit('end', nextOffset);
+          return;
         }
 
-        return emitter.emit('end', false);
+        emitter.emit('end', false);
+        return;
       } catch (error) {
         emitter.emit('error', error);
       }
@@ -101,37 +188,32 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
    * @param {stream} stream
    * @returns {uuid4} uuid4 string
    */
-  async function createBlob(params, stream) {
+  async function createBlob(params: CreateBlobParams, stream: Readable): Promise<string> {
     const blob = assembleBlob(params);
     try {
       const result = await operator.insertOne(blob);
       if (result.acknowledged) {
         debug(`New BLOB for ${params.profile}, id: ${blob.id} has been made`);
         debug(`Uploading blob content`);
-        const upload = new Promise((resolve, reject) => {
-          const outputStream = gridFSBucket.openUploadStream(blob.id);
-
-          stream
+        return new Promise<string>((resolve, reject) => {
+          const uploadStream = gridFSBucket.openUploadStream(blob.id);
+          stream.pipe(uploadStream);
+          uploadStream
             .on('error', reject)
-            .on('data', chunk => outputStream.write(chunk))
-            .on('end', () => outputStream.end(undefined, undefined, () => {
-              resolve();
-            }));
+            .on('finish', () => {
+              resolve(blob.id)
+            });
         });
-
-        await Promise.all([upload]);
-        debug(`Blob content uploaded`);
-        return blob.id;
       }
 
-      throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, 'Blob creation error!');
-    } catch (error) {
-      const errorMessage = error.payload || error.message || '';
+      throw new ApiError(httpStatus['INTERNAL_SERVER_ERROR'] as number, 'Blob creation error!');
+    } catch (error: unknown) {
+      const errorMessage = (error instanceof ApiError && (error.payload || error.message)) || (error instanceof Error ? error.message : '') || '';
       logger.error(error);
-      throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, `Mongo errored: ${errorMessage}`);
+      throw new ApiError(httpStatus['INTERNAL_SERVER_ERROR'] as number, `Mongo errored: ${errorMessage}`);
     }
 
-    function assembleBlob({id, profile, contentType, date}) {
+    function assembleBlob({id, profile, contentType, date}: CreateBlobParams): BlobDocument {
       return {
         id,
         correlationId: '',
@@ -153,7 +235,7 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
   }
 
   // MARK: Read Blob
-  async function readBlob({id}) {
+  async function readBlob({id}: ReadBlobParams): Promise<BlobDocument | void> {
     const sanitizedId = sanitize(id);
     debug(`Read blob: ${sanitizedId}`);
     const doc = await operator.findOne({id: sanitizedId});
@@ -162,27 +244,26 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
       return formatBlobDocument(doc);
     }
 
-    throw new ApiError(httpStatus.NOT_FOUND, 'Blob not found');
+    throw new ApiError(httpStatus['NOT_FOUND'] as number, 'Blob not found');
 
-    function formatBlobDocument(doc) {
-      const blob = doc;
-      return Object.keys(blob).reduce((acc, key) => {
-        if ((/^_+/u).test(key)) {
-          return acc;
+    function formatBlobDocument(doc: BlobDocument) {
+      const formatted: Partial<BlobDocument> & Record<string, unknown> = {};
+      for (const [key, value] of Object.entries(doc)) {
+        if (/^_/.test(key)) continue;
+
+        if ((key === 'creationTime' || key === 'modificationTime') && value !== null) {
+          formatted[key] = new Date(value).toISOString();
+        } else {
+          formatted[key] = value;
         }
+      }
 
-        if (key === 'creationTime' || key === 'modificationTime') {
-          const value = new Date(blob[key]).toISOString();
-          return {...acc, [key]: value};
-        }
-
-        return {...acc, [key]: blob[key]};
-      }, {});
+      return formatted as BlobDocument;
     }
   }
 
   // MARK: Read Blob Content
-  function readBlobContent({id}) {
+  function readBlobContent({id}: ReadBlobParams) {
     debug(`Forming stream from blob ${id}`);
     const sanitizedId = sanitize(id);
     // Return content stream
@@ -190,7 +271,7 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
   }
 
   // MARK: Update Blob
-  async function updateBlob({id, payload}) {
+  async function updateBlob({id, payload}: UpdateBlobParams) {
     const sanitizedId = sanitize(id);
     debug(`Update blob: ${sanitizedId}`);
 
@@ -198,7 +279,7 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
     debugDev(blob ? 'Blob found' : 'Blob not found');
 
     if (!blob) {
-      throw new ApiError(httpStatus.NOT_FOUND, 'Blob not found');
+      throw new ApiError(httpStatus['NOT_FOUND'] as number, 'Blob not found');
     }
     // debugDev(blob);
     const {op, ...rest} = payload;
@@ -208,42 +289,37 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
     }
 
     const updateIfNotInStates = [BLOB_STATE.TRANSFORMATION_FAILED, BLOB_STATE.ABORTED, BLOB_STATE.PROCESSED];
-    if (updateIfNotInStates.includes(blob.state)) {
-      throw new ApiError(httpStatus.CONFLICT, 'Not valid blob state for update');
+    if (updateIfNotInStates.some(state => state === blob.state)) {
+      throw new ApiError(httpStatus['CONFLICT'] as number, 'Not valid blob state for update');
     }
 
     const {numberOfRecords, failedRecords, importResults} = blob.processingInfo;
     if (op === BLOB_UPDATE_OPERATIONS.recordProcessed && numberOfRecords < failedRecords.length + importResults.length) {
-      throw new ApiError(httpStatus.CONFLICT, 'Invalid blob record count');
+      throw new ApiError(httpStatus['CONFLICT'] as number, 'Invalid blob record count');
     }
 
     const doc = getUpdateDoc(op, rest);
 
     // debugDev(doc);
-    const {modifiedCount} = await operator.findOneAndUpdate({id: sanitizedId}, doc, {projection: {_id: 0}, returnNewDocument: false});
-
-    if (modifiedCount === 0) {
-      throw new ApiError(httpStatus.CONFLICT, 'No change');
+    const {ok, lastErrorObject} = await operator.findOneAndUpdate({id: sanitizedId}, doc, {projection: {_id: 0}, includeResultMetadata: true});
+    if (ok === 0) {
+      console.log(lastErrorObject);
+      throw new ApiError(httpStatus['CONFLICT'] as number, 'No change');
     }
 
     return;
 
     // MARK: Update - Get update doc
-    function getUpdateDoc(op, updatePayload) {
+    function getUpdateDoc(op: keyof typeof BLOB_UPDATE_OPERATIONS, updatePayload: Omit<UpdateBlobPayload, 'op'>) {
       const nowDate = new Date().toISOString();
-      const {
-        abort, recordProcessed, transformationFailed,
-        updateState, transformedRecord, addCorrelationId,
-        setCataloger, setNotificationEmail, resetImportResults
-      } = BLOB_UPDATE_OPERATIONS;
 
       debug(`Update blob operation: ${op}`);
       debugDev(`Update blob payload: ${JSON.stringify(updatePayload)}`);
 
-      if (op === updateState) {
+      if (op === BLOB_UPDATE_OPERATIONS.updateState) {
         const {state} = updatePayload;
 
-        const validStatesToUpdate = [
+        const validStatesToUpdate: (keyof typeof BLOB_STATE | undefined)[] = [
           BLOB_STATE.PROCESSED,
           BLOB_STATE.PROCESSING,
           BLOB_STATE.PROCESSING_BULK,
@@ -257,10 +333,10 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
           return {$set: {state, modificationTime: nowDate}};
         }
 
-        throw new ApiError(httpStatus.UNPROCESSABLE_ENTITY, 'Blob update state error: invalid state');
+        throw new ApiError(httpStatus['UNPROCESSABLE_ENTITY'] as number, 'Blob update state error: invalid state');
       }
 
-      if (op === abort) {
+      if (op === BLOB_UPDATE_OPERATIONS.abort) {
         return {
           $set: {
             state: BLOB_STATE.ABORTED,
@@ -269,7 +345,7 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
         };
       }
 
-      if (op === resetImportResults) {
+      if (op === BLOB_UPDATE_OPERATIONS.resetImportResults) {
         return {
           $set: {
             'processingInfo.importResults': [],
@@ -278,7 +354,7 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
         };
       }
 
-      if (op === transformationFailed) {
+      if (op === BLOB_UPDATE_OPERATIONS.transformationFailed) {
         return {
           $set: {
             state: BLOB_STATE.TRANSFORMATION_FAILED,
@@ -288,10 +364,9 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
         };
       }
 
-      if (op === transformedRecord) {
+      if (op === BLOB_UPDATE_OPERATIONS.transformedRecord) {
         const incNumberOfRecords = updatePayload.incNumberOfRecords ?? true;
         if (updatePayload.error) {
-          updatePayload.error.timestamp = nowDate;
           return {
             $set: {
               modificationTime: nowDate
@@ -315,7 +390,7 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
         };
       }
 
-      if (op === recordProcessed) {
+      if (op === BLOB_UPDATE_OPERATIONS.recordProcessed) {
         return {
           $set: {
             modificationTime: nowDate
@@ -329,7 +404,7 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
         };
       }
 
-      if (op === addCorrelationId) {
+      if (op === BLOB_UPDATE_OPERATIONS.addCorrelationId) {
         return {
           $set: {
             modificationTime: nowDate,
@@ -338,7 +413,7 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
         };
       }
 
-      if (op === setCataloger) {
+      if (op === BLOB_UPDATE_OPERATIONS.setCataloger) {
         return {
           $set: {
             modificationTime: nowDate,
@@ -347,7 +422,7 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
         };
       }
 
-      if (op === setNotificationEmail) {
+      if (op === BLOB_UPDATE_OPERATIONS.setNotificationEmail) {
         return {
           $set: {
             modificationTime: nowDate,
@@ -357,12 +432,12 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
       }
 
       logger.error(`Blob update case '${op}' was not found`);
-      throw new ApiError(httpStatus.UNPROCESSABLE_ENTITY, 'Blob update operation error');
+      throw new ApiError(httpStatus['UNPROCESSABLE_ENTITY'] as number, 'Blob update operation error');
     }
   }
 
   // MARK: Remove Blob
-  async function removeBlob({id}) {
+  async function removeBlob({id}: RemoveBlobParams) {
     const sanitizedId = sanitize(id);
     debug(`Preparing to remove blob @ id: ${sanitizedId}`);
 
@@ -371,14 +446,17 @@ export async function createMongoBlobsOperator(mongoUrl, db = 'db') {
       debug(`Removing blob id:${JSON.stringify(sanitizedId)}`);
       await operator.deleteOne({id: sanitizedId});
       return;
-    } catch (err) {
-      debugDev('removeBlob handing error');
-      throw new ApiError(httpStatus.INTERNAL_SERVER_ERROR, err.message);
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        debugDev('removeBlob handing error');
+        throw new ApiError(httpStatus['INTERNAL_SERVER_ERROR'] as number, error.message);
+      }
+      throw error;
     }
   }
 
   // MARK: Remove Blob Content
-  async function removeBlobContent({id}) {
+  async function removeBlobContent({id}: RemoveBlobParams) {
     debug(`Checkking blob content, id: ${id}`);
     const sanitizedId = sanitize(id);
 

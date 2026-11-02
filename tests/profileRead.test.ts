@@ -2,18 +2,17 @@ import assert from 'node:assert';
 import {READERS} from '@natlibfi/fixura';
 import mongoFixturesFactory from '@natlibfi/fixura-mongo';
 import generateTests from '@natlibfi/fixugen';
-import {createMongoProfilesOperator} from '../src/mongoProfiles.js';
+import {createMongoProfilesOperator} from '../src/mongoProfiles.ts';
 
-let mongoFixtures;
+let mongoFixtures; // eslint-disable-line functional/no-let
 
 generateTests({
   callback,
-  path: [import.meta.dirname, '..', 'test-fixtures', 'removeProfile'],
+  path: [import.meta.dirname, '..', 'test-fixtures', 'readProfile'],
   recurse: false,
   useMetadataFile: true,
   fixura: {
-    failWhenNotFound: true,
-    reader: READERS.JSON
+    failWhenNotFound: true
   },
   hooks: {
     before: async () => {
@@ -33,7 +32,7 @@ generateTests({
 
 async function initMongofixtures() {
   mongoFixtures = await mongoFixturesFactory({
-    rootPath: [import.meta.dirname, '..', 'test-fixtures', 'removeProfile'],
+    rootPath: [import.meta.dirname, '..', 'test-fixtures', 'readProfile'],
     useObjectId: true
   });
 }
@@ -46,13 +45,12 @@ async function callback({
   expectedErrorMessage = ''
 }) {
   const mongoUri = await mongoFixtures.getUri();
-  await mongoFixtures.populate(getFixture('dbContents.json'));
+  await mongoFixtures.populate(getFixture({components: ['dbContents.json'], reader: READERS.JSON}));
   const mongoOperator = await createMongoProfilesOperator(mongoUri, '');
-  const expectedResult = await getFixture('expectedResult.json');
+  const expectedResult = await getFixture({components: ['expectedResult.json'], reader: READERS.JSON});
   try {
-    await mongoOperator.removeProfile(operationParams);
-    const dump = await mongoFixtures.dump();
-    assert.deepStrictEqual(dump, expectedResult);
+    const result = await mongoOperator.readProfile(operationParams);
+    assert.deepStrictEqual(result, expectedResult);
   } catch (error) {
     if (!expectedToFail) {
       throw error;
