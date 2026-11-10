@@ -184,7 +184,7 @@ export async function createApiClient(options: ApiClientOptions, keycloakOptions
       if (!location) {
         throw new ApiError(response.status, 'Missing location header');
       }
-      const [match] = (/\/(?<def>.[^/]*)$/u).exec(location) ?? [];
+      const [, match] = (/\/(?<def>.[^/]*)$/u).exec(location) ?? [];
       return match ?? '';
     }
   }
