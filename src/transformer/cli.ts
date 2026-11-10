@@ -55,6 +55,10 @@ export default async function (
 
 
       function recordEvent(payload: RecordPayload) {
+        if (args.recordsOnly && payload.failed) {
+          return;
+        }
+
         if (args.recordsOnly) {
           handleOutput(payload.record);
           return;
