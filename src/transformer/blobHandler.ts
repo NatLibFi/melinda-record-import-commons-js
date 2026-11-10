@@ -1,23 +1,54 @@
 import createDebugLogger from 'debug';
-import {BLOB_UPDATE_OPERATIONS} from '../constants.js';
+import {BLOB_STATE, BLOB_UPDATE_OPERATIONS} from '../constants.ts';
 
-export default function (mongoOperator, amqpOperator, processHandler, config) {
+import type {AmqpOperator} from '../amqp.ts';
+import type {MongoBlobsOperator} from '../mongoBlobs.ts';
+import type {EventEmitter, Readable} from 'node:stream';
+
+export interface BlobHandlerConfig {
+  abortOnInvalidRecords?: boolean;
+  readFrom?: 'blobContent' | Readable | ReadableStream;
+  nextQueueStatus?: keyof typeof BLOB_STATE;
+}
+
+export interface RecordPayload {
+  failed: boolean;
+  record: string;
+  error: string | any;
+  incNumberOfRecords: boolean
+}
+
+export type ProcessHandler = (source: Readable | ReadableStream) => Promise<EventEmitter>;
+
+export type BlobHandler = (blobId: string) => Promise<void>;
+
+export default function (
+  mongoOperator: MongoBlobsOperator,
+  amqpOperator: AmqpOperator,
+  processHandler: ProcessHandler,
+  config: BlobHandlerConfig
+): BlobHandler {
   const debug = createDebugLogger('@natlibfi/melinda-record-import-commons');
   const debugHandling = debug.extend('blobHandling');
   const debugRecordHandling = debug.extend('recordHandling');
   const {abortOnInvalidRecords, readFrom = 'blobContent', nextQueueStatus} = config;
 
+  if (nextQueueStatus === undefined) {
+    throw new Error('nextQueueStatus is required');
+  }
+  const nextStatus: keyof typeof BLOB_STATE = nextQueueStatus;
+
   return startHandling;
 
-  async function startHandling(blobId) {
-    const recordPayloadQueuings = [];
-    const blobUpdates = [];
+  async function startHandling(blobId: string): Promise<void> {
+    const recordPayloadQueuings: Promise<void | boolean>[] = [];
+    const blobUpdates: Promise<void>[] = [];
     let hasFailed = false;
 
     debugHandling(`Starting process for blob ${blobId}`);
 
     try {
-      const handlerEmitter = await getEmitter(processHandler, readFrom, nextQueueStatus);
+      const handlerEmitter = await getEmitter(processHandler, readFrom, nextStatus);
 
       await new Promise((resolve, reject) => {
         handlerEmitter
@@ -60,13 +91,14 @@ export default function (mongoOperator, amqpOperator, processHandler, config) {
               }
             }));
           })
-          .on('record', recordPayload => {
-            if (!recordPayload.failed) {
+          .on('record', (recordPayload: RecordPayload) => {
+            const {failed, error, incNumberOfRecords, record} = recordPayload;
+            if (!failed) {
               debugRecordHandling(`Sending record to queue`);
               recordPayloadQueuings.push(amqpOperator.sendToQueue({
                 blobId,
-                status: nextQueueStatus,
-                data: recordPayload.record
+                status: nextStatus,
+                data: record
               }));
               //recordPayloads.push(payload);
               debugRecordHandling('Adding success record to blob');
@@ -80,12 +112,12 @@ export default function (mongoOperator, amqpOperator, processHandler, config) {
             }
             debugRecordHandling(`Record failed, skip queuing!`);
             debugRecordHandling('Adding failed record to blob');
-            const {failed, ...restForPayload} = recordPayload;
             blobUpdates.push(mongoOperator.updateBlob({
               id: blobId,
               payload: {
                 op: BLOB_UPDATE_OPERATIONS.transformedRecord,
-                error: restForPayload
+                error: {error, record},
+                incNumberOfRecords
               }
             }));
             // Setting fail check value trigger
@@ -96,7 +128,7 @@ export default function (mongoOperator, amqpOperator, processHandler, config) {
 
       if (abortOnInvalidRecords && hasFailed) {
         debug('Purge records from queue because some records failed and abortOnInvalidRecords is true');
-        await amqpOperator.purgeQueue({blobId, status: nextQueueStatus});
+        await amqpOperator.purgeQueue({blobId, status: nextStatus});
         await mongoOperator.updateBlob({
           id: blobId,
           payload: {
@@ -108,12 +140,12 @@ export default function (mongoOperator, amqpOperator, processHandler, config) {
         return;
       }
 
-      debug(`Setting blob state ${nextQueueStatus}...`);
+      debug(`Setting blob state ${nextStatus}...`);
       await mongoOperator.updateBlob({
         id: blobId,
         payload: {
           op: BLOB_UPDATE_OPERATIONS.updateState,
-          state: nextQueueStatus
+          state: nextStatus
         }
       });
 
@@ -132,7 +164,11 @@ export default function (mongoOperator, amqpOperator, processHandler, config) {
       return;
     }
 
-    async function getEmitter(processHandler, readFrom, nextQueueStatus) {
+    async function getEmitter(
+      processHandler: ProcessHandler,
+      readFrom: 'blobContent' | Readable | ReadableStream,
+      nextQueueStatus: keyof typeof BLOB_STATE
+    ): Promise<EventEmitter> {
       debugHandling(`Preparing next queue: ${blobId}.${nextQueueStatus}`);
       await amqpOperator.purgeQueue({blobId, status: nextQueueStatus});
 
@@ -146,8 +182,11 @@ export default function (mongoOperator, amqpOperator, processHandler, config) {
       return processHandler(readFrom);
     }
 
-    function getError(err) {
-      return JSON.stringify(err.stack || err.message || err);
+    function getError(err: unknown): string {
+      if (err instanceof Error) {
+        return JSON.stringify(err.stack || err.message || err);
+      }
+      return JSON.stringify(err);
     }
   }
 }

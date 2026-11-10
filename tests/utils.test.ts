@@ -1,9 +1,9 @@
 import assert from 'node:assert';
 import {READERS} from '@natlibfi/fixura';
 import generateTests from '@natlibfi/fixugen';
-import {isOfflinePeriod, getNextBlob} from '../src/utils.js';
+import {isOfflinePeriod, getNextBlob} from '../src/utils.ts';
 import mongoFixturesFactory from '@natlibfi/fixura-mongo';
-import {createMongoBlobsOperator} from '../src/mongoBlobs.js';
+import {createMongoBlobsOperator} from '../src/mongoBlobs.ts';
 
 let mongoFixtures; // eslint-disable-line functional/no-let
 

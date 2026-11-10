@@ -2,7 +2,7 @@ import assert from 'node:assert';
 import {READERS} from '@natlibfi/fixura';
 import generateTests from '@natlibfi/fixugen-http-client';
 import createDebugLogger from 'debug';
-import {createApiClient} from '../src/api-client.js';
+import {createApiClient} from '../src/api-client.ts';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
 
 const debug = createDebugLogger('@natlibfi/melinda-record-import-commons/api-client:test');
@@ -39,16 +39,16 @@ async function callback({getFixture, method, expectedError = false, expectedErro
       const {query} = input;
       const {expectedResult} = output;
       const emitter = client.getBlobs(query);
-      const blobsArray = [];
+      const blobsArray: {blob: string}[] = [];
       const emitterResult = new Promise((resolve, reject) => {
         emitter
           .on('error', reject)
           .on('end', resolve)
-          .on('blobs', blobs => {
+          .on('blobs', (blob: {blob: string}) => {
             // Use console.log coz logger starts print with date and type
             // eslint-disable-next-line no-console
             // console.log(blobs);
-            blobsArray.push(blobs); //eslint-disable-line functional/immutable-data
+            blobsArray.push(blob); //eslint-disable-line functional/immutable-data
           });
       });
       await emitterResult;
