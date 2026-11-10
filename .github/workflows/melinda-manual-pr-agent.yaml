@@ -1,0 +1,26 @@
+name: Melinda-manual-pr-agent
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr_url:
+        description: "Full URL of the pull request to review"
+        required: true
+        type: string
+
+jobs:
+  pr_agent_job:
+    runs-on: ubuntu-latest   # or your self-hosted runner label if the endpoint is internal-only
+    permissions:
+      contents: read
+      pull-requests: write
+    container: pragent/pr-agent:latest
+    env:
+      # LLM endpoint (OpenAI-compatible). Dummy key: the server accepts any key.
+      OPENAI__API_BASE: ${{ secrets.MELINDA_LLM_SERVICE_URL }}
+      OPENAI__KEY: ${{ secrets.MELINDA_LLM_SERVICE_URL_KEY }}
+      # GitHub token (auto-created; must be passed explicitly)
+      GITHUB__USER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Run PR-Agent review
+        run: pr-agent --pr_url ${{ github.event.inputs.pr_url }} review
