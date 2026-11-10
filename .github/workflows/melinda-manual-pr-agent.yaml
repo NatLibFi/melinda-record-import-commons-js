@@ -23,4 +23,6 @@ jobs:
       GITHUB__USER_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Run PR-Agent review
-        run: pr-agent --pr_url ${{ github.event.inputs.pr_url }} review
+        env:
+          PR_URL: ${{ github.event.inputs.pr_url }}
+        run: pr-agent --pr_url "$PR_URL" review
