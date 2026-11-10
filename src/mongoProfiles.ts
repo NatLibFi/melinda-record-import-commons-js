@@ -9,7 +9,7 @@ import {EventEmitter} from 'events';
 import {Error as ApiError} from '@natlibfi/melinda-commons';
 
 import {generateProfileQuery} from './utils.ts';
-import type {ProfileQuery, UserInfo} from './utils.ts';
+import type {ProfileQuery} from './utils.ts';
 
 // MARK: Type definitions
 
@@ -28,7 +28,7 @@ export interface QueryProfileParams {
 
 export interface CreateOrModifyProfileParams {
   id: string;
-  payload: UserInfo;
+  payload: { groups: string[] };
 }
 
 export interface ReadProfileParams {
