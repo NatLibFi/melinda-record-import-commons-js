@@ -9,6 +9,8 @@ export interface BlobHandlerConfig {
   abortOnInvalidRecords?: boolean;
   readFrom?: 'blobContent' | Readable | ReadableStream;
   nextQueueStatus?: keyof typeof BLOB_STATE;
+  /** Delay in ms before process.exit(1) on infrastructure errors (default 3000, lets logs flush) */
+  infraErrorExitDelayMs?: number;
 }
 
 export interface RecordPayload {
@@ -22,6 +24,13 @@ export type ProcessHandler = (source: Readable | ReadableStream) => Promise<Even
 
 export type BlobHandler = (blobId: string) => Promise<void>;
 
+/**
+ * Internal sentinel: a user transform failure that has already been
+ * marked on the blob (transformationFailed). The outer catch treats this
+ * as handled and does NOT exit the process.
+ */
+class HandledTransformError extends Error {}
+
 export default function (
   mongoOperator: MongoBlobsOperator,
   amqpOperator: AmqpOperator,
@@ -31,7 +40,12 @@ export default function (
   const debug = createDebugLogger('@natlibfi/melinda-record-import-commons');
   const debugHandling = debug.extend('blobHandling');
   const debugRecordHandling = debug.extend('recordHandling');
-  const {abortOnInvalidRecords, readFrom = 'blobContent', nextQueueStatus} = config;
+  const {
+    abortOnInvalidRecords,
+    readFrom = 'blobContent',
+    nextQueueStatus,
+    infraErrorExitDelayMs = 3000
+  } = config;
 
   if (nextQueueStatus === undefined) {
     throw new Error('nextQueueStatus is required');
@@ -44,36 +58,56 @@ export default function (
     const recordPayloadQueuings: Promise<void | boolean>[] = [];
     const blobUpdates: Promise<void>[] = [];
     let hasFailed = false;
+    let settled = false;
 
     debugHandling(`Starting process for blob ${blobId}`);
 
     try {
-      const handlerEmitter = await getEmitter(processHandler, readFrom, nextStatus);
+      const handlerEmitter = await getEmitter(readFrom, nextStatus);
 
       await new Promise((resolve, reject) => {
         handlerEmitter
           .on('end', async () => {
+            if (settled) {
+              return;
+            }
+            settled = true;
             debugHandling(`Process has collected all records. ${recordPayloadQueuings.length} records`);
-            await Promise.all(recordPayloadQueuings);
-            debugHandling(`All records are Processed`);
-            await Promise.all(blobUpdates);
-            debugHandling(`All blob updates are Processed`);
-            resolve(true);
+            try {
+              await Promise.all(recordPayloadQueuings);
+              debugHandling(`All records are Processed`);
+              await Promise.all(blobUpdates);
+              debugHandling(`All blob updates are Processed`);
+              resolve(true);
+            } catch (err) {
+              failProcess(err);
+            }
           })
           .on('error', async err => {
+            if (settled) {
+              return;
+            }
+            settled = true;
             debugHandling('Process has failed');
-            await mongoOperator.updateBlob({
-              id: blobId,
-              payload: {
-                op: BLOB_UPDATE_OPERATIONS.transformationFailed,
-                error: getError(err)
-              }
-            });
-            reject(err);
+            try {
+              await mongoOperator.updateBlob({
+                id: blobId,
+                payload: {
+                  op: BLOB_UPDATE_OPERATIONS.transformationFailed,
+                  error: getError(err)
+                }
+              });
+            } catch (updateErr) {
+              // Infrastructure error while marking the blob as failed
+              failProcess(updateErr);
+              return;
+            }
+            // Sentinel: blob is already marked as failed, treat as handled in the outer catch
+            reject(new HandledTransformError(err));
           })
           .on('cataloger', cataloger => {
             debugHandling('Setting cataloger for blob');
-            blobUpdates.push(mongoOperator.updateBlob({
+            track(blobUpdates, mongoOperator.updateBlob({
               id: blobId,
               payload: {
                 op: BLOB_UPDATE_OPERATIONS.setCataloger,
@@ -83,7 +117,7 @@ export default function (
           })
           .on('notificationEmail', notificationEmail => {
             debugHandling('Setting notification email for blob');
-            blobUpdates.push(mongoOperator.updateBlob({
+            track(blobUpdates, mongoOperator.updateBlob({
               id: blobId,
               payload: {
                 op: BLOB_UPDATE_OPERATIONS.setNotificationEmail,
@@ -95,14 +129,14 @@ export default function (
             const {failed, error, incNumberOfRecords, record} = recordPayload;
             if (!failed) {
               debugRecordHandling(`Sending record to queue`);
-              recordPayloadQueuings.push(amqpOperator.sendToQueue({
+              track(recordPayloadQueuings, amqpOperator.sendToQueue({
                 blobId,
                 status: nextStatus,
                 data: record
               }));
               //recordPayloads.push(payload);
               debugRecordHandling('Adding success record to blob');
-              blobUpdates.push(mongoOperator.updateBlob({
+              track(blobUpdates, mongoOperator.updateBlob({
                 id: blobId,
                 payload: {
                   op: BLOB_UPDATE_OPERATIONS.transformedRecord
@@ -112,7 +146,7 @@ export default function (
             }
             debugRecordHandling(`Record failed, skip queuing!`);
             debugRecordHandling('Adding failed record to blob');
-            blobUpdates.push(mongoOperator.updateBlob({
+            track(blobUpdates, mongoOperator.updateBlob({
               id: blobId,
               payload: {
                 op: BLOB_UPDATE_OPERATIONS.transformedRecord,
@@ -151,21 +185,14 @@ export default function (
 
       return;
     } catch (err) {
-      const error = getError(err);
-      debugHandling(`Failed transforming blob: ${error}`);
-      await mongoOperator.updateBlob({
-        id: blobId,
-        payload: {
-          op: BLOB_UPDATE_OPERATIONS.transformationFailed,
-          error
-        }
-      });
-
-      return;
+      if (err instanceof HandledTransformError) {
+        debugHandling(`Transform failed for blob ${blobId}, blob marked as TRANSFORMATION_FAILED, continuing`);
+        return;
+      }
+      failProcess(err);
     }
 
     async function getEmitter(
-      processHandler: ProcessHandler,
       readFrom: 'blobContent' | Readable | ReadableStream,
       nextQueueStatus: keyof typeof BLOB_STATE
     ): Promise<EventEmitter> {
@@ -175,11 +202,42 @@ export default function (
       if (readFrom === 'blobContent') {
         debugHandling(`Streaming blob content: ${blobId}`);
         const readStream = await mongoOperator.readBlobContent({id: blobId});
-        return processHandler(readStream);
+        return callProcessHandler(readStream);
       }
 
       debugHandling(`Passing read source ${readFrom} to process handler`);
-      return processHandler(readFrom);
+      return callProcessHandler(readFrom);
+    }
+
+    async function callProcessHandler(source: Readable | ReadableStream): Promise<EventEmitter> {
+      let result: unknown;
+      try {
+        result = processHandler(source);
+      } catch (err) {
+        return markTransformFailed(err);
+      }
+      if (result && typeof (result as {then?: unknown}).then === 'function') {
+        try {
+          return await result as EventEmitter;
+        } catch (err) {
+          return markTransformFailed(err);
+        }
+      }
+      return result as EventEmitter;
+    }
+
+    async function markTransformFailed(err: unknown): Promise<never> {
+      // User error from the transform handler (sync throw or async rejection):
+      // mark blob as failed and keep running
+      debugHandling('Process handler failed, marking blob as TRANSFORMATION_FAILED');
+      await mongoOperator.updateBlob({
+        id: blobId,
+        payload: {
+          op: BLOB_UPDATE_OPERATIONS.transformationFailed,
+          error: getError(err)
+        }
+      });
+      throw new HandledTransformError(getError(err));
     }
 
     function getError(err: unknown): string {
@@ -187,6 +245,20 @@ export default function (
         return JSON.stringify(err.stack || err.message || err);
       }
       return JSON.stringify(err);
+    }
+
+    function track<T>(promises: Promise<T>[], promise: Promise<T>): void {
+      // Guard: rejections are settled later by Promise.all in the 'end' handler; without
+      // this, a rejection before that point would be an unhandled rejection. Attaching a
+      // separate .catch handler does not consume the rejection for Promise.all.
+      promise.catch(() => undefined);
+      promises.push(promise);
+    }
+
+    function failProcess(err: unknown): void {
+      debugHandling(`Infrastructure error while handling blob ${blobId} — exiting so the process restarts: ${getError(err)}`);
+      // Delayed exit gives time for logs to flush; unref so tests don't hang
+      setTimeout(() => process.exit(1), infraErrorExitDelayMs).unref();
     }
   }
 }
