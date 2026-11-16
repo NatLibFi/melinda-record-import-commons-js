@@ -33,8 +33,8 @@ export default function (
   const debugRecordHandling = debug.extend('recordHandling');
   const {abortOnInvalidRecords, readFrom = 'blobContent', nextQueueStatus} = config;
 
-  if (nextQueueStatus === undefined) {
-    throw new Error('nextQueueStatus is required');
+  if (nextQueueStatus === undefined || !Object.hasOwn(BLOB_STATE, nextQueueStatus)) {
+    throw new Error(`nextQueueStatus is required and must be a valid BLOB_STATE value, got: ${String(nextQueueStatus)}`);
   }
   const nextStatus: keyof typeof BLOB_STATE = nextQueueStatus;
 
