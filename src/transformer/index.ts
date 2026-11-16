@@ -18,7 +18,7 @@ export interface TransformerConfig {
   profileIds: string[];
   polltime?: string;
   abortOnInvalidRecords?: boolean;
-  readFrom?: 'blobContent' | Readable;
+  readFrom?: 'blobContent' | Readable | ReadableStream;
   nextQueueStatus?: keyof typeof BLOB_STATE;
 }
 
