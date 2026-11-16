@@ -28,7 +28,7 @@ export interface QueryProfileParams {
 
 export interface CreateOrModifyProfileParams {
   id: string;
-  payload: { groups: string[] };
+  payload: {groups: string[]};
 }
 
 export interface ReadProfileParams {
@@ -99,7 +99,7 @@ export async function createMongoProfilesOperator(mongoUrl: string, db = 'db'): 
         }
 
         if (hasNext && !getAll) {
-          await emitter.emit('end', false);
+          await emitter.emit('end', nextOffset);
           return;
         }
 
