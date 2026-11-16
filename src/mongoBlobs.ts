@@ -301,11 +301,7 @@ export async function createMongoBlobsOperator(mongoUrl: string, db = 'db'): Pro
     const doc = getUpdateDoc(op, rest);
 
     // debugDev(doc);
-    const {ok, lastErrorObject} = await operator.findOneAndUpdate({id: sanitizedId}, doc, {projection: {_id: 0}, includeResultMetadata: true});
-    if (ok === 0) {
-      console.log(lastErrorObject);
-      throw new ApiError(httpStatus['CONFLICT'] as number, 'No change');
-    }
+    await operator.findOneAndUpdate({id: sanitizedId}, doc, {projection: {_id: 0}});
 
     return;
 
