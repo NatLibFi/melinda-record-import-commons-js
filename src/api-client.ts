@@ -91,7 +91,7 @@ interface SetTransformedRecordParams {
     standardIdentifiers?: string[],
     sourceIds?: string[],
     message: string,
-    timestamp: string
+    timestamp?: string
   };
 }
 

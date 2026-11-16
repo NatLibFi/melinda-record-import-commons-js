@@ -367,12 +367,15 @@ export async function createMongoBlobsOperator(mongoUrl: string, db = 'db'): Pro
       if (op === BLOB_UPDATE_OPERATIONS.transformedRecord) {
         const incNumberOfRecords = updatePayload.incNumberOfRecords ?? true;
         if (updatePayload.error) {
+          const failedRecord = typeof updatePayload.error === 'string'
+            ? updatePayload.error
+            : {...updatePayload.error, timestamp: nowDate};
           return {
             $set: {
               modificationTime: nowDate
             },
             $push: {
-              'processingInfo.failedRecords': updatePayload.error
+              'processingInfo.failedRecords': failedRecord
             },
             $inc: {
               'processingInfo.numberOfRecords': incNumberOfRecords ? 1 : 0
