@@ -2,13 +2,13 @@ import assert from 'node:assert';
 import {READERS} from '@natlibfi/fixura';
 import mongoFixturesFactory from '@natlibfi/fixura-mongo';
 import generateTests from '@natlibfi/fixugen';
-import {createMongoProfilesOperator} from '../src/mongoProfiles.js';
+import {createMongoProfilesOperator} from '../src/mongoProfiles.ts';
 
 let mongoFixtures; // eslint-disable-line functional/no-let
 
 generateTests({
   callback,
-  path: [import.meta.dirname, '..', 'test-fixtures', 'readProfile'],
+  path: [import.meta.dirname, '..', 'test-fixtures', 'createOrModifyProfile'],
   recurse: false,
   useMetadataFile: true,
   fixura: {
@@ -32,7 +32,7 @@ generateTests({
 
 async function initMongofixtures() {
   mongoFixtures = await mongoFixturesFactory({
-    rootPath: [import.meta.dirname, '..', 'test-fixtures', 'readProfile'],
+    rootPath: [import.meta.dirname, '..', 'test-fixtures', 'createOrModifyProfile'],
     useObjectId: true
   });
 }
@@ -49,8 +49,9 @@ async function callback({
   const mongoOperator = await createMongoProfilesOperator(mongoUri, '');
   const expectedResult = await getFixture({components: ['expectedResult.json'], reader: READERS.JSON});
   try {
-    const result = await mongoOperator.readProfile(operationParams);
-    assert.deepStrictEqual(result, expectedResult);
+    await mongoOperator.createOrModifyProfile(operationParams);
+    const dump = await mongoFixtures.dump();
+    assert.deepEqual(dump, expectedResult);
   } catch (error) {
     if (!expectedToFail) {
       throw error;

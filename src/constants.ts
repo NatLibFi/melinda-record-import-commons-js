@@ -12,7 +12,7 @@ export const BLOB_STATE = {
   COLLECTING: 'COLLECTING',
   PROCESSED_AND_COLLECTED: 'PROCESSED_AND_COLLECTED',
   ABORTED: 'ABORTED'
-};
+} as const;
 
 export const BLOB_UPDATE_OPERATIONS = {
   abort: 'abort',
@@ -25,7 +25,7 @@ export const BLOB_UPDATE_OPERATIONS = {
   transformationFailed: 'transformationFailed',
   transformedRecord: 'transformedRecord',
   updateState: 'updateState'
-};
+} as const;
 
 export const RECORD_IMPORT_STATE = {
   CREATED: 'CREATED',
@@ -35,6 +35,6 @@ export const RECORD_IMPORT_STATE = {
   QUEUED: 'QUEUED',
   SKIPPED: 'SKIPPED',
   UPDATED: 'UPDATED'
-};
+} as const;
 
-export const CHUNK_SIZE = 100;
+export const CHUNK_SIZE = 100 as const;

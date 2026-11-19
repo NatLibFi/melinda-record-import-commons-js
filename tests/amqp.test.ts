@@ -2,7 +2,7 @@ import assert from 'node:assert';
 import {READERS} from '@natlibfi/fixura';
 import generateTests from '@natlibfi/fixugen';
 import * as fakeAmqpLib from '@onify/fake-amqplib';
-import {createAmqpOperator} from '../src/amqp.js';
+import {createAmqpOperator} from '../src/amqp.ts';
 
 run();
 

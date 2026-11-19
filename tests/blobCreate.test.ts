@@ -2,13 +2,13 @@ import assert from 'node:assert';
 import {READERS} from '@natlibfi/fixura';
 import mongoFixturesFactory from '@natlibfi/fixura-mongo';
 import generateTests from '@natlibfi/fixugen';
-import {createMongoBlobsOperator} from '../src/mongoBlobs.js';
+import {createMongoBlobsOperator} from '../src/mongoBlobs.ts';
 
 let mongoFixtures; // eslint-disable-line functional/no-let
 
 generateTests({
   callback,
-  path: [import.meta.dirname, '..', 'test-fixtures', 'blob', 'remove'],
+  path: [import.meta.dirname, '..', 'test-fixtures', 'blob', 'create'],
   recurse: false,
   useMetadataFile: true,
   fixura: {
@@ -33,7 +33,7 @@ generateTests({
 
 async function initMongofixtures() {
   mongoFixtures = await mongoFixturesFactory({
-    rootPath: [import.meta.dirname, '..', 'test-fixtures', 'blob', 'remove'],
+    rootPath: [import.meta.dirname, '..', 'test-fixtures', 'blob', 'create'],
     gridFS: {bucketName: 'blobmetadatas'},
     useObjectId: true
   });
@@ -51,9 +51,11 @@ async function callback({
   const mongoOperator = await createMongoBlobsOperator(mongoUri, '');
   const expectedResult = await getFixture('expectedResult.json');
   try {
-    await mongoOperator.removeBlob(operationParams);
-    const dump = await mongoFixtures.dump();
-    assert.deepStrictEqual(dump, expectedResult);
+    const blobContentStream = getFixture({components: ['blobContent'], reader: READERS.STREAM});
+    await mongoOperator.createBlob(operationParams, blobContentStream);
+    const dump = dumpParser(await mongoFixtures.dump());
+    assert.deepEqual(dump, expectedResult);
+    assert.equal(expectedToFail, false, 'This is expected to succes');
   } catch (error) {
     if (!expectedToFail) {
       throw error;
@@ -63,5 +65,12 @@ async function callback({
     assert.equal(error.status, expectedErrorStatus);
     assert.equal(error.payload, expectedErrorMessage);
     assert.equal(expectedToFail, true, 'This is expected to fail');
+  }
+
+  function dumpParser(dump) {
+    return {
+      blobmetadatas: dump.blobmetadatas,
+      'blobmetadatas.files': dump['blobmetadatas.files'].map(({filename}) => ({filename}))
+    };
   }
 }

@@ -2,17 +2,18 @@ import assert from 'node:assert';
 import {READERS} from '@natlibfi/fixura';
 import mongoFixturesFactory from '@natlibfi/fixura-mongo';
 import generateTests from '@natlibfi/fixugen';
-import {createMongoProfilesOperator} from '../src/mongoProfiles.js';
+import {createMongoBlobsOperator} from '../src/mongoBlobs.ts';
 
 let mongoFixtures; // eslint-disable-line functional/no-let
 
 generateTests({
   callback,
-  path: [import.meta.dirname, '..', 'test-fixtures', 'createOrModifyProfile'],
+  path: [import.meta.dirname, '..', 'test-fixtures', 'blob', 'removeContent'],
   recurse: false,
   useMetadataFile: true,
   fixura: {
-    failWhenNotFound: true
+    failWhenNotFound: true,
+    reader: READERS.JSON
   },
   hooks: {
     before: async () => {
@@ -32,7 +33,8 @@ generateTests({
 
 async function initMongofixtures() {
   mongoFixtures = await mongoFixturesFactory({
-    rootPath: [import.meta.dirname, '..', 'test-fixtures', 'createOrModifyProfile'],
+    rootPath: [import.meta.dirname, '..', 'test-fixtures', 'blob', 'removeContent'],
+    gridFS: {bucketName: 'blobmetadatas'},
     useObjectId: true
   });
 }
@@ -45,13 +47,14 @@ async function callback({
   expectedErrorMessage = ''
 }) {
   const mongoUri = await mongoFixtures.getUri();
-  await mongoFixtures.populate(getFixture({components: ['dbContents.json'], reader: READERS.JSON}));
-  const mongoOperator = await createMongoProfilesOperator(mongoUri, '');
-  const expectedResult = await getFixture({components: ['expectedResult.json'], reader: READERS.JSON});
+  await mongoFixtures.populate(getFixture('dbContents.json'));
+  await mongoFixtures.populateFiles(getFixture('dbFiles.json'));
+  const expectedResult = await getFixture('expectedResult.json');
+  const mongoOperator = await createMongoBlobsOperator(mongoUri, '');
   try {
-    await mongoOperator.createOrModifyProfile(operationParams);
-    const dump = await mongoFixtures.dump();
-    assert.deepEqual(dump, expectedResult);
+    await mongoOperator.removeBlobContent(operationParams);
+    const dump = dumpParser(await mongoFixtures.dump());
+    assert.deepStrictEqual(dump, expectedResult);
   } catch (error) {
     if (!expectedToFail) {
       throw error;
@@ -61,5 +64,12 @@ async function callback({
     assert.equal(error.status, expectedErrorStatus);
     assert.equal(error.payload, expectedErrorMessage);
     assert.equal(expectedToFail, true, 'This is expected to fail');
+  }
+
+  function dumpParser(dump) {
+    return {
+      blobmetadatas: dump.blobmetadatas,
+      'blobmetadatas.files': dump['blobmetadatas.files'].map(({filename}) => ({filename}))
+    };
   }
 }
