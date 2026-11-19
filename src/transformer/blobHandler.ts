@@ -92,13 +92,13 @@ export default function (
             }));
           })
           .on('record', (recordPayload: RecordPayload) => {
-            const {failed, error, incNumberOfRecords, record} = recordPayload;
+            const {failed, incNumberOfRecords, ...restForPayload} = recordPayload;
             if (!failed) {
               debugRecordHandling(`Sending record to queue`);
               recordPayloadQueuings.push(amqpOperator.sendToQueue({
                 blobId,
                 status: nextStatus,
-                data: record
+                data: recordPayload.record
               }));
               //recordPayloads.push(payload);
               debugRecordHandling('Adding success record to blob');
@@ -116,7 +116,7 @@ export default function (
               id: blobId,
               payload: {
                 op: BLOB_UPDATE_OPERATIONS.transformedRecord,
-                error: {error, record},
+                error: restForPayload,
                 incNumberOfRecords
               }
             }));
